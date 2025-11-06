@@ -1,25 +1,17 @@
+// ignore_for_file: lines_longer_than_80_chars, public_member_api_docs
+
 // GENERATED-LIKE: Manual FirebaseOptions based on google-services.json and GoogleService-Info.plist
 // This avoids relying on iOS plist auto-discovery and ensures explicit init.
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 
 class DefaultFirebaseOptions {
   const DefaultFirebaseOptions._();
 
-  static FirebaseOptions get currentPlatform {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return android;
-      case TargetPlatform.iOS:
-        return ios;
-      // Other platforms are not targeted in this app.
-      default:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions are not supported for this platform.',
-        );
-    }
-  }
+  static FirebaseOptions get currentPlatform =>
+      defaultTargetPlatform == TargetPlatform.iOS ? ios : android;
 
   // Android options from android/app/google-services.json
   static const FirebaseOptions android = FirebaseOptions(
@@ -40,5 +32,3 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.birkinapps.smartdolap',
   );
 }
-
-
