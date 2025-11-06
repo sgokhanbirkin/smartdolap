@@ -1,3 +1,4 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -207,7 +208,8 @@ class _LoginFormState extends State<_LoginForm> {
           ),
           SizedBox(height: AppSizes.verticalSpacingM),
           TextButton(
-            onPressed: () => Navigator.of(context).pushReplacementNamed(AppRouter.register),
+            onPressed: () =>
+                Navigator.of(context).pushReplacementNamed(AppRouter.register),
             child: Text(tr('dont_have_account_register')),
           ),
         ],
@@ -215,4 +217,3 @@ class _LoginFormState extends State<_LoginForm> {
     ),
   );
 }
-

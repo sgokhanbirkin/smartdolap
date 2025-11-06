@@ -1,3 +1,5 @@
+// ignore_for_file: directives_ordering
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +43,7 @@ class SmartDolapApp extends StatelessWidget {
       create: (BuildContext _) => sl<AuthCubit>(),
       child: Builder(
         builder: (BuildContext innerContext) => MaterialApp(
-          title: tr('app_name'),
+          onGenerateTitle: (BuildContext ctx) => tr('app_name'),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),

@@ -14,6 +14,9 @@ class AppRouter {
   /// Register route path
   static const String register = '/register';
 
+  /// Pantry add item route path
+  static const String pantryAdd = '/pantry/add';
+
   /// Generate route based on route settings
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
