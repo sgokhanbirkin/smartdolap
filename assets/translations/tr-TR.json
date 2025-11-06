@@ -1,0 +1,28 @@
+{
+  "app_name": "SmartDolap",
+  "login_title": "Tekrar Hoş Geldin!",
+  "register_title": "Hesap Oluştur",
+  "login": "Giriş Yap",
+  "register": "Kayıt Ol",
+  "email": "E-posta",
+  "password": "Şifre",
+  "name": "Ad Soyad",
+  "dont_have_account_register": "Hesabın yok mu? Kayıt ol",
+  "have_account_login": "Zaten hesabın var mı? Giriş yap",
+
+  "invalid_email": "Geçerli bir e-posta girin",
+  "short_password": "Şifre en az 6 karakter olmalı",
+  "invalid_credentials": "Geçersiz e-posta veya şifre",
+  "email_in_use": "Bu e-posta zaten kullanılıyor",
+  "weak_password": "Şifre çok zayıf",
+  "network_error": "Ağ hatası. Lütfen bağlantını kontrol et",
+  "unknown_error": "Bilinmeyen bir hata oluştu",
+  "auth_error": "Giriş başarısız",
+
+  "pantry_title": "Dolap",
+  "recipes_title": "Tarifler",
+  "profile_title": "Profil",
+  "pantry_empty_message": "Dolabın boş. Başlamak için ürün ekle.",
+  "recipes_empty_message": "Henüz tarif yok. Dolabından öneri al.",
+  "profile_welcome_message": "Profiline hoş geldin"
+}

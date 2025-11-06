@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "85712037587",
+    "project_id": "smart-do-76854",
+    "storage_bucket": "smart-do-76854.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85712037587:android:52ab72b3e70c12d61a5626",
+        "android_client_info": {
+          "package_name": "com.birkinapps.smartdolap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNa9pHyRHO8G6JGzEYUow02mkd0ZPecH8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
