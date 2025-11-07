@@ -9,8 +9,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/firebase_options.dart';
 import 'package:smartdolap/core/theme/app_theme.dart';
+import 'package:smartdolap/core/theme/theme_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/product/router/app_router.dart';
+import 'package:smartdolap/product/services/expiry_notification_service.dart';
 
 /// Main entry point
 Future<void> main() async {
@@ -18,6 +20,9 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await EasyLocalization.ensureInitialized();
   await setupLocator();
+
+  // Initialize notification service
+  await sl<ExpiryNotificationService>().initialize();
 
   runApp(
     EasyLocalization(
@@ -39,19 +44,29 @@ class SmartDolapApp extends StatelessWidget {
     designSize: const Size(390, 844), // iPhone 12 referans
     minTextAdapt: true,
     splitScreenMode: true,
-    builder: (BuildContext context, Widget? child) => BlocProvider<AuthCubit>(
-      create: (BuildContext _) => sl<AuthCubit>(),
+    builder: (BuildContext context, Widget? child) => MultiBlocProvider(
+      providers: <BlocProvider<dynamic>>[
+        BlocProvider<AuthCubit>(
+          create: (BuildContext _) => sl<AuthCubit>(),
+        ),
+        BlocProvider<ThemeCubit>(
+          create: (BuildContext _) => ThemeCubit(),
+        ),
+      ],
       child: Builder(
-        builder: (BuildContext innerContext) => MaterialApp(
-          onGenerateTitle: (BuildContext ctx) => tr('app_name'),
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          localizationsDelegates: innerContext.localizationDelegates,
-          supportedLocales: innerContext.supportedLocales,
-          locale: innerContext.locale,
-          onGenerateRoute: AppRouter.onGenerateRoute,
-          initialRoute: AppRouter.login,
+        builder: (BuildContext innerContext) => BlocBuilder<ThemeCubit, ThemeState>(
+          builder: (BuildContext context, ThemeState themeState) => MaterialApp(
+            onGenerateTitle: (BuildContext ctx) => tr('app_name'),
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: themeState.themeMode,
+            localizationsDelegates: innerContext.localizationDelegates,
+            supportedLocales: innerContext.supportedLocales,
+            locale: innerContext.locale,
+            onGenerateRoute: AppRouter.onGenerateRoute,
+            initialRoute: AppRouter.login,
+          ),
         ),
       ),
     ),

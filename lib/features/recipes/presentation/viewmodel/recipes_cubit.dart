@@ -1,5 +1,5 @@
-// ignore_for_file: public_member_api_docs, avoid_catches_without_on_clauses
-
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
@@ -8,6 +8,7 @@ import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.d
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
+import 'package:smartdolap/product/services/image_lookup_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 
 class RecipesCubit extends Cubit<RecipesState> {
@@ -15,29 +16,46 @@ class RecipesCubit extends Cubit<RecipesState> {
     required this.suggest,
     required this.openAI,
     required this.promptPreferences,
+    required this.imageLookup,
     Box<dynamic>? cache,
   }) : super(const RecipesInitial());
 
   final SuggestRecipesFromPantry suggest;
   final IOpenAIService openAI;
   final PromptPreferenceService promptPreferences;
+  final ImageLookupService imageLookup;
   Box<dynamic>? _cache = Hive.isBoxOpen('recipes_cache')
       ? Hive.box('recipes_cache')
       : null;
   void setCache(Box<dynamic> box) => _cache = box;
   final Set<String> _seenTitles = <String>{};
   bool isFetchingMore = false;
+  Map<String, dynamic> _activeFilters = <String, dynamic>{}; // Current filters
+
+  Future<String?> _fixImageUrl(String? imageUrl, String title) async {
+    // OpenAI'den gelen imageUrl'ler genelde çalışmıyor, ImageLookupService kullan
+    if (imageUrl == null ||
+        imageUrl.isEmpty ||
+        imageUrl.contains('example.com') ||
+        imageUrl.startsWith('http://example.com') ||
+        imageUrl.startsWith('https://example.com')) {
+      return await imageLookup.search('$title ${tr('recipe_search_suffix')}');
+    }
+    return imageUrl;
+  }
 
   Future<void> load(String userId) async {
     emit(const RecipesLoading());
     try {
       final List<Recipe> recipes = await suggest(userId: userId);
-      if (isClosed) return;
-      emit(RecipesLoaded(recipes));
+      if (isClosed) {
+        return;
+      }
+      emit(RecipesLoaded(recipes, allRecipes: recipes));
       _seenTitles.addAll(recipes.map((Recipe e) => e.title));
       // cache
       _cache ??= Hive.box('recipes_cache');
-      _cache?.put(
+      await _cache?.put(
         userId,
         recipes
             .map(
@@ -56,7 +74,9 @@ class RecipesCubit extends Cubit<RecipesState> {
       );
       await promptPreferences.incrementGenerated(recipes.length);
     } catch (e) {
-      if (isClosed) return;
+      if (isClosed) {
+        return;
+      }
       emit(RecipesFailure(e.toString()));
     }
   }
@@ -76,29 +96,35 @@ class RecipesCubit extends Cubit<RecipesState> {
         ings,
         count: 6,
         servings: prefs.servings,
-        query: prefs.composePrompt('Öğün: $meal'),
+        query: prefs.composePrompt(
+          tr('meal_type', namedArgs: <String, String>{'meal': meal}),
+        ),
         excludeTitles: _seenTitles.toList(),
       );
-      final List<Recipe> recipes = suggestions
-          .map(
-            (RecipeSuggestion e) => Recipe(
-              id: '',
-              title: e.title,
-              ingredients: e.ingredients,
-              steps: e.steps,
-              calories: e.calories,
-              durationMinutes: e.durationMinutes,
-              difficulty: e.difficulty,
-              imageUrl: e.imageUrl,
-              category: e.category ?? meal,
-            ),
-          )
-          .toList();
+      final List<Recipe> recipes = await Future.wait(
+        suggestions.map(
+          (RecipeSuggestion e) async => Recipe(
+            id: '',
+            title: e.title,
+            ingredients: e.ingredients,
+            steps: e.steps,
+            calories: e.calories,
+            durationMinutes: e.durationMinutes,
+            difficulty: e.difficulty,
+            imageUrl: await _fixImageUrl(e.imageUrl, e.title),
+            category: e.category ?? meal,
+          ),
+        ),
+      );
       _seenTitles.addAll(recipes.map((Recipe e) => e.title));
       await promptPreferences.incrementGenerated(recipes.length);
-      if (!isClosed) emit(RecipesLoaded(recipes));
+      if (!isClosed) {
+        emit(RecipesLoaded(recipes, allRecipes: recipes));
+      }
     } catch (e) {
-      if (!isClosed) emit(RecipesFailure(e.toString()));
+      if (!isClosed) {
+        emit(RecipesFailure(e.toString()));
+      }
     }
   }
 
@@ -115,27 +141,31 @@ class RecipesCubit extends Cubit<RecipesState> {
       final List<RecipeSuggestion> suggestions = await openAI.suggestRecipes(
         ings,
         servings: prefs.servings,
-        query: prefs.composePrompt('Serbest giriş listesi'),
+        query: prefs.composePrompt(tr('free_input_list')),
       );
-      if (isClosed) return;
-      final List<Recipe> recipes = suggestions
-          .map(
-            (RecipeSuggestion e) => Recipe(
-              id: '',
-              title: e.title,
-              ingredients: e.ingredients,
-              steps: e.steps,
-              calories: e.calories,
-              durationMinutes: e.durationMinutes,
-              difficulty: e.difficulty,
-              imageUrl: e.imageUrl,
-            ),
-          )
-          .toList();
+      if (isClosed) {
+        return;
+      }
+      final List<Recipe> recipes = await Future.wait(
+        suggestions.map(
+          (RecipeSuggestion e) async => Recipe(
+            id: '',
+            title: e.title,
+            ingredients: e.ingredients,
+            steps: e.steps,
+            calories: e.calories,
+            durationMinutes: e.durationMinutes,
+            difficulty: e.difficulty,
+            imageUrl: await _fixImageUrl(e.imageUrl, e.title),
+          ),
+        ),
+      );
       await promptPreferences.incrementGenerated(recipes.length);
-      emit(RecipesLoaded(recipes));
+      emit(RecipesLoaded(recipes, allRecipes: recipes));
     } catch (e) {
-      if (isClosed) return;
+      if (isClosed) {
+        return;
+      }
       emit(RecipesFailure(e.toString()));
     }
   }
@@ -143,7 +173,9 @@ class RecipesCubit extends Cubit<RecipesState> {
   Future<void> loadFromCache(String userId) async {
     final Box<dynamic> box = _cache ?? Hive.box('recipes_cache');
     final List<dynamic>? raw = box.get(userId) as List<dynamic>?;
-    if (raw == null) return;
+    if (raw == null) {
+      return;
+    }
     final List<Recipe> recipes = raw
         .map(
           (e) => Recipe(
@@ -159,12 +191,76 @@ class RecipesCubit extends Cubit<RecipesState> {
           ),
         )
         .toList();
-    if (recipes.isNotEmpty && !isClosed) emit(RecipesLoaded(recipes));
+    if (recipes.isNotEmpty && !isClosed) {
+      emit(RecipesLoaded(recipes, allRecipes: recipes));
+    }
   }
 
   // Apply client-side filter from UI without exposing emit
-  void applyFilter(List<Recipe> recipes) {
-    emit(RecipesLoaded(recipes));
+  void applyFilter({
+    List<String>? ingredients,
+    String? meal,
+    int? maxCalories,
+    int? minFiber,
+  }) {
+    final RecipesState s = state;
+    if (s is! RecipesLoaded) {
+      return;
+    }
+    final List<Recipe> source = s.allRecipes ?? s.recipes;
+
+    // Update active filters
+    _activeFilters = <String, dynamic>{
+      if (ingredients != null && ingredients.isNotEmpty)
+        'ingredients': ingredients,
+      if (meal != null && meal.isNotEmpty) 'meal': meal,
+      if (maxCalories != null) 'maxCalories': maxCalories,
+      if (minFiber != null) 'minFiber': minFiber,
+    };
+
+    // Apply filters
+    final List<Recipe> filtered = source.where((Recipe r) {
+      final bool ingOk =
+          ingredients == null ||
+          ingredients.isEmpty ||
+          ingredients.every(
+            (String name) => r.ingredients
+                .map((String e) => e.toLowerCase())
+                .contains(name.toLowerCase()),
+          );
+      final bool mealOk =
+          meal == null ||
+          meal.isEmpty ||
+          (r.category ?? '').toLowerCase() == meal.toLowerCase();
+      final bool calOk =
+          maxCalories == null || (r.calories ?? 0) <= maxCalories;
+      final bool fiberOk = minFiber == null || (r.fiber ?? 0) >= minFiber;
+      return ingOk && mealOk && calOk && fiberOk;
+    }).toList();
+
+    emit(
+      RecipesLoaded(
+        filtered,
+        allRecipes: source,
+        activeFilters: _activeFilters,
+      ),
+    );
+  }
+
+  // Reset filters and show all recipes
+  void resetFilters() {
+    final RecipesState s = state;
+    if (s is! RecipesLoaded) {
+      return;
+    }
+    _activeFilters = <String, dynamic>{};
+    emit(
+      RecipesLoaded(
+        s.allRecipes ?? s.recipes,
+        allRecipes: s.allRecipes ?? s.recipes,
+        activeFilters: <String, dynamic>{},
+      ),
+    );
   }
 
   // Discovery with infinite scroll
@@ -183,72 +279,97 @@ class RecipesCubit extends Cubit<RecipesState> {
       final List<Recipe> current = state is RecipesLoaded
           ? (state as RecipesLoaded).recipes
           : <Recipe>[];
-      final List<Recipe> newOnes =
-          (await openAI.suggestRecipes(
-                <Ingredient>[],
-                query: prefs.composePrompt(query),
-                excludeTitles: _seenTitles.toList(),
-                count: 6,
-                servings: prefs.servings,
-              ))
-              .map(
-                (RecipeSuggestion e) => Recipe(
-                  id: '',
-                  title: e.title,
-                  ingredients: e.ingredients,
-                  steps: e.steps,
-                  calories: e.calories,
-                  durationMinutes: e.durationMinutes,
-                  difficulty: e.difficulty,
-                  imageUrl: e.imageUrl,
-                  category: e.category,
-                ),
-              )
-              .toList();
+      final List<Recipe> newOnes = await Future.wait(
+        (await openAI.suggestRecipes(
+          <Ingredient>[],
+          query: prefs.composePrompt(query),
+          excludeTitles: _seenTitles.toList(),
+          count: 6,
+          servings: prefs.servings,
+        )).map(
+          (RecipeSuggestion e) async => Recipe(
+            id: '',
+            title: e.title,
+            ingredients: e.ingredients,
+            steps: e.steps,
+            calories: e.calories,
+            durationMinutes: e.durationMinutes,
+            difficulty: e.difficulty,
+            imageUrl: await _fixImageUrl(e.imageUrl, e.title),
+            category: e.category,
+          ),
+        ),
+      );
       _seenTitles.addAll(newOnes.map((Recipe e) => e.title));
       await promptPreferences.incrementGenerated(newOnes.length);
-      emit(RecipesLoaded(<Recipe>[...current, ...newOnes]));
+      final List<Recipe> updated = <Recipe>[...current, ...newOnes];
+      emit(
+        RecipesLoaded(
+          updated,
+          allRecipes: updated,
+          activeFilters: _activeFilters,
+        ),
+      );
     } catch (e) {
-      if (!isClosed) emit(RecipesFailure(e.toString()));
+      if (!isClosed) {
+        emit(RecipesFailure(e.toString()));
+      }
     }
   }
 
   Future<void> loadMoreFromPantry(String userId) async {
-    if (isFetchingMore) return;
+    if (isFetchingMore) {
+      return;
+    }
     final RecipesState s = state;
     final List<Recipe> current = s is RecipesLoaded ? s.recipes : <Recipe>[];
     final PromptPreferences prefs = promptPreferences.getPreferences();
     try {
       isFetchingMore = true;
+      emit(RecipesLoaded(current, isLoadingMore: true));
+      debugPrint('[RecipesCubit] Loading more pantry suggestions...');
       final List<RecipeSuggestion> more = await openAI.suggestRecipes(
         <Ingredient>[],
         count: 6,
         servings: prefs.servings,
-        query: prefs.composePrompt('Serbest keşif'),
+        query: prefs.composePrompt(tr('free_discovery')),
         excludeTitles: _seenTitles.toList(),
       );
-      final List<Recipe> mapped = more
-          .map(
-            (RecipeSuggestion e) => Recipe(
-              id: '',
-              title: e.title,
-              ingredients: e.ingredients,
-              steps: e.steps,
-              calories: e.calories,
-              durationMinutes: e.durationMinutes,
-              difficulty: e.difficulty,
-              imageUrl: e.imageUrl,
-              category: e.category,
-            ),
-          )
-          .toList();
+      final List<Recipe> mapped = await Future.wait(
+        more.map(
+          (RecipeSuggestion e) async => Recipe(
+            id: '',
+            title: e.title,
+            ingredients: e.ingredients,
+            steps: e.steps,
+            calories: e.calories,
+            durationMinutes: e.durationMinutes,
+            difficulty: e.difficulty,
+            imageUrl: await _fixImageUrl(e.imageUrl, e.title),
+            category: e.category,
+          ),
+        ),
+      );
       _seenTitles.addAll(mapped.map((Recipe e) => e.title));
       await promptPreferences.incrementGenerated(mapped.length);
-      emit(RecipesLoaded(<Recipe>[...current, ...mapped]));
+      final List<Recipe> updated = <Recipe>[...current, ...mapped];
+      emit(
+        RecipesLoaded(
+          updated,
+          allRecipes: updated,
+          activeFilters: _activeFilters,
+        ),
+      );
     } catch (e) {
       // ignore fail silently for load more
+      if (!isClosed) {
+        emit(RecipesLoaded(current, isLoadingMore: false));
+      }
     } finally {
       isFetchingMore = false;
+      if (state is RecipesLoaded && !(state as RecipesLoaded).isLoadingMore) {
+        debugPrint('[RecipesCubit] Load more finished.');
+      }
     }
   }
 }

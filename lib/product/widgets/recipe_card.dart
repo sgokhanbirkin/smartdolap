@@ -30,22 +30,34 @@ class _RecipeCardState extends State<RecipeCard> {
     _loadFav();
   }
 
+  Future<Box<dynamic>> _favoritesBox() async {
+    if (Hive.isBoxOpen('favorite_recipes')) {
+      return Hive.box<dynamic>('favorite_recipes');
+    }
+    return Hive.openBox<dynamic>('favorite_recipes');
+  }
+
   Future<void> _loadFav() async {
-    final Box<String> box = Hive.isBoxOpen('favorites')
-        ? Hive.box<String>('favorites')
-        : await Hive.openBox<String>('favorites');
+    final Box<dynamic> box = await _favoritesBox();
+    if (!mounted) {
+      return;
+    }
     setState(() => _fav = box.containsKey(_favKey));
   }
 
   Future<void> _toggleFav() async {
-    final Box<String> box = Hive.isBoxOpen('favorites')
-        ? Hive.box<String>('favorites')
-        : await Hive.openBox<String>('favorites');
+    final Box<dynamic> box = await _favoritesBox();
     if (box.containsKey(_favKey)) {
       await box.delete(_favKey);
+      if (!mounted) {
+        return;
+      }
       setState(() => _fav = false);
     } else {
-      await box.put(_favKey, widget.recipe.title);
+      await box.put(_favKey, widget.recipe.toMap());
+      if (!mounted) {
+        return;
+      }
       setState(() => _fav = true);
     }
   }
@@ -96,7 +108,7 @@ class _RecipeCardState extends State<RecipeCard> {
                 ],
               ),
             ),
-          // Image area with favorite
+          // Image area with favorite and difficulty badge
           Stack(
             children: <Widget>[
               AspectRatio(
@@ -107,12 +119,17 @@ class _RecipeCardState extends State<RecipeCard> {
                     ? Image.network(
                         widget.recipe.imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          child: Icon(Icons.restaurant_menu, size: 32.sp),
-                        ),
+                        errorBuilder: (_, Object error, StackTrace? stackTrace) {
+                          debugPrint(
+                            'Resim yüklenemedi: ${widget.recipe.imageUrl} - $error',
+                          );
+                          return Container(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            child: Icon(Icons.restaurant_menu, size: 32.sp),
+                          );
+                        },
                       )
                     : Container(
                         color: Theme.of(
@@ -121,6 +138,19 @@ class _RecipeCardState extends State<RecipeCard> {
                         child: Icon(Icons.restaurant_menu, size: 32.sp),
                       ),
               ),
+              // Difficulty badge - sol üst
+              if (widget.recipe.difficulty != null &&
+                  widget.recipe.difficulty!.isNotEmpty)
+                Positioned(
+                  left: AppSizes.spacingS,
+                  top: AppSizes.spacingS,
+                  child: _InfoBadge(
+                    icon: Icons.speed_outlined,
+                    label: widget.recipe.difficulty!,
+                    color: _difficultyColor(widget.recipe.difficulty!),
+                  ),
+                ),
+              // Favorite button - sağ üst
               Positioned(
                 right: AppSizes.spacingS,
                 top: AppSizes.spacingS,
@@ -139,6 +169,7 @@ class _RecipeCardState extends State<RecipeCard> {
             padding: EdgeInsets.all(AppSizes.cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
                   widget.recipe.title,
@@ -147,11 +178,54 @@ class _RecipeCardState extends State<RecipeCard> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSizes.verticalSpacingS),
-                Text(
-                  widget.recipe.ingredients.take(3).join(', '),
-                  style: TextStyle(fontSize: AppSizes.textS),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                Flexible(
+                  child: Text(
+                    widget.recipe.ingredients.take(3).join(', '),
+                    style: TextStyle(
+                      fontSize: AppSizes.textS,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(height: AppSizes.verticalSpacingS),
+                // Bottom badges row: Duration (sol) ve Calories (sağ)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    // Duration badge - sol alt
+                    if (widget.recipe.durationMinutes != null)
+                      Flexible(
+                        child: _InfoBadge(
+                          icon: Icons.timer_outlined,
+                          label: tr(
+                            'duration_minutes',
+                            namedArgs: <String, String>{
+                              'value': '${widget.recipe.durationMinutes}',
+                            },
+                          ),
+                          color: Colors.blue,
+                        ),
+                      ),
+                    if (widget.recipe.durationMinutes != null && 
+                        widget.recipe.calories != null)
+                      SizedBox(width: AppSizes.spacingXS),
+                    // Calories badge - sağ alt
+                    if (widget.recipe.calories != null)
+                      Flexible(
+                        child: _InfoBadge(
+                          icon: Icons.local_fire_department_outlined,
+                          label: tr(
+                            'calories_kcal',
+                            namedArgs: <String, String>{
+                              'value': '${widget.recipe.calories}',
+                            },
+                          ),
+                          color: Colors.orange,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -180,4 +254,62 @@ class _RecipeCardState extends State<RecipeCard> {
     }
     return Colors.red.shade600;
   }
+
+  Color _difficultyColor(String difficulty) {
+    final String lower = difficulty.toLowerCase();
+    if (lower.contains('kolay') || lower.contains('easy')) {
+      return Colors.green.shade600;
+    }
+    if (lower.contains('orta') || lower.contains('medium')) {
+      return Colors.orange.shade600;
+    }
+    if (lower.contains('zor') || lower.contains('hard')) {
+      return Colors.red.shade600;
+    }
+    return Colors.grey.shade600;
+  }
+}
+
+/// Info badge widget for recipe cards
+class _InfoBadge extends StatelessWidget {
+  const _InfoBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: AppSizes.spacingS,
+      vertical: AppSizes.spacingXS * 0.5,
+    ),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(AppSizes.radius),
+      border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, size: AppSizes.iconXS, color: color),
+        SizedBox(width: AppSizes.spacingXS * 0.5),
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: AppSizes.textXS,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    ),
+  );
 }

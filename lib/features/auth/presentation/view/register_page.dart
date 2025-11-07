@@ -53,7 +53,10 @@ class _RegisterPageState extends State<RegisterPage> {
             unauthenticated: () {},
             error: (AuthFailure failure) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(_getErrorMessage(failure))),
+                SnackBar(
+                  content: Text(_getErrorMessage(failure)),
+                  behavior: SnackBarBehavior.floating,
+                ),
               );
             },
           );
@@ -87,8 +90,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   TextFormField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
+                    style: TextStyle(fontSize: AppSizes.textM),
                     decoration: InputDecoration(
                       labelText: tr('display_name'),
+                      labelStyle: TextStyle(fontSize: AppSizes.textM),
                       prefixIcon: Icon(Icons.person, size: AppSizes.icon),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.radius),
@@ -100,9 +105,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(fontSize: AppSizes.textM),
                     validator: Validators.emailValidator,
                     decoration: InputDecoration(
                       labelText: tr('email'),
+                      labelStyle: TextStyle(fontSize: AppSizes.textM),
                       prefixIcon: Icon(Icons.email, size: AppSizes.icon),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.radius),
@@ -114,9 +121,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    style: TextStyle(fontSize: AppSizes.textM),
                     validator: Validators.passwordValidator,
                     decoration: InputDecoration(
                       labelText: tr('password'),
+                      labelStyle: TextStyle(fontSize: AppSizes.textM),
                       prefixIcon: Icon(Icons.lock, size: AppSizes.icon),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.radius),
@@ -150,14 +159,30 @@ class _RegisterPageState extends State<RegisterPage> {
                               );
                             }
                           },
-                    child: Text(tr('register')),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size(double.infinity, AppSizes.buttonHeight),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSizes.buttonPaddingH,
+                        vertical: AppSizes.buttonPaddingV,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radius),
+                      ),
+                    ),
+                    child: Text(
+                      tr('register'),
+                      style: TextStyle(fontSize: AppSizes.textM),
+                    ),
                   ),
                   SizedBox(height: AppSizes.verticalSpacingM),
                   TextButton(
                     onPressed: () => Navigator.of(
                       context,
                     ).pushReplacementNamed(AppRouter.login),
-                    child: Text(tr('have_account_login')),
+                    child: Text(
+                      tr('have_account_login'),
+                      style: TextStyle(fontSize: AppSizes.textM),
+                    ),
                   ),
                 ],
               ),

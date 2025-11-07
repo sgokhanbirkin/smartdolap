@@ -2,7 +2,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/validators.dart';
@@ -45,7 +44,9 @@ class LoginPage extends StatelessWidget {
                 child: SizedBox(
                   height: AppSizes.iconXL,
                   width: AppSizes.iconXL,
-                  child: CircularProgressIndicator(strokeWidth: 3.w),
+                  child: CircularProgressIndicator(
+                    strokeWidth: AppSizes.spacingXS * 0.75,
+                  ),
                 ),
               );
             }
@@ -88,11 +89,11 @@ class LoginPage extends StatelessWidget {
   );
 
   String _getErrorMessage(AuthFailure failure) => failure.when(
-    invalidCredentials: () => 'Geçersiz email veya şifre',
-    emailAlreadyInUse: () => 'Bu email adresi zaten kullanılıyor',
-    weakPassword: () => 'Şifre çok zayıf',
-    network: () => 'Ağ hatası. Lütfen bağlantınızı kontrol edin',
-    unknown: (String? message) => message ?? 'Bir hata oluştu',
+    invalidCredentials: () => tr('invalid_credentials'),
+    emailAlreadyInUse: () => tr('email_in_use'),
+    weakPassword: () => tr('weak_password'),
+    network: () => tr('network_error'),
+    unknown: (String? message) => message ?? tr('unknown_error'),
   );
 }
 
@@ -210,7 +211,10 @@ class _LoginFormState extends State<_LoginForm> {
           TextButton(
             onPressed: () =>
                 Navigator.of(context).pushReplacementNamed(AppRouter.register),
-            child: Text(tr('dont_have_account_register')),
+            child: Text(
+              tr('dont_have_account_register'),
+              style: TextStyle(fontSize: AppSizes.textM),
+            ),
           ),
         ],
       ),

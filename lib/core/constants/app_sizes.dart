@@ -93,6 +93,9 @@ class AppSizes {
   /// Extra large icon (40dp)
   static double get iconXL => 40.sp;
 
+  /// Extra extra large icon (56dp)
+  static double get iconXXL => 56.sp;
+
   // Card dimensions
   /// Card padding
   static double get cardPadding => 16.w;

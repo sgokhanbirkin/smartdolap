@@ -10,6 +10,7 @@ class PantryItem {
     this.quantity = 1.0,
     this.unit = '',
     this.expiryDate,
+    this.imageUrl,
     this.ingredients = const <Ingredient>[],
     this.category,
     this.createdAt,
@@ -21,6 +22,7 @@ class PantryItem {
   final double quantity;
   final String unit;
   final DateTime? expiryDate;
+  final String? imageUrl;
   final List<Ingredient> ingredients;
   final String? category;
   final DateTime? createdAt;
@@ -32,6 +34,7 @@ class PantryItem {
     double? quantity,
     String? unit,
     DateTime? expiryDate,
+    String? imageUrl,
     List<Ingredient>? ingredients,
     String? category,
     DateTime? createdAt,
@@ -42,6 +45,7 @@ class PantryItem {
     quantity: quantity ?? this.quantity,
     unit: unit ?? this.unit,
     expiryDate: expiryDate ?? this.expiryDate,
+    imageUrl: imageUrl ?? this.imageUrl,
     ingredients: ingredients ?? this.ingredients,
     category: category ?? this.category,
     createdAt: createdAt ?? this.createdAt,

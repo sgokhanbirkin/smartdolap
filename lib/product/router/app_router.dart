@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/auth/presentation/view/login_page.dart';
 import 'package:smartdolap/features/auth/presentation/view/register_page.dart';
@@ -9,7 +10,9 @@ import 'package:smartdolap/features/pantry/presentation/view/pantry_item_detail_
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/view/recipe_detail_page.dart';
+import 'package:smartdolap/features/recipes/presentation/view/favorites_page.dart';
 import 'package:smartdolap/product/widgets/app_shell.dart';
+import 'package:smartdolap/core/constants/app_sizes.dart';
 
 /// App router configuration
 class AppRouter {
@@ -31,6 +34,9 @@ class AppRouter {
   /// Recipe detail route path
   static const String recipeDetail = '/recipes/detail';
 
+  /// Favorites route path
+  static const String favorites = '/recipes/favorites';
+
   /// Generate route based on route settings
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -47,8 +53,17 @@ class AppRouter {
         return MaterialPageRoute<bool>(
           builder: (BuildContext context) {
             if (userId == null || userId.isEmpty) {
-              return const Scaffold(
-                body: Center(child: Text('User bilgisi eksik')),
+              return Scaffold(
+                body: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSizes.padding),
+                    child: Text(
+                      tr('invalid_user_info'),
+                      style: TextStyle(fontSize: AppSizes.text),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
               );
             }
             return BlocProvider<PantryCubit>(
@@ -64,8 +79,17 @@ class AppRouter {
             args['item'] == null ||
             args['userId'] == null) {
           return MaterialPageRoute<dynamic>(
-            builder: (_) => const Scaffold(
-              body: Center(child: Text('Geçersiz parametreler')),
+            builder: (BuildContext context) => Scaffold(
+              body: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.padding),
+                  child: Text(
+                    tr('invalid_parameters'),
+                    style: TextStyle(fontSize: AppSizes.text),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
             ),
           );
         }
@@ -82,6 +106,10 @@ class AppRouter {
         final Recipe? recipe = settings.arguments as Recipe?;
         return MaterialPageRoute<dynamic>(
           builder: (BuildContext context) => RecipeDetailPage(recipe: recipe),
+        );
+      case favorites:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const FavoritesPage(),
         );
       case home:
       default:

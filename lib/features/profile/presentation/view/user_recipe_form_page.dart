@@ -19,7 +19,8 @@ class UserRecipeFormPage extends StatefulWidget {
     List<String>? tags,
     String? imagePath,
     String? videoPath,
-  })? onSubmit;
+  })?
+  onSubmit;
 
   /// Provides the mutable state backing this widget.
   @override
@@ -96,8 +97,8 @@ class _UserRecipeFormPageState extends State<UserRecipeFormPage> {
                 ),
                 validator: (String? value) =>
                     value == null || value.trim().isEmpty
-                        ? tr('invalid_name')
-                        : null,
+                    ? tr('invalid_name')
+                    : null,
               ),
               SizedBox(height: AppSizes.verticalSpacingM),
               TextFormField(
@@ -169,15 +170,21 @@ class _UserRecipeFormPageState extends State<UserRecipeFormPage> {
               if (_imageFile != null)
                 Padding(
                   padding: EdgeInsets.only(top: AppSizes.verticalSpacingS),
-                  child: Image.file(_imageFile!, height: 120),
+                  child: Image.file(
+                    _imageFile!,
+                    height: AppSizes.verticalSpacingXXL * 3.75,
+                  ),
                 ),
               if (_videoFile != null)
                 Padding(
                   padding: EdgeInsets.only(top: AppSizes.verticalSpacingS),
                   child: Text(
-                    tr('profile_video_selected', namedArgs: <String, String>{
-                      'path': _videoFile!.path.split('/').last,
-                    }),
+                    tr(
+                      'profile_video_selected',
+                      namedArgs: <String, String>{
+                        'path': _videoFile!.path.split('/').last,
+                      },
+                    ),
                   ),
                 ),
               SizedBox(height: AppSizes.verticalSpacingL),
@@ -219,36 +226,33 @@ class _UserRecipeFormPageState extends State<UserRecipeFormPage> {
     required VoidCallback onAdd,
     required ValueChanged<String> onRemove,
     bool enumerated = false,
-  }) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Row(
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  decoration: InputDecoration(hintText: placeholder),
-                  onSubmitted: (_) => onAdd(),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.check),
-                onPressed: onAdd,
-              ),
-            ],
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(hintText: placeholder),
+              onSubmitted: (_) => onAdd(),
+            ),
           ),
-          Wrap(
-            spacing: AppSizes.spacingS,
-            children: items.asMap().entries.map((MapEntry<int, String> entry) {
-              final String text =
-                  enumerated ? '${entry.key + 1}. ${entry.value}' : entry.value;
-              return InputChip(
-                label: Text(text),
-                onDeleted: () => onRemove(entry.value),
-              );
-            }).toList(),
-          ),
+          IconButton(icon: const Icon(Icons.check), onPressed: onAdd),
         ],
-      );
+      ),
+      Wrap(
+        spacing: AppSizes.spacingS,
+        children: items.asMap().entries.map((MapEntry<int, String> entry) {
+          final String text = enumerated
+              ? '${entry.key + 1}. ${entry.value}'
+              : entry.value;
+          return InputChip(
+            label: Text(text),
+            onDeleted: () => onRemove(entry.value),
+          );
+        }).toList(),
+      ),
+    ],
+  );
 }

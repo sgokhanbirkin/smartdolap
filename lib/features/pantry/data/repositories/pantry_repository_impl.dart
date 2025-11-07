@@ -121,15 +121,16 @@ class PantryRepositoryImpl implements IPantryRepository {
   PantryItem _fromMap(Map<String, dynamic> m, {String? fallbackId}) => PantryItem(
     id: m['id'] as String? ?? fallbackId ?? '',
     name: m['name'] as String? ?? '',
-    quantity: (m['quantity'] as num?)?.toDouble() ?? 1.0,
-    unit: m['unit'] as String? ?? '',
-    expiryDate: m['expiryDate'] != null
-        ? DateTime.tryParse(m['expiryDate'] as String)
-        : null,
-    ingredients:
-        (m['ingredients'] as List<dynamic>?)
-            ?.map(
-              (dynamic e) => Ingredient(
+      quantity: (m['quantity'] as num?)?.toDouble() ?? 1.0,
+      unit: m['unit'] as String? ?? '',
+      expiryDate: m['expiryDate'] != null
+          ? DateTime.tryParse(m['expiryDate'] as String)
+          : null,
+      imageUrl: m['imageUrl'] as String?,
+      ingredients:
+          (m['ingredients'] as List<dynamic>?)
+              ?.map(
+                (dynamic e) => Ingredient(
                 name: (e as Map<String, dynamic>)['name'] as String? ?? '',
                 unit: (e)['unit'] as String? ?? '',
                 quantity: ((e)['quantity'] as num?)?.toDouble() ?? 1.0,
@@ -152,6 +153,7 @@ class PantryRepositoryImpl implements IPantryRepository {
     'quantity': item.quantity,
     'unit': item.unit,
     'expiryDate': item.expiryDate?.toIso8601String(),
+    'imageUrl': item.imageUrl,
     'ingredients': item.ingredients
         .map(
           (Ingredient i) => <String, dynamic>{

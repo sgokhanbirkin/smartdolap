@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/utils/quantity_formatter.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/widgets/unit_dropdown_widget.dart';
 
 /// Pantry item detail page - Edit quantity and delete item
 class PantryItemDetailPage extends StatefulWidget {
@@ -24,15 +26,29 @@ class PantryItemDetailPage extends StatefulWidget {
 }
 
 class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
+  static const List<String> _unitOptions = <String>[
+    'adet',
+    'kg',
+    'g',
+    'lt',
+    'ml',
+    'paket',
+    'kutu',
+    'demet',
+    'tane',
+  ];
   late final TextEditingController _qtyController;
   late final TextEditingController _unitController;
 
   @override
   void initState() {
     super.initState();
-    _qtyController = TextEditingController(text: widget.item.quantity.toString());
+    _qtyController = TextEditingController(
+      text: QuantityFormatter.formatQuantity(widget.item.quantity, widget.item.unit),
+    );
     _unitController = TextEditingController(text: widget.item.unit);
   }
+
 
   @override
   void dispose() {
@@ -43,109 +59,128 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: Text(widget.item.name),
-          actions: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              color: Colors.red,
-              onPressed: () => _showDeleteDialog(context),
+    appBar: AppBar(
+      title: Text(widget.item.name),
+      actions: <Widget>[
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          color: Theme.of(context).colorScheme.error,
+          onPressed: () => _showDeleteDialog(context),
+        ),
+      ],
+    ),
+    body: SafeArea(
+      child: Padding(
+        padding: EdgeInsets.all(AppSizes.padding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(AppSizes.padding * 0.75),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      widget.item.name,
+                      style: TextStyle(
+                        fontSize: AppSizes.textL,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.verticalSpacingM),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: TextFormField(
+                            controller: _qtyController,
+                            keyboardType: TextInputType.number,
+                            style: TextStyle(fontSize: AppSizes.textM),
+                            decoration: InputDecoration(
+                              labelText: tr('quantity'),
+                              labelStyle: TextStyle(fontSize: AppSizes.textM),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radius,
+                                ),
+                              ),
+                              contentPadding: EdgeInsets.all(AppSizes.padding * 0.75),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: AppSizes.spacingM),
+                        Expanded(
+                          child: UnitDropdownWidget(
+                            unitController: _unitController,
+                            unitOptions: _unitOptions,
+                            wrapInCard: false,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (widget.item.expiryDate != null) ...[
+                      SizedBox(height: AppSizes.verticalSpacingM),
+                      Row(
+                        children: <Widget>[
+                          Icon(Icons.calendar_today, size: AppSizes.iconS),
+                          SizedBox(width: AppSizes.spacingS),
+                          Text(
+                            '${tr('expiry_date')}: '
+                            '${_formatDate(widget.item.expiryDate!)}',
+                            style: TextStyle(fontSize: AppSizes.textS),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: AppSizes.verticalSpacingL),
+            ElevatedButton.icon(
+              onPressed: _saveChanges,
+              icon: const Icon(Icons.save),
+              label: Text(tr('save')),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, AppSizes.buttonHeight),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.buttonPaddingH,
+                  vertical: AppSizes.buttonPaddingV,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radius),
+                ),
+              ),
             ),
           ],
         ),
-        body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.padding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppSizes.padding),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          widget.item.name,
-                          style: TextStyle(
-                            fontSize: AppSizes.textXL,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: AppSizes.verticalSpacingM),
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextFormField(
-                                controller: _qtyController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: tr('quantity'),
-                                  border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppSizes.radius),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.spacingM),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _unitController,
-                                decoration: InputDecoration(
-                                  labelText: tr('unit'),
-                                  border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppSizes.radius),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (widget.item.expiryDate != null) ...[
-                          SizedBox(height: AppSizes.verticalSpacingM),
-                          Row(
-                            children: <Widget>[
-                              Icon(Icons.calendar_today, size: AppSizes.icon),
-                              SizedBox(width: AppSizes.spacingS),
-                              Text(
-                                '${tr('expiry_date')}: ${_formatDate(widget.item.expiryDate!)}',
-                                style: TextStyle(fontSize: AppSizes.text),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(height: AppSizes.verticalSpacingL),
-                ElevatedButton.icon(
-                  onPressed: _saveChanges,
-                  icon: const Icon(Icons.save),
-                  label: Text(tr('save')),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      ),
+    ),
+  );
 
   Future<void> _saveChanges() async {
-    final double? qty = double.tryParse(_qtyController.text.replaceAll(',', '.'));
+    final double? qty = double.tryParse(
+      _qtyController.text.replaceAll(',', '.'),
+    );
     if (qty == null || qty <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('invalid_quantity'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('invalid_quantity'))));
       return;
     }
+    
+    // Floating-point precision sorununu önlemek için yuvarlama
+    final double roundedQty = QuantityFormatter.roundQuantity(qty, _unitController.text);
+    
     final PantryItem updated = widget.item.copyWith(
-      quantity: qty,
+      quantity: roundedQty,
       unit: _unitController.text.trim(),
     );
     await context.read<PantryCubit>().update(widget.userId, updated);
-    if (mounted) Navigator.of(context).pop(true);
+    if (mounted) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   Future<void> _showDeleteDialog(BuildContext context) async {
@@ -161,7 +196,9 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: Text(tr('delete')),
           ),
         ],
@@ -169,11 +206,12 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
     );
     if (confirm == true && mounted) {
       await context.read<PantryCubit>().remove(widget.userId, widget.item.id);
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
     }
   }
 
   String _formatDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
 }
-

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:smartdolap/features/auth/data/repositories/auth_repository_impl.dart';
@@ -18,15 +19,22 @@ import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.d
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/profile/data/badge_service.dart';
+import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/recipes/data/repositories/recipes_repository_impl.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/get_recipe_detail.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/product/services/expiry_notification_service.dart';
+import 'package:smartdolap/product/services/image_lookup_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_service.dart';
+import 'package:smartdolap/product/services/storage/i_storage_service.dart';
+import 'package:smartdolap/product/services/storage/storage_service.dart';
 
 /// Dependency injection service locator
 final GetIt sl = GetIt.instance;
@@ -104,11 +112,32 @@ Future<void> setupLocator() async {
     ),
   );
 
-  // OpenAI
+  // HTTP clients
   sl.registerLazySingleton<Dio>(
     () => Dio(BaseOptions(baseUrl: 'https://api.openai.com/v1')),
   );
+  sl.registerLazySingleton<ImageLookupService>(() => ImageLookupService(Dio()));
+
+  // OpenAI
   sl.registerLazySingleton<IOpenAIService>(() => OpenAIService(dio: sl()));
+
+  // Storage
+  sl.registerLazySingleton<IStorageService>(
+    () => StorageService(sl<FirebaseStorage>()),
+  );
+
+  // Notifications
+  sl.registerLazySingleton<FlutterLocalNotificationsPlugin>(
+    FlutterLocalNotificationsPlugin.new,
+  );
+  sl.registerLazySingleton<ExpiryNotificationService>(
+    () => ExpiryNotificationService(sl<FlutterLocalNotificationsPlugin>()),
+  );
+
+  // Profile
+  sl.registerLazySingleton<IBadgeRepository>(
+    () => BadgeRepositoryImpl(sl<FirebaseFirestore>()),
+  );
 
   // Recipes
   sl.registerLazySingleton<IRecipesRepository>(
@@ -117,10 +146,17 @@ Future<void> setupLocator() async {
       sl(),
       sl(),
       sl<PromptPreferenceService>(),
+      sl<ImageLookupService>(),
     ),
   );
   sl.registerFactory(() => SuggestRecipesFromPantry(sl()));
+  sl.registerFactory(() => GetRecipeDetail(sl()));
   sl.registerFactory(
-    () => RecipesCubit(suggest: sl(), openAI: sl(), promptPreferences: sl()),
+    () => RecipesCubit(
+      suggest: sl(),
+      openAI: sl(),
+      promptPreferences: sl(),
+      imageLookup: sl<ImageLookupService>(),
+    ),
   );
 }

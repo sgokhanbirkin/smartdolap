@@ -4,17 +4,23 @@ import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
 /// Handles gamification XP/level calculations.
 class ProfileStatsService {
   /// Creates a service backed by the provided Hive box.
-  ProfileStatsService(this._box);
+  ProfileStatsService(this._box, {this.onStatsChanged});
 
   final Box<dynamic> _box;
   static const String _statsKey = 'profile_stats';
+
+  /// Optional callback when stats change (for badge checking)
+  final Future<void> Function(ProfileStats stats)? onStatsChanged;
 
   /// Reads the latest profile stats or returns defaults.
   ProfileStats load() =>
       ProfileStats.fromMap(_box.get(_statsKey) as Map<dynamic, dynamic>?);
 
   /// Persists the given stats atomically.
-  Future<void> save(ProfileStats stats) => _box.put(_statsKey, stats.toMap());
+  Future<void> save(ProfileStats stats) async {
+    await _box.put(_statsKey, stats.toMap());
+    await onStatsChanged?.call(stats);
+  }
 
   /// Adds the provided XP amount and performs level-up logic.
   Future<ProfileStats> addXp(int amount) async {

@@ -47,7 +47,20 @@ class EmptyState extends StatelessWidget {
             SizedBox(height: AppSizes.verticalSpacingM),
             ElevatedButton(
               onPressed: onAction,
-              child: Text(tr(actionLabelKey!)),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, AppSizes.buttonHeight),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.buttonPaddingH,
+                  vertical: AppSizes.buttonPaddingV,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radius),
+                ),
+              ),
+              child: Text(
+                tr(actionLabelKey!),
+                style: TextStyle(fontSize: AppSizes.text),
+              ),
             ),
           ],
         ],

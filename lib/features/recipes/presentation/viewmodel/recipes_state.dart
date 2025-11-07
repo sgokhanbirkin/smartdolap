@@ -15,8 +15,28 @@ class RecipesLoading extends RecipesState {
 }
 
 class RecipesLoaded extends RecipesState {
-  const RecipesLoaded(this.recipes);
+  const RecipesLoaded(
+    this.recipes, {
+    this.isLoadingMore = false,
+    this.activeFilters = const <String, dynamic>{},
+    this.allRecipes,
+  });
   final List<Recipe> recipes;
+  final bool isLoadingMore;
+  final Map<String, dynamic> activeFilters; // Filter state
+  final List<Recipe>? allRecipes; // Original unfiltered list
+
+  int get activeFilterCount {
+    int count = 0;
+    if (activeFilters['ingredients'] != null &&
+        (activeFilters['ingredients'] as List).isNotEmpty) {
+      count++;
+    }
+    if (activeFilters['meal'] != null) count++;
+    if (activeFilters['maxCalories'] != null) count++;
+    if (activeFilters['minFiber'] != null) count++;
+    return count;
+  }
 }
 
 class RecipesFailure extends RecipesState {
