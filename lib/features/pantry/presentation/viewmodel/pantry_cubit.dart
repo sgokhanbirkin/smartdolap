@@ -34,6 +34,10 @@ class PantryCubit extends Cubit<PantryState> {
     );
   }
 
+  Future<void> refresh(String userId) async {
+    await watch(userId);
+  }
+
   Future<void> add(String userId, PantryItem item) async {
     try {
       await addPantryItem(userId: userId, item: item);

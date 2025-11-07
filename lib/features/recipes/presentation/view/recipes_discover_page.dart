@@ -7,9 +7,11 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
 import 'package:smartdolap/product/widgets/recipe_card.dart';
+import 'package:smartdolap/product/router/app_router.dart';
 
 class RecipesDiscoverPage extends StatefulWidget {
   const RecipesDiscoverPage({
@@ -27,6 +29,7 @@ class RecipesDiscoverPage extends StatefulWidget {
 
 class _RecipesDiscoverPageState extends State<RecipesDiscoverPage> {
   final ScrollController _ctrl = ScrollController();
+  RecipesCubit? _discoverCubit;
 
   @override
   void initState() {
@@ -35,9 +38,10 @@ class _RecipesDiscoverPageState extends State<RecipesDiscoverPage> {
   }
 
   void _onScroll() {
-    if (_ctrl.position.pixels > _ctrl.position.maxScrollExtent - 300) {
-      context.read<RecipesCubit>().discoverMore(widget.userId, widget.query);
-    }
+    if (_ctrl.position.pixels <= _ctrl.position.maxScrollExtent - 300) return;
+    final RecipesCubit? cubit = _discoverCubit;
+    if (cubit == null) return;
+    cubit.discoverMore(widget.userId, widget.query);
   }
 
   @override
@@ -54,6 +58,7 @@ class _RecipesDiscoverPageState extends State<RecipesDiscoverPage> {
           sl<RecipesCubit>()..discoverInit(widget.userId, widget.query),
       child: BlocBuilder<RecipesCubit, RecipesState>(
         builder: (BuildContext context, RecipesState s) {
+          _discoverCubit = context.read<RecipesCubit>();
           if (s is RecipesLoading || s is RecipesInitial) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -64,7 +69,16 @@ class _RecipesDiscoverPageState extends State<RecipesDiscoverPage> {
             mainAxisSpacing: AppSizes.verticalSpacingS,
             crossAxisSpacing: AppSizes.spacingS,
             itemCount: recipes.length,
-            itemBuilder: (_, int i) => RecipeCard(recipe: recipes[i]),
+            itemBuilder: (_, int i) {
+              final Recipe recipe = recipes[i];
+              return RecipeCard(
+                recipe: recipe,
+                onTap: () => Navigator.of(context).pushNamed(
+                  AppRouter.recipeDetail,
+                  arguments: recipe,
+                ),
+              );
+            },
           );
         },
       ),

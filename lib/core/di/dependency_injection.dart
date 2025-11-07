@@ -18,6 +18,9 @@ import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.d
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
+import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
+import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/recipes/data/repositories/recipes_repository_impl.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
@@ -33,10 +36,33 @@ Future<void> setupLocator() async {
   // Hive
   await Hive.initFlutter();
   // Burada ileride adapter register edilecek (Ingredient, vb.)
-  await dotenv.load(fileName: '.env');
+  await dotenv.load();
   // Local cache boxes
   await Hive.openBox<dynamic>('recipes_cache');
-
+  await Hive.openBox<dynamic>('pantry_box');
+  await Hive.openBox<dynamic>('profile_box');
+  await Hive.openBox<dynamic>('profile_stats_box');
+  if (!sl.isRegistered<Box<dynamic>>(instanceName: 'pantryBox')) {
+    sl.registerLazySingleton<Box<dynamic>>(
+      () => Hive.box<dynamic>('pantry_box'),
+      instanceName: 'pantryBox',
+    );
+  }
+  if (!sl.isRegistered<PromptPreferenceService>()) {
+    sl.registerLazySingleton<PromptPreferenceService>(
+      () => PromptPreferenceService(Hive.box<dynamic>('profile_box')),
+    );
+  }
+  if (!sl.isRegistered<ProfileStatsService>()) {
+    sl.registerLazySingleton<ProfileStatsService>(
+      () => ProfileStatsService(Hive.box<dynamic>('profile_stats_box')),
+    );
+  }
+  if (!sl.isRegistered<UserRecipeService>()) {
+    sl.registerLazySingleton<UserRecipeService>(
+      () => UserRecipeService(Hive.box<dynamic>('profile_box')),
+    );
+  }
   // Firebase
   sl.registerLazySingleton<fb.FirebaseAuth>(() => fb.FirebaseAuth.instance);
   sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
@@ -60,7 +86,10 @@ Future<void> setupLocator() async {
 
   // Pantry
   sl.registerLazySingleton<IPantryRepository>(
-    () => PantryRepositoryImpl(sl<FirebaseFirestore>()),
+    () => PantryRepositoryImpl(
+      sl<FirebaseFirestore>(),
+      sl<Box<dynamic>>(instanceName: 'pantryBox'),
+    ),
   );
   sl.registerFactory(() => ListPantryItems(sl()));
   sl.registerFactory(() => AddPantryItem(sl()));
@@ -83,8 +112,15 @@ Future<void> setupLocator() async {
 
   // Recipes
   sl.registerLazySingleton<IRecipesRepository>(
-    () => RecipesRepositoryImpl(sl<FirebaseFirestore>(), sl(), sl()),
+    () => RecipesRepositoryImpl(
+      sl<FirebaseFirestore>(),
+      sl(),
+      sl(),
+      sl<PromptPreferenceService>(),
+    ),
   );
   sl.registerFactory(() => SuggestRecipesFromPantry(sl()));
-  sl.registerFactory(() => RecipesCubit(suggest: sl(), openAI: sl()));
+  sl.registerFactory(
+    () => RecipesCubit(suggest: sl(), openAI: sl(), promptPreferences: sl()),
+  );
 }

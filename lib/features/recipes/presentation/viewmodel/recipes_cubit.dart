@@ -1,22 +1,26 @@
 // ignore_for_file: public_member_api_docs, avoid_catches_without_on_clauses
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
-import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
-import 'package:smartdolap/product/services/openai/i_openai_service.dart';
-import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
+import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
+import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
+import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 
 class RecipesCubit extends Cubit<RecipesState> {
   RecipesCubit({
     required this.suggest,
     required this.openAI,
+    required this.promptPreferences,
     Box<dynamic>? cache,
   }) : super(const RecipesInitial());
 
   final SuggestRecipesFromPantry suggest;
   final IOpenAIService openAI;
+  final PromptPreferenceService promptPreferences;
   Box<dynamic>? _cache = Hive.isBoxOpen('recipes_cache')
       ? Hive.box('recipes_cache')
       : null;
@@ -27,17 +31,17 @@ class RecipesCubit extends Cubit<RecipesState> {
   Future<void> load(String userId) async {
     emit(const RecipesLoading());
     try {
-      final recipes = await suggest(userId: userId);
+      final List<Recipe> recipes = await suggest(userId: userId);
       if (isClosed) return;
       emit(RecipesLoaded(recipes));
-      _seenTitles.addAll(recipes.map((e) => e.title));
+      _seenTitles.addAll(recipes.map((Recipe e) => e.title));
       // cache
       _cache ??= Hive.box('recipes_cache');
       _cache?.put(
         userId,
         recipes
             .map(
-              (e) => {
+              (Recipe e) => <String, Object?>{
                 'id': e.id,
                 'title': e.title,
                 'ingredients': e.ingredients,
@@ -50,6 +54,7 @@ class RecipesCubit extends Cubit<RecipesState> {
             )
             .toList(),
       );
+      await promptPreferences.incrementGenerated(recipes.length);
     } catch (e) {
       if (isClosed) return;
       emit(RecipesFailure(e.toString()));
@@ -63,19 +68,20 @@ class RecipesCubit extends Cubit<RecipesState> {
   ) async {
     emit(const RecipesLoading());
     try {
+      final PromptPreferences prefs = promptPreferences.getPreferences();
       final List<Ingredient> ings = names
-          .map((e) => Ingredient(name: e))
+          .map((String e) => Ingredient(name: e))
           .toList();
-      final suggestions = await openAI.suggestRecipes(
+      final List<RecipeSuggestion> suggestions = await openAI.suggestRecipes(
         ings,
         count: 6,
-        servings: 2,
-        query: 'öğün: $meal',
+        servings: prefs.servings,
+        query: prefs.composePrompt('Öğün: $meal'),
         excludeTitles: _seenTitles.toList(),
       );
-      final recipes = suggestions
+      final List<Recipe> recipes = suggestions
           .map(
-            (e) => Recipe(
+            (RecipeSuggestion e) => Recipe(
               id: '',
               title: e.title,
               ingredients: e.ingredients,
@@ -88,7 +94,8 @@ class RecipesCubit extends Cubit<RecipesState> {
             ),
           )
           .toList();
-      _seenTitles.addAll(recipes.map((e) => e.title));
+      _seenTitles.addAll(recipes.map((Recipe e) => e.title));
+      await promptPreferences.incrementGenerated(recipes.length);
       if (!isClosed) emit(RecipesLoaded(recipes));
     } catch (e) {
       if (!isClosed) emit(RecipesFailure(e.toString()));
@@ -98,32 +105,35 @@ class RecipesCubit extends Cubit<RecipesState> {
   Future<void> loadFromText(String csv) async {
     emit(const RecipesLoading());
     try {
+      final PromptPreferences prefs = promptPreferences.getPreferences();
       final List<Ingredient> ings = csv
           .split(',')
           .map((String s) => s.trim())
           .where((String s) => s.isNotEmpty)
           .map((String s) => Ingredient(name: s))
           .toList();
-      final suggestions = await openAI.suggestRecipes(ings);
-      if (isClosed) return;
-      emit(
-        RecipesLoaded(
-          suggestions
-              .map(
-                (e) => Recipe(
-                  id: '',
-                  title: e.title,
-                  ingredients: e.ingredients,
-                  steps: e.steps,
-                  calories: e.calories,
-                  durationMinutes: e.durationMinutes,
-                  difficulty: e.difficulty,
-                  imageUrl: e.imageUrl,
-                ),
-              )
-              .toList(),
-        ),
+      final List<RecipeSuggestion> suggestions = await openAI.suggestRecipes(
+        ings,
+        servings: prefs.servings,
+        query: prefs.composePrompt('Serbest giriş listesi'),
       );
+      if (isClosed) return;
+      final List<Recipe> recipes = suggestions
+          .map(
+            (RecipeSuggestion e) => Recipe(
+              id: '',
+              title: e.title,
+              ingredients: e.ingredients,
+              steps: e.steps,
+              calories: e.calories,
+              durationMinutes: e.durationMinutes,
+              difficulty: e.difficulty,
+              imageUrl: e.imageUrl,
+            ),
+          )
+          .toList();
+      await promptPreferences.incrementGenerated(recipes.length);
+      emit(RecipesLoaded(recipes));
     } catch (e) {
       if (isClosed) return;
       emit(RecipesFailure(e.toString()));
@@ -134,7 +144,7 @@ class RecipesCubit extends Cubit<RecipesState> {
     final Box<dynamic> box = _cache ?? Hive.box('recipes_cache');
     final List<dynamic>? raw = box.get(userId) as List<dynamic>?;
     if (raw == null) return;
-    final recipes = raw
+    final List<Recipe> recipes = raw
         .map(
           (e) => Recipe(
             id: (e['id'] as String?) ?? '',
@@ -168,6 +178,7 @@ class RecipesCubit extends Cubit<RecipesState> {
       _discoverFetch(userId, query);
 
   Future<void> _discoverFetch(String userId, String query) async {
+    final PromptPreferences prefs = promptPreferences.getPreferences();
     try {
       final List<Recipe> current = state is RecipesLoaded
           ? (state as RecipesLoaded).recipes
@@ -175,13 +186,13 @@ class RecipesCubit extends Cubit<RecipesState> {
       final List<Recipe> newOnes =
           (await openAI.suggestRecipes(
                 <Ingredient>[],
-                query: query,
+                query: prefs.composePrompt(query),
                 excludeTitles: _seenTitles.toList(),
                 count: 6,
-                servings: 2,
+                servings: prefs.servings,
               ))
               .map(
-                (e) => Recipe(
+                (RecipeSuggestion e) => Recipe(
                   id: '',
                   title: e.title,
                   ingredients: e.ingredients,
@@ -194,7 +205,8 @@ class RecipesCubit extends Cubit<RecipesState> {
                 ),
               )
               .toList();
-      _seenTitles.addAll(newOnes.map((e) => e.title));
+      _seenTitles.addAll(newOnes.map((Recipe e) => e.title));
+      await promptPreferences.incrementGenerated(newOnes.length);
       emit(RecipesLoaded(<Recipe>[...current, ...newOnes]));
     } catch (e) {
       if (!isClosed) emit(RecipesFailure(e.toString()));
@@ -205,17 +217,19 @@ class RecipesCubit extends Cubit<RecipesState> {
     if (isFetchingMore) return;
     final RecipesState s = state;
     final List<Recipe> current = s is RecipesLoaded ? s.recipes : <Recipe>[];
+    final PromptPreferences prefs = promptPreferences.getPreferences();
     try {
       isFetchingMore = true;
       final List<RecipeSuggestion> more = await openAI.suggestRecipes(
         <Ingredient>[],
         count: 6,
-        servings: 2,
+        servings: prefs.servings,
+        query: prefs.composePrompt('Serbest keşif'),
         excludeTitles: _seenTitles.toList(),
       );
       final List<Recipe> mapped = more
           .map(
-            (e) => Recipe(
+            (RecipeSuggestion e) => Recipe(
               id: '',
               title: e.title,
               ingredients: e.ingredients,
@@ -228,7 +242,8 @@ class RecipesCubit extends Cubit<RecipesState> {
             ),
           )
           .toList();
-      _seenTitles.addAll(mapped.map((e) => e.title));
+      _seenTitles.addAll(mapped.map((Recipe e) => e.title));
+      await promptPreferences.incrementGenerated(mapped.length);
       emit(RecipesLoaded(<Recipe>[...current, ...mapped]));
     } catch (e) {
       // ignore fail silently for load more

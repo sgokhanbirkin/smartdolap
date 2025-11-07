@@ -140,4 +140,37 @@ class OpenAIService implements IOpenAIService {
         )
         .toList();
   }
+
+  @override
+  Future<String> categorizeItem(String itemName) async {
+    final Response<dynamic> res = await _dio.post(
+      '/chat/completions',
+      options: Options(headers: _headers),
+      data: <String, dynamic>{
+        'model': 'gpt-4o-mini',
+        'response_format': {'type': 'json_object'},
+        'messages': <Map<String, String>>[
+          <String, String>{
+            'role': 'system',
+            'content':
+                'Yanıt dili Türkçe olsun. Şu şemada JSON ver: {"category":"kategori_adı"}. Kategori: Süt Ürünleri, Sebze, Meyve, Et/Tavuk/Balık, Bakliyat, Tahıl, Baharat, İçecek, Diğer. Yalnızca JSON dön.',
+          },
+          <String, String>{
+            'role': 'user',
+            'content': 'Bu ürünü kategorize et: $itemName',
+          },
+        ],
+      },
+    );
+
+    final Map<String, dynamic> data = res.data as Map<String, dynamic>;
+    final List<dynamic> choices = data['choices'] as List<dynamic>;
+    final Map<String, dynamic> message =
+        (choices.first as Map<String, dynamic>)['message']
+            as Map<String, dynamic>;
+    final String content = message['content'] as String;
+    final Map<String, dynamic> json =
+        jsonDecode(content) as Map<String, dynamic>;
+    return (json['category'] as String?) ?? 'Diğer';
+  }
 }

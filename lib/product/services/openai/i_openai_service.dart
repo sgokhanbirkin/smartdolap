@@ -38,4 +38,6 @@ abstract class IOpenAIService {
     String? query,
     List<String>? excludeTitles,
   });
+
+  Future<String> categorizeItem(String itemName);
 }

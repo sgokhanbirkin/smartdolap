@@ -88,7 +88,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
-                      labelText: tr('name'),
+                      labelText: tr('display_name'),
                       prefixIcon: Icon(Icons.person, size: AppSizes.icon),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.radius),

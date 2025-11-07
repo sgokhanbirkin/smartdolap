@@ -6,14 +6,22 @@ import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
+import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
+import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 
 class RecipesRepositoryImpl implements IRecipesRepository {
-  RecipesRepositoryImpl(this._firestore, this._pantry, this._openai);
+  RecipesRepositoryImpl(
+    this._firestore,
+    this._pantry,
+    this._openai,
+    this._promptPrefs,
+  );
 
   final FirebaseFirestore _firestore;
   final IPantryRepository _pantry;
   final IOpenAIService _openai;
+  final PromptPreferenceService _promptPrefs;
 
   @override
   Future<List<Recipe>> suggestFromPantry({required String userId}) async {
@@ -26,10 +34,16 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         )
         .toList();
 
+    final PromptPreferences prefs = _promptPrefs.getPreferences();
+    final String contextPrompt = prefs.composePrompt(
+      'Dolaptaki malzemeler: ${ingredients.map((Ingredient e) => e.name).join(', ')}.',
+    );
+
     final List<RecipeSuggestion> suggestions = await _openai.suggestRecipes(
       ingredients,
-      servings: 2,
+      servings: prefs.servings,
       count: 6,
+      query: contextPrompt,
     );
 
     final List<Recipe> recipes = <Recipe>[];
@@ -73,6 +87,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         ),
       );
     }
+    await _promptPrefs.incrementGenerated(recipes.length);
     return recipes;
   }
 }

@@ -51,7 +51,7 @@ void main() {
 
         when(
           () => mockRepository.currentUserStream,
-        ).thenAnswer((_) => Stream<User?>.value(null));
+        ).thenAnswer((_) => const Stream<User?>.empty());
 
         when(
           () => mockLoginUseCase(
@@ -70,6 +70,7 @@ void main() {
           cubit.login(email: 'test@example.com', password: 'password123'),
       expect: () => const <AuthState>[
         AuthState.loading(),
+        AuthState.unauthenticated(),
         AuthState.authenticated(
           User(
             id: 'test-uid',
@@ -89,7 +90,7 @@ void main() {
 
         when(
           () => mockRepository.currentUserStream,
-        ).thenAnswer((_) => Stream<User?>.value(null));
+        ).thenAnswer((_) => const Stream<User?>.empty());
 
         when(
           () => mockLoginUseCase(
@@ -109,6 +110,7 @@ void main() {
       expect: () => const <AuthState>[
         AuthState.loading(),
         AuthState.error(AuthFailure.invalidCredentials()),
+        AuthState.unauthenticated(),
       ],
     );
 
@@ -118,7 +120,7 @@ void main() {
 
       when(
         () => mockRepository.currentUserStream,
-      ).thenAnswer((_) => Stream<User?>.value(null));
+      ).thenAnswer((_) => const Stream<User?>.empty());
 
       // Act
       final AuthCubit cubit = AuthCubit(
