@@ -11,8 +11,8 @@ class CategorySelectorWidget extends StatelessWidget {
   const CategorySelectorWidget({
     required this.selectedCategory,
     required this.isCategorizing,
-    this.suggestedCategory,
     required this.onCategorySelected,
+    this.suggestedCategory,
     super.key,
   });
 
@@ -123,15 +123,20 @@ class CategorySelectorWidget extends StatelessWidget {
                         selected: selected,
                         onSelected: (bool value) =>
                             onCategorySelected(value ? cat : null),
-                        selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                        selectedColor:
+                            Theme.of(context).colorScheme.primaryContainer,
                         labelStyle: TextStyle(
                           fontSize: AppSizes.textXS,
-                          fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                           color: selected
                               ? Theme.of(context).colorScheme.onPrimaryContainer
                               : Theme.of(context).colorScheme.onSurface,
                         ),
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         side: BorderSide(
                           color: selected
                               ? Theme.of(context).colorScheme.primary

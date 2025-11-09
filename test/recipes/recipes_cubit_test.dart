@@ -48,7 +48,6 @@ void main() {
     late MockIOpenAIService mockOpenAI;
     late MockPromptPreferenceService mockPromptPreferences;
     late MockImageLookupService mockImageLookup;
-    late Box<dynamic> cacheBox;
 
     setUp(() async {
       mockSuggest = MockSuggestRecipesFromPantry();
@@ -59,7 +58,7 @@ void main() {
       if (Hive.isBoxOpen('recipes_cache')) {
         await Hive.box<dynamic>('recipes_cache').close();
       }
-      cacheBox = await Hive.openBox<dynamic>('recipes_cache');
+      await Hive.openBox<dynamic>('recipes_cache');
     });
 
     test('initial state should be RecipesInitial', () {
@@ -100,7 +99,6 @@ void main() {
         openAI: mockOpenAI,
         promptPreferences: mockPromptPreferences,
         imageLookup: mockImageLookup,
-        cache: cacheBox,
       ),
       act: (RecipesCubit cubit) => cubit.load('test-user-123'),
       expect: () => <Matcher>[
@@ -186,7 +184,7 @@ void main() {
     blocTest<RecipesCubit, RecipesState>(
       'should emit loaded with isLoadingMore when loadMoreFromPantry is called',
       setUp: () {
-        const PromptPreferences testPrefs = PromptPreferences(servings: 2);
+        const PromptPreferences testPrefs = PromptPreferences();
         final List<RecipeSuggestion> testSuggestions = <RecipeSuggestion>[
           const RecipeSuggestion(
             title: 'New Recipe',

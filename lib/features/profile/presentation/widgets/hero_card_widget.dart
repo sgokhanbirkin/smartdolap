@@ -29,7 +29,8 @@ class HeroCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocBuilder<AuthCubit, AuthState>(
     builder: (BuildContext context, AuthState state) {
-      final domain.User? user = state.whenOrNull(authenticated: (u) => u);
+      final domain.User? user =
+          state.whenOrNull<domain.User>(authenticated: (domain.User u) => u);
       return AnimatedContainer(
         duration: const Duration(milliseconds: 350),
         padding: EdgeInsets.all(AppSizes.padding),
@@ -67,7 +68,8 @@ class HeroCardWidget extends StatelessWidget {
                 Text(
                   prefs.nickname.isNotEmpty
                       ? prefs.nickname
-                      : (user?.displayName ?? tr('profile_nickname_placeholder')),
+                      : (user?.displayName ??
+                          tr('profile_nickname_placeholder')),
                   style: TextStyle(
                     fontSize: AppSizes.text,
                     fontWeight: FontWeight.bold,

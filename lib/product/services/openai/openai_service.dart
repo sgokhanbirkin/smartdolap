@@ -30,12 +30,13 @@ class OpenAIService implements IOpenAIService {
       options: Options(headers: _headers),
       data: <String, dynamic>{
         'model': 'gpt-4o-mini',
-        'response_format': {'type': 'json_object'},
+        'response_format': <String, String>{'type': 'json_object'},
         'messages': <Map<String, dynamic>>[
           <String, dynamic>{
             'role': 'system',
             'content':
-                'Yanıt dili Türkçe olsun. Şu şemada JSON döndür: {"items":[{"name":"","unit":"","quantity":1}]}',
+                'Yanıt dili Türkçe olsun. Şu şemada JSON döndür: '
+                '{"items":[{"name":"","unit":"","quantity":1}]}',
           },
           <String, dynamic>{
             'role': 'user',
@@ -61,17 +62,19 @@ class OpenAIService implements IOpenAIService {
         jsonDecode(content) as Map<String, dynamic>;
     final List<dynamic> items =
         (json['items'] as List<dynamic>?) ?? <dynamic>[];
-    return items
-        .map(
-          (dynamic e) => Ingredient(
-            name: (e['name'] as String?)?.trim() ?? '',
-            unit: (e['unit'] as String?)?.trim() ?? '',
-            quantity: (e['quantity'] is num)
-                ? (e['quantity'] as num).toDouble()
-                : 1.0,
-          ),
-        )
-        .toList();
+    return items.map((Object? e) {
+      final Map<String, dynamic>? itemMap = e as Map<String, dynamic>?;
+      if (itemMap == null) {
+        return const Ingredient(name: '');
+      }
+      return Ingredient(
+        name: (itemMap['name'] as String?)?.trim() ?? '',
+        unit: (itemMap['unit'] as String?)?.trim() ?? '',
+        quantity: (itemMap['quantity'] is num)
+            ? (itemMap['quantity'] as num).toDouble()
+            : 1.0,
+      );
+    }).toList();
   }
 
   @override
@@ -82,35 +85,58 @@ class OpenAIService implements IOpenAIService {
     String? query,
     List<String>? excludeTitles,
   }) async {
+    print('[OpenAIService] suggestRecipes başladı');
+    print('[OpenAIService] Pantry: ${pantry.length} malzeme');
+    print('[OpenAIService] Servings: $servings, Count: $count');
     final String pantryText = pantry
         .map(
           (Ingredient e) =>
-              '${e.name}${e.quantity > 0 ? ' x${e.quantity}' : ''}${e.unit.isNotEmpty ? ' ${e.unit}' : ''}',
+              '${e.name}'
+              '${e.quantity > 0 ? ' x${e.quantity}' : ''}'
+              '${e.unit.isNotEmpty ? ' ${e.unit}' : ''}',
         )
         .join(', ');
 
+    print('[OpenAIService] API isteği gönderiliyor...');
+    final DateTime startTime = DateTime.now();
     final Response<dynamic> res = await _dio.post(
       '/chat/completions',
       options: Options(headers: _headers),
       data: <String, dynamic>{
         'model': 'gpt-4o-mini',
-        'response_format': {'type': 'json_object'},
+        'response_format': <String, String>{'type': 'json_object'},
         'messages': <Map<String, String>>[
           <String, String>{
             'role': 'system',
             'content':
-                'Yanıt dili Türkçe olsun. Şu şemada JSON ver: {"recipes":[{"title":"","ingredients":[],"steps":[],"calories":0,"durationMinutes":0,"difficulty":"kolay","category":"kahvaltı","fiber":0}]}. Yalnızca JSON ver.',
+                'Yanıt dili Türkçe olsun. Şu şemada JSON ver: '
+                '{"recipes":[{"title":"","ingredients":[],"steps":[],'
+                '"calories":0,"durationMinutes":0,"difficulty":"kolay",'
+                '"category":"kahvaltı","fiber":0}]}. Yalnızca JSON ver.',
           },
           <String, String>{
             'role': 'user',
             'content':
-                'Dolap: [$pantryText]. En az $count tarif öner. Porsiyon: $servings kişilik. '
+                'Dolap: [$pantryText]. En az $count tarif öner. '
+                'Porsiyon: $servings kişilik. '
                 '${query != null ? 'Arama: $query. ' : ''}'
-                '${excludeTitles != null && excludeTitles.isNotEmpty ? 'Şu başlıkları tekrar etme: ${excludeTitles.join(', ')}. ' : ''}'
-                'Gerekirse ekstra malzeme ekleyebilirsin. Her tarif için imageUrl alanına uygun, telifsiz bir görsel URL’i (ör. üretim değil, stok görsel) ekle. Yalnızca JSON dön.',
+                '${excludeTitles != null && excludeTitles.isNotEmpty ? 'Şu '
+                          'başlıkları tekrar etme: '
+                          '${excludeTitles.join(', ')}. ' : ''}'
+                'Gerekirse ekstra malzeme ekleyebilirsin. '
+                'Her tarif için imageUrl alanına uygun, '
+                'telifsiz bir görsel (ör. üretim değil, '
+                'stok görsel) ekle. '
+                'Yalnızca JSON dön.',
           },
         ],
       },
+    );
+
+    final DateTime endTime = DateTime.now();
+    final Duration duration = endTime.difference(startTime);
+    print(
+      '[OpenAIService] API yanıtı geldi - Süre: ${duration.inSeconds} saniye',
     );
 
     final Map<String, dynamic> data2 = res.data as Map<String, dynamic>;
@@ -123,22 +149,61 @@ class OpenAIService implements IOpenAIService {
         jsonDecode(content) as Map<String, dynamic>;
     final List<dynamic> recipes =
         (json['recipes'] as List<dynamic>?) ?? <dynamic>[];
-    return recipes
-        .map(
-          (dynamic r) => RecipeSuggestion(
-            title: (r['title'] as String?) ?? '',
-            ingredients:
-                ((r['ingredients'] as List?)?.cast<String>()) ?? <String>[],
-            steps: ((r['steps'] as List?)?.cast<String>()) ?? <String>[],
-            calories: (r['calories'] as num?)?.toInt(),
-            durationMinutes: (r['durationMinutes'] as num?)?.toInt(),
-            difficulty: r['difficulty'] as String?,
-            imageUrl: r['imageUrl'] as String?,
-            category: r['category'] as String?,
-            fiber: (r['fiber'] as num?)?.toInt(),
-          ),
-        )
-        .toList();
+    print('[OpenAIService] ${recipes.length} tarif parse ediliyor...');
+    final List<RecipeSuggestion> result = recipes.map((Object? r) {
+      final Map<String, dynamic>? recipeMap = r as Map<String, dynamic>?;
+      if (recipeMap == null) {
+        return const RecipeSuggestion(
+          title: '',
+          ingredients: <String>[],
+          steps: <String>[],
+        );
+      }
+      return RecipeSuggestion(
+        title: (recipeMap['title'] as String?) ?? '',
+        ingredients:
+            (recipeMap['ingredients'] as List<dynamic>?)?.map<String>((
+              dynamic e,
+            ) {
+              if (e is String) {
+                return e;
+              }
+              if (e is Map<String, dynamic>) {
+                // Eğer Map ise, 'name' veya ilk değeri al
+                return (e['name'] as String?) ??
+                    (e.values.first as String?) ??
+                    e.toString();
+              }
+              return e.toString();
+            }).toList() ??
+            <String>[],
+        steps:
+            (recipeMap['steps'] as List<dynamic>?)?.map<String>((dynamic e) {
+              if (e is String) {
+                return e;
+              }
+              if (e is Map<String, dynamic>) {
+                // Eğer Map ise, 'step' veya ilk değeri al
+                return (e['step'] as String?) ??
+                    (e['text'] as String?) ??
+                    (e.values.first as String?) ??
+                    e.toString();
+              }
+              return e.toString();
+            }).toList() ??
+            <String>[],
+        calories: (recipeMap['calories'] as num?)?.toInt(),
+        durationMinutes: (recipeMap['durationMinutes'] as num?)?.toInt(),
+        difficulty: recipeMap['difficulty'] as String?,
+        imageUrl: recipeMap['imageUrl'] as String?,
+        category: recipeMap['category'] as String?,
+        fiber: (recipeMap['fiber'] as num?)?.toInt(),
+      );
+    }).toList();
+    print(
+      '[OpenAIService] suggestRecipes tamamlandı - ${result.length} tarif döndürüldü',
+    );
+    return result;
   }
 
   @override
@@ -148,12 +213,15 @@ class OpenAIService implements IOpenAIService {
       options: Options(headers: _headers),
       data: <String, dynamic>{
         'model': 'gpt-4o-mini',
-        'response_format': {'type': 'json_object'},
+        'response_format': <String, String>{'type': 'json_object'},
         'messages': <Map<String, String>>[
           <String, String>{
             'role': 'system',
             'content':
-                'Yanıt dili Türkçe olsun. Şu şemada JSON ver: {"category":"kategori_adı"}. Kategori: Süt Ürünleri, Sebze, Meyve, Et/Tavuk/Balık, Bakliyat, Tahıl, Baharat, İçecek, Diğer. Yalnızca JSON dön.',
+                'Yanıt dili Türkçe olsun. Şu şemada JSON ver: '
+                '{"category":"kategori_adı"}. Kategori: Süt Ürünleri, '
+                'Sebze, Meyve, Et/Tavuk/Balık, Bakliyat, Tahıl, '
+                'Baharat, İçecek, Diğer. Yalnızca JSON dön.',
           },
           <String, String>{
             'role': 'user',

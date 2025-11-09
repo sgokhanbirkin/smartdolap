@@ -1,9 +1,11 @@
 import 'package:hive/hive.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_repository.dart';
 import 'package:uuid/uuid.dart';
 
 /// Stores user created and AI curated recipes in Hive.
-class UserRecipeService {
+/// Implements IUserRecipeRepository to follow Dependency Inversion Principle
+class UserRecipeService implements IUserRecipeRepository {
   /// Creates a service backed by the provided Hive box.
   UserRecipeService(this._box);
 
@@ -11,7 +13,7 @@ class UserRecipeService {
   static const String _userRecipesKey = 'user_recipes';
   static const Uuid _uuid = Uuid();
 
-  /// Returns all persisted recipes in insertion order.
+  @override
   List<UserRecipe> fetch() {
     final List<dynamic>? raw = _box.get(_userRecipesKey) as List<dynamic>?;
     if (raw == null) {
@@ -23,7 +25,7 @@ class UserRecipeService {
         .toList(growable: true);
   }
 
-  /// Saves the provided recipe and returns the refreshed cache.
+  @override
   Future<List<UserRecipe>> addRecipe(UserRecipe recipe) async {
     final List<UserRecipe> all = fetch();
     all.add(recipe);
@@ -34,7 +36,7 @@ class UserRecipeService {
     return all;
   }
 
-  /// Creates a manual recipe entry from raw form values.
+  @override
   Future<List<UserRecipe>> createManual({
     required String title,
     required List<String> ingredients,
@@ -56,5 +58,19 @@ class UserRecipeService {
       createdAt: DateTime.now(),
     );
     return addRecipe(recipe);
+  }
+
+  @override
+  Future<List<UserRecipe>> deleteRecipesByTitles(List<String> titles) async {
+    final List<UserRecipe> all = fetch();
+    final Set<String> titlesSet = titles.toSet();
+    final List<UserRecipe> remaining = all
+        .where((UserRecipe r) => !titlesSet.contains(r.title))
+        .toList();
+    await _box.put(
+      _userRecipesKey,
+      remaining.map((UserRecipe e) => e.toMap()).toList(growable: false),
+    );
+    return remaining;
   }
 }

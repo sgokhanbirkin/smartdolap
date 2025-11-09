@@ -32,14 +32,13 @@ void main() {
         const PantryItem(
           id: 'item-2',
           name: 'Süt',
-          quantity: 1,
           unit: 'litre',
         ),
       ];
 
       when(
         () => mockRepository.watchItems(userId: testUserId),
-      ).thenAnswer((_) => Stream.value(testItems));
+      ).thenAnswer((_) => Stream<List<PantryItem>>.value(testItems));
 
       // Act
       final Stream<List<PantryItem>> result =
@@ -61,7 +60,7 @@ void main() {
 
       when(
         () => mockRepository.watchItems(userId: testUserId),
-      ).thenAnswer((_) => Stream.value(<PantryItem>[]));
+      ).thenAnswer((_) => Stream<List<PantryItem>>.value(<PantryItem>[]));
 
       // Act
       final Stream<List<PantryItem>> result =

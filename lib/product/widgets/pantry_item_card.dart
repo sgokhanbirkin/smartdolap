@@ -67,7 +67,9 @@ class _PantryItemCardState extends State<PantryItemCard>
   }
 
   void _handleQuantityChange(double delta) {
-    if (widget.onQuantityChanged == null || widget.userId == null) return;
+    if (widget.onQuantityChanged == null || widget.userId == null) {
+      return;
+    }
 
     final String unit = widget.item.unit.toLowerCase().trim();
     double increment;
@@ -79,19 +81,30 @@ class _PantryItemCardState extends State<PantryItemCard>
       increment = delta > 0 ? 0.1 : -0.1; // Kg için 0.1'er artış
     } else if (unit == 'ml' || unit == 'mililitre') {
       increment = delta > 0 ? 50 : -50; // ML için 50'şer artış
-    } else if (unit == 'lt' || unit == 'l' || unit == 'litre' || unit == 'liter') {
+    } else if (unit == 'lt' ||
+        unit == 'l' ||
+        unit == 'litre' ||
+        unit == 'liter') {
       increment = delta > 0 ? 0.1 : -0.1; // Litre için 0.1'er artış
-    } else if (unit == 'adet' || unit == 'tane' || unit == 'paket' || unit == 'kutu' || unit == 'demet') {
+    } else if (unit == 'adet' ||
+        unit == 'tane' ||
+        unit == 'paket' ||
+        unit == 'kutu' ||
+        unit == 'demet') {
       increment = delta > 0 ? 1 : -1; // Adet bazlı birimler için 1'er artış
     } else {
       increment = delta > 0 ? 0.5 : -0.5; // Varsayılan
     }
 
     // Floating-point precision sorununu önlemek için yuvarlama
-    double newQuantity = (widget.item.quantity + increment).clamp(0.1, 1000);
-    newQuantity = QuantityFormatter.roundQuantity(newQuantity, widget.item.unit);
+    double newQuantity =
+        (widget.item.quantity + increment).clamp(0.1, 1000);
+    newQuantity =
+        QuantityFormatter.roundQuantity(newQuantity, widget.item.unit);
     
-    if ((newQuantity - widget.item.quantity).abs() < 0.001) return;
+    if ((newQuantity - widget.item.quantity).abs() < 0.001) {
+      return;
+    }
 
     HapticFeedback.selectionClick();
     widget.onQuantityChanged!(widget.item.copyWith(quantity: newQuantity));
@@ -163,9 +176,14 @@ class _PantryItemCardState extends State<PantryItemCard>
                                 width: AppSizes.iconXXL,
                                 height: AppSizes.iconXXL,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, Object error, StackTrace? stackTrace) {
+                                errorBuilder: (
+                                  _,
+                                  Object error,
+                                  StackTrace? stackTrace,
+                                ) {
                                   debugPrint(
-                                    'Resim yüklenemedi: ${widget.item.imageUrl} - $error',
+                                    'Resim yüklenemedi: '
+                                    '${widget.item.imageUrl} - $error',
                                   );
                                   return _fallbackIcon(context);
                                 },
@@ -192,7 +210,7 @@ class _PantryItemCardState extends State<PantryItemCard>
                             Row(
                               children: <Widget>[
                                 // Quick actions - Quantity +/- buttons
-                                if (hasQuickActions) ...[
+                                if (hasQuickActions) ...<Widget>[
                                   IconButton(
                                     icon: const Icon(
                                       Icons.remove_circle_outline,
@@ -200,8 +218,9 @@ class _PantryItemCardState extends State<PantryItemCard>
                                     iconSize: AppSizes.iconS,
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
-                                    onPressed: () =>
-                                        _handleQuantityChange(-1),
+                                    onPressed: () {
+                                      _handleQuantityChange(-1);
+                                    },
                                     color: Theme.of(
                                       context,
                                     ).colorScheme.primary,
@@ -209,8 +228,10 @@ class _PantryItemCardState extends State<PantryItemCard>
                                   SizedBox(width: AppSizes.spacingXS),
                                 ],
                                 Text(
-                                  '${QuantityFormatter.formatQuantity(widget.item.quantity, widget.item.unit)} ${widget.item.unit}'
-                                      .trim(),
+                                  '${QuantityFormatter.formatQuantity(
+                                    widget.item.quantity,
+                                    widget.item.unit,
+                                  )} ${widget.item.unit}'.trim(),
                                   style: TextStyle(
                                     fontSize: AppSizes.textS,
                                     fontWeight: FontWeight.w500,
@@ -219,7 +240,7 @@ class _PantryItemCardState extends State<PantryItemCard>
                                     ).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                                if (hasQuickActions) ...[
+                                if (hasQuickActions) ...<Widget>[
                                   SizedBox(width: AppSizes.spacingXS),
                                   IconButton(
                                     icon: const Icon(Icons.add_circle_outline),
@@ -305,7 +326,9 @@ class _PantryItemCardState extends State<PantryItemCard>
   }
 
   String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+      '${date.day.toString().padLeft(2, '0')}.'
+      '${date.month.toString().padLeft(2, '0')}.'
+      '${date.year}';
 
   Widget _fallbackIcon(BuildContext context) => Container(
     width: AppSizes.iconXXL,

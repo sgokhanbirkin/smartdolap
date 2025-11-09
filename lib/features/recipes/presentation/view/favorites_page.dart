@@ -80,7 +80,7 @@ class FavoritesPage extends StatelessWidget {
                             .toList();
 
                         if (favorites.isEmpty) {
-                          return EmptyState(
+                          return const EmptyState(
                             messageKey: 'no_favorites_message',
                             lottieUrl:
                                 'https://assets2.lottiefiles.com/packages/lf20_Stt1R2.json',
@@ -88,15 +88,13 @@ class FavoritesPage extends StatelessWidget {
                         }
 
                         return Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.padding,
-                          ),
+                          padding: EdgeInsets.all(AppSizes.padding),
                           child: GridView.builder(
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              mainAxisSpacing: AppSizes.verticalSpacingS,
                               crossAxisSpacing: AppSizes.spacingS,
+                              mainAxisSpacing: AppSizes.verticalSpacingS,
                               childAspectRatio: 0.75,
                             ),
                             itemCount: favorites.length,

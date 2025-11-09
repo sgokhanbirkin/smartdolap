@@ -29,12 +29,18 @@ class RecipesLoaded extends RecipesState {
   int get activeFilterCount {
     int count = 0;
     if (activeFilters['ingredients'] != null &&
-        (activeFilters['ingredients'] as List).isNotEmpty) {
+        (activeFilters['ingredients'] as List<dynamic>).isNotEmpty) {
       count++;
     }
-    if (activeFilters['meal'] != null) count++;
-    if (activeFilters['maxCalories'] != null) count++;
-    if (activeFilters['minFiber'] != null) count++;
+    if (activeFilters['meal'] != null) {
+      count++;
+    }
+    if (activeFilters['maxCalories'] != null) {
+      count++;
+    }
+    if (activeFilters['minFiber'] != null) {
+      count++;
+    }
     return count;
   }
 }

@@ -19,15 +19,19 @@ import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.d
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
-import 'package:smartdolap/features/profile/data/badge_service.dart';
-import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
+import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_repository.dart';
+import 'package:smartdolap/features/recipes/data/services/meal_name_mapper.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_mapper.dart';
 import 'package:smartdolap/features/recipes/data/repositories/recipes_repository_impl.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
-import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/get_recipe_detail.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart';
@@ -69,6 +73,23 @@ Future<void> setupLocator() async {
   if (!sl.isRegistered<UserRecipeService>()) {
     sl.registerLazySingleton<UserRecipeService>(
       () => UserRecipeService(Hive.box<dynamic>('profile_box')),
+    );
+  }
+  // Register UserRecipeService as IUserRecipeRepository (DIP)
+  if (!sl.isRegistered<IUserRecipeRepository>()) {
+    sl.registerLazySingleton<IUserRecipeRepository>(
+      () => sl<UserRecipeService>(),
+    );
+  }
+  // Recipe services
+  if (!sl.isRegistered<RecipeCacheService>()) {
+    sl.registerLazySingleton<RecipeCacheService>(
+      () => RecipeCacheService(Hive.box<dynamic>('recipes_cache')),
+    );
+  }
+  if (!sl.isRegistered<RecipeImageService>()) {
+    sl.registerLazySingleton<RecipeImageService>(
+      () => RecipeImageService(sl<ImageLookupService>()),
     );
   }
   // Firebase
@@ -157,6 +178,9 @@ Future<void> setupLocator() async {
       openAI: sl(),
       promptPreferences: sl(),
       imageLookup: sl<ImageLookupService>(),
+      cacheService: sl(),
+      imageService: sl(),
+      userRecipeRepository: sl(),
     ),
   );
 }

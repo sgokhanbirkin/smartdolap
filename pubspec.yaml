@@ -17,10 +17,14 @@ dependencies:
   firebase_storage: ^12.3.4
   flutter:
     sdk: flutter
+  flutter_animate: ^4.5.0
   flutter_bloc: ^8.1.5
   flutter_dotenv: ^5.1.0
   flutter_local_notifications: ^17.2.3
+  flutter_localizations:
+    sdk: flutter
   flutter_screenutil: ^5.9.0
+  flutter_spinkit: ^5.2.1
   flutter_staggered_grid_view: ^0.7.0
   freezed_annotation: ^2.4.1
   get_it: ^7.6.7
@@ -30,14 +34,12 @@ dependencies:
   image_picker: ^1.0.5
   intl: ^0.20.2
   lottie: ^3.1.2
+  pdf: ^3.11.3
+  printing: ^5.13.3
+  share_plus: ^10.1.2
   shimmer: ^3.0.0
   timezone: ^0.9.4
   uuid: ^4.4.2
-  flutter_animate: ^4.5.0
-  flutter_spinkit: ^5.2.1
-  share_plus: ^10.1.2
-  printing: ^5.13.3
-  pdf: ^3.11.3
 
 dev_dependencies:
   bloc_test: ^9.1.7

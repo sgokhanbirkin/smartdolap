@@ -69,11 +69,10 @@ class BadgeDefinitions {
 
   /// Gets a badge by ID
   static Badge? getBadgeById(String id) {
-    try {
-      return getAllBadges().firstWhere((Badge badge) => badge.id == id);
-    } catch (_) {
-      return null;
-    }
+    final List<Badge> badges = getAllBadges()
+        .where((Badge badge) => badge.id == id)
+        .toList();
+    return badges.isEmpty ? null : badges.first;
   }
 }
 

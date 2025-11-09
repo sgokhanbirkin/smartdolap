@@ -31,7 +31,7 @@ class SettingsMenuWidget extends StatelessWidget {
               ),
             ),
           ),
-          Divider(height: 1),
+          const Divider(height: 1),
           // Language selection
           ListTile(
             leading: const Icon(Icons.language),
@@ -72,7 +72,7 @@ class SettingsMenuWidget extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => ThemeDialogWidget.show(context),
           ),
-          Divider(height: 1),
+          const Divider(height: 1),
           // Logout
           ListTile(
             leading: Icon(
@@ -106,4 +106,3 @@ class SettingsMenuWidget extends StatelessWidget {
     );
   }
 }
-

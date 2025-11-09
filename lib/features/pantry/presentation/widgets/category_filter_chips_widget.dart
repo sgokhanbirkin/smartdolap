@@ -42,7 +42,9 @@ class CategoryFilterChipsWidget extends StatelessWidget {
           checkmarkColor: Theme.of(context).colorScheme.onPrimaryContainer,
           labelStyle: TextStyle(
             fontSize: AppSizes.textS,
-            fontWeight: selectedCategory == null ? FontWeight.w600 : FontWeight.normal,
+            fontWeight: selectedCategory == null
+                ? FontWeight.w600
+                : FontWeight.normal,
           ),
         ),
         SizedBox(width: AppSizes.spacingS),
@@ -61,7 +63,9 @@ class CategoryFilterChipsWidget extends StatelessWidget {
               checkmarkColor: CategoryColors.getCategoryBadgeTextColor(cat),
               labelStyle: TextStyle(
                 fontSize: AppSizes.textS,
-                fontWeight: selectedCategory == cat ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: selectedCategory == cat
+                    ? FontWeight.w600
+                    : FontWeight.normal,
                 color: selectedCategory == cat
                     ? CategoryColors.getCategoryBadgeTextColor(cat)
                     : Theme.of(context).colorScheme.onSurfaceVariant,

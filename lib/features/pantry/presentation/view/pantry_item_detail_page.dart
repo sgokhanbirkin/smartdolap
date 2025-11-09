@@ -44,11 +44,13 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
   void initState() {
     super.initState();
     _qtyController = TextEditingController(
-      text: QuantityFormatter.formatQuantity(widget.item.quantity, widget.item.unit),
+      text: QuantityFormatter.formatQuantity(
+        widget.item.quantity,
+        widget.item.unit,
+      ),
     );
     _unitController = TextEditingController(text: widget.item.unit);
   }
-
 
   @override
   void dispose() {
@@ -105,7 +107,9 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
                                   AppSizes.radius,
                                 ),
                               ),
-                              contentPadding: EdgeInsets.all(AppSizes.padding * 0.75),
+                              contentPadding: EdgeInsets.all(
+                                AppSizes.padding * 0.75,
+                              ),
                             ),
                           ),
                         ),
@@ -119,7 +123,7 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
                         ),
                       ],
                     ),
-                    if (widget.item.expiryDate != null) ...[
+                    if (widget.item.expiryDate != null) ...<Widget>[
                       SizedBox(height: AppSizes.verticalSpacingM),
                       Row(
                         children: <Widget>[
@@ -169,10 +173,13 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
       ).showSnackBar(SnackBar(content: Text(tr('invalid_quantity'))));
       return;
     }
-    
+
     // Floating-point precision sorununu önlemek için yuvarlama
-    final double roundedQty = QuantityFormatter.roundQuantity(qty, _unitController.text);
-    
+    final double roundedQty = QuantityFormatter.roundQuantity(
+      qty,
+      _unitController.text,
+    );
+
     final PantryItem updated = widget.item.copyWith(
       quantity: roundedQty,
       unit: _unitController.text.trim(),
@@ -184,8 +191,13 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
   }
 
   Future<void> _showDeleteDialog(BuildContext context) async {
+    if (!mounted) {
+      return;
+    }
+    final BuildContext dialogContext = context;
+    final BuildContext navigatorContext = context;
     final bool? confirm = await showDialog<bool>(
-      context: context,
+      context: dialogContext,
       builder: (BuildContext ctx) => AlertDialog(
         title: Text(tr('delete_item')),
         content: Text(tr('delete_item_confirm')),
@@ -197,7 +209,7 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
             ),
             child: Text(tr('delete')),
           ),
@@ -205,13 +217,16 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
       ),
     );
     if (confirm == true && mounted) {
-      await context.read<PantryCubit>().remove(widget.userId, widget.item.id);
+      final PantryCubit cubit = navigatorContext.read<PantryCubit>();
+      await cubit.remove(widget.userId, widget.item.id);
       if (mounted) {
-        Navigator.of(context).pop(true);
+        Navigator.of(navigatorContext).pop(true);
       }
     }
   }
 
   String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+      '${date.day.toString().padLeft(2, '0')}.'
+      '${date.month.toString().padLeft(2, '0')}.'
+      '${date.year}';
 }

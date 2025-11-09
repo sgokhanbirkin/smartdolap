@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/profile/domain/entities/badge.dart' as domain;
 import 'package:smartdolap/features/profile/presentation/widgets/badge_card_widget.dart';
@@ -94,7 +93,7 @@ class BadgeDetailDialogWidget extends StatelessWidget {
           tr(badge.descriptionKey),
           style: TextStyle(fontSize: AppSizes.textM),
         ),
-        if (badge.isUnlocked && badge.unlockedAt != null) ...[
+        if (badge.isUnlocked && badge.unlockedAt != null) ...<Widget>[
           SizedBox(height: AppSizes.verticalSpacingM),
           Text(
             tr(

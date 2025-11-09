@@ -1,6 +1,7 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/auth/presentation/view/login_page.dart';
 import 'package:smartdolap/features/auth/presentation/view/register_page.dart';
@@ -9,10 +10,12 @@ import 'package:smartdolap/features/pantry/presentation/view/add_pantry_item_pag
 import 'package:smartdolap/features/pantry/presentation/view/pantry_item_detail_page.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
-import 'package:smartdolap/features/recipes/presentation/view/recipe_detail_page.dart';
 import 'package:smartdolap/features/recipes/presentation/view/favorites_page.dart';
+import 'package:smartdolap/features/recipes/presentation/view/get_suggestions_page.dart';
+import 'package:smartdolap/features/recipes/presentation/view/meal_recipes_page.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/view/recipe_detail_page.dart';
 import 'package:smartdolap/product/widgets/app_shell.dart';
-import 'package:smartdolap/core/constants/app_sizes.dart';
 
 /// App router configuration
 class AppRouter {
@@ -36,6 +39,12 @@ class AppRouter {
 
   /// Favorites route path
   static const String favorites = '/recipes/favorites';
+
+  /// Meal recipes route path
+  static const String mealRecipes = '/recipes/meal';
+
+  /// Get suggestions route path
+  static const String getSuggestions = '/recipes/get-suggestions';
 
   /// Generate route based on route settings
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -75,9 +84,7 @@ class AppRouter {
       case pantryDetail:
         final Map<String, dynamic>? args =
             settings.arguments as Map<String, dynamic>?;
-        if (args == null ||
-            args['item'] == null ||
-            args['userId'] == null) {
+        if (args == null || args['item'] == null || args['userId'] == null) {
           return MaterialPageRoute<dynamic>(
             builder: (BuildContext context) => Scaffold(
               body: Center(
@@ -104,12 +111,73 @@ class AppRouter {
         );
       case recipeDetail:
         final Recipe? recipe = settings.arguments as Recipe?;
-        return MaterialPageRoute<dynamic>(
+        return MaterialPageRoute<bool>(
           builder: (BuildContext context) => RecipeDetailPage(recipe: recipe),
         );
       case favorites:
         return MaterialPageRoute<dynamic>(
           builder: (BuildContext context) => const FavoritesPage(),
+        );
+      case mealRecipes:
+        final Map<String, dynamic>? args =
+            settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['meal'] == null || args['userId'] == null) {
+          return MaterialPageRoute<dynamic>(
+            builder: (BuildContext context) => Scaffold(
+              body: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.padding),
+                  child: Text(
+                    tr('invalid_parameters'),
+                    style: TextStyle(fontSize: AppSizes.text),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => MealRecipesPage(
+            meal: args['meal'] as String,
+            userId: args['userId'] as String,
+          ),
+        );
+      case getSuggestions:
+        final Map<String, dynamic>? args =
+            settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['items'] == null || args['userId'] == null) {
+          return MaterialPageRoute<dynamic>(
+            builder: (BuildContext context) => Scaffold(
+              body: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.padding),
+                  child: Text(
+                    tr('invalid_parameters'),
+                    style: TextStyle(fontSize: AppSizes.text),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute<bool>(
+          builder: (BuildContext context) => MultiBlocProvider(
+            providers: <BlocProvider<dynamic>>[
+              BlocProvider<RecipesCubit>(
+                create: (_) => sl<RecipesCubit>(),
+              ),
+              BlocProvider<PantryCubit>(
+                create: (_) => sl<PantryCubit>()..watch(args['userId'] as String),
+              ),
+            ],
+            child: GetSuggestionsPage(
+              items: args['items'] as List<PantryItem>,
+              meal: args['meal'] as String?,
+              userId: args['userId'] as String,
+            ),
+          ),
         );
       case home:
       default:

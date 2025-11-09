@@ -29,8 +29,14 @@ class RecipesRepositoryImpl implements IRecipesRepository {
 
   @override
   Future<List<Recipe>> suggestFromPantry({required String userId}) async {
+    print('[RecipesRepository] suggestFromPantry başladı - userId: $userId');
+    final DateTime repoStartTime = DateTime.now();
+    
+    print('[RecipesRepository] Pantry items yükleniyor...');
     final List<dynamic> pantryItemsRaw = await _pantry.getItems(userId: userId);
     final List<PantryItem> pantryItems = pantryItemsRaw.cast<PantryItem>();
+    print('[RecipesRepository] ${pantryItems.length} pantry item bulundu');
+    
     final List<Ingredient> ingredients = pantryItems
         .map<Ingredient>(
           (PantryItem i) =>
@@ -48,12 +54,17 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       ),
     );
 
+    print('[RecipesRepository] OpenAI suggestRecipes çağrılıyor...');
+    final DateTime openaiStartTime = DateTime.now();
     final List<RecipeSuggestion> suggestions = await _openai.suggestRecipes(
       ingredients,
       servings: prefs.servings,
       query: contextPrompt,
     );
+    final Duration openaiDuration = DateTime.now().difference(openaiStartTime);
+    print('[RecipesRepository] OpenAI yanıtı geldi - ${suggestions.length} öneri, Süre: ${openaiDuration.inSeconds} saniye');
 
+    print('[RecipesRepository] Tarifler Firestore\'a kaydediliyor ve görseller düzeltiliyor...');
     final List<Recipe> recipes = <Recipe>[];
     for (final RecipeSuggestion s in suggestions) {
       final DocumentReference<Map<String, dynamic>> doc = _firestore
@@ -67,13 +78,18 @@ class RecipesRepositoryImpl implements IRecipesRepository {
           .length;
 
       String? imageUrl = s.imageUrl;
-      // OpenAI'den gelen imageUrl'ler genelde çalışmıyor, ImageLookupService kullan
+      // OpenAI'den gelen imageUrl'ler genelde çalışmıyor,
+      // ImageLookupService kullan
       if (imageUrl == null ||
           imageUrl.isEmpty ||
           imageUrl.contains('example.com')) {
+        print('[RecipesRepository] Görsel aranıyor: ${s.title}');
+        final DateTime imageStartTime = DateTime.now();
         imageUrl = await _imageLookup.search(
           '${s.title} ${tr('recipe_search_suffix')}',
         );
+        final Duration imageDuration = DateTime.now().difference(imageStartTime);
+        print('[RecipesRepository] Görsel bulundu - Süre: ${imageDuration.inMilliseconds}ms');
       }
 
       await doc.set(<String, dynamic>{
@@ -106,6 +122,8 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       );
     }
     await _promptPrefs.incrementGenerated(recipes.length);
+    final Duration repoDuration = DateTime.now().difference(repoStartTime);
+    print('[RecipesRepository] suggestFromPantry tamamlandı - ${recipes.length} tarif, Toplam süre: ${repoDuration.inSeconds} saniye');
     return recipes;
   }
 
@@ -141,7 +159,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         missingCount: data['missingCount'] as int?,
         fiber: (data['fiber'] as num?)?.toInt(),
       );
-    } catch (e) {
+    } on Exception {
       return null;
     }
   }

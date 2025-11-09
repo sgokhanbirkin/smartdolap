@@ -6,6 +6,9 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart'
+    as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/profile/data/badge_service.dart';
@@ -13,19 +16,19 @@ import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
+import 'package:smartdolap/features/profile/domain/entities/badge.dart'
+    as domain;
 import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
-import 'package:smartdolap/features/profile/domain/entities/badge.dart' as domain;
 import 'package:smartdolap/features/profile/presentation/view/user_recipe_form_page.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/badge_grid_widget.dart';
-import 'package:smartdolap/features/profile/presentation/widgets/hero_card_widget.dart';
-import 'package:smartdolap/features/profile/presentation/widgets/prompt_preview_card_widget.dart';
-import 'package:smartdolap/features/profile/presentation/widgets/stats_tables_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/collection_card_widget.dart';
+import 'package:smartdolap/features/profile/presentation/widgets/hero_card_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/preference_controls_widget.dart';
+import 'package:smartdolap/features/profile/presentation/widgets/prompt_preview_card_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/settings_menu_widget.dart';
-import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
+import 'package:smartdolap/features/profile/presentation/widgets/stats_tables_widget.dart';
 
 /// Profile page - User profile and settings
 class ProfilePage extends StatefulWidget {
@@ -73,7 +76,11 @@ class _ProfilePageState extends State<ProfilePage>
     _favoritesCount = favBox.length;
 
     // Load badges
-    final AuthState authState = context.read<AuthCubit>().state;
+    if (!mounted) {
+      return;
+    }
+    final BuildContext authContext = context;
+    final AuthState authState = authContext.read<AuthCubit>().state;
     await authState.whenOrNull(
       authenticated: (domain.User user) async {
         final BadgeService badgeService = BadgeService(
@@ -104,7 +111,12 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   Widget build(BuildContext context) => Scaffold(
     body: _isLoading
-        ? const Center(child: CircularProgressIndicator())
+        ? const Center(
+            child: CustomLoadingIndicator(
+              type: LoadingType.pulsingGrid,
+              size: 50,
+            ),
+          )
         : Stack(
             children: <Widget>[
               SafeArea(
@@ -150,7 +162,9 @@ class _ProfilePageState extends State<ProfilePage>
                                   Icon(
                                     Icons.emoji_events,
                                     size: AppSizes.icon,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary,
                                   ),
                                   SizedBox(width: AppSizes.spacingS),
                                   Text(
@@ -250,7 +264,8 @@ class _ProfilePageState extends State<ProfilePage>
           badgeRepository: sl<IBadgeRepository>(),
           userId: user.id,
         );
-        final List<domain.Badge> newlyUnlocked = await badgeService.checkAndAwardBadges();
+        final List<domain.Badge> newlyUnlocked =
+            await badgeService.checkAndAwardBadges();
         if (newlyUnlocked.isNotEmpty && mounted) {
           _badges = await badgeService.getAllBadgesWithStatus();
           setState(() {});
@@ -258,9 +273,13 @@ class _ProfilePageState extends State<ProfilePage>
       },
     );
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(tr('profile_ai_recipe_recorded'))));
+    if (!mounted) {
+      return;
+    }
+    final BuildContext snackbarContext = context;
+    ScaffoldMessenger.of(snackbarContext).showSnackBar(
+      SnackBar(content: Text(tr('profile_ai_recipe_recorded'))),
+    );
   }
 
   Future<void> _createManualRecipe() async {
@@ -305,7 +324,11 @@ class _ProfilePageState extends State<ProfilePage>
       });
 
       // Check for badges
-      final AuthState authState = context.read<AuthCubit>().state;
+      if (!mounted) {
+        return;
+      }
+      final BuildContext badgeContext = context;
+      final AuthState authState = badgeContext.read<AuthCubit>().state;
       await authState.whenOrNull(
         authenticated: (domain.User user) async {
           final BadgeService badgeService = BadgeService(
@@ -313,7 +336,8 @@ class _ProfilePageState extends State<ProfilePage>
             badgeRepository: sl<IBadgeRepository>(),
             userId: user.id,
           );
-          final List<domain.Badge> newlyUnlocked = await badgeService.checkAndAwardBadges();
+          final List<domain.Badge> newlyUnlocked =
+              await badgeService.checkAndAwardBadges();
           if (newlyUnlocked.isNotEmpty && mounted) {
             _badges = await badgeService.getAllBadgesWithStatus();
             setState(() {});
@@ -336,7 +360,11 @@ class _ProfilePageState extends State<ProfilePage>
       setState(() => _stats = stats);
 
       // Check for badges
-      final AuthState authState = context.read<AuthCubit>().state;
+      if (!mounted) {
+        return;
+      }
+      final BuildContext badgeContext = context;
+      final AuthState authState = badgeContext.read<AuthCubit>().state;
       await authState.whenOrNull(
         authenticated: (domain.User user) async {
           final BadgeService badgeService = BadgeService(
@@ -344,7 +372,8 @@ class _ProfilePageState extends State<ProfilePage>
             badgeRepository: sl<IBadgeRepository>(),
             userId: user.id,
           );
-          final List<domain.Badge> newlyUnlocked = await badgeService.checkAndAwardBadges();
+          final List<domain.Badge> newlyUnlocked =
+              await badgeService.checkAndAwardBadges();
           if (newlyUnlocked.isNotEmpty && mounted) {
             _badges = await badgeService.getAllBadgesWithStatus();
             setState(() {});
@@ -352,7 +381,11 @@ class _ProfilePageState extends State<ProfilePage>
         },
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) {
+        return;
+      }
+      final BuildContext snackbarContext = context;
+      ScaffoldMessenger.of(snackbarContext).showSnackBar(
         SnackBar(content: Text(tr('profile_photo_upload_placeholder'))),
       );
     }

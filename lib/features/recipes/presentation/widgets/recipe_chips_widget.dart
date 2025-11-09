@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 
-/// Recipe chips widget displaying category, duration, calories, difficulty, and missing ingredients
+/// Recipe chips widget displaying category, duration,
+/// calories, difficulty, and missing ingredients
 class RecipeChipsWidget extends StatelessWidget {
   const RecipeChipsWidget({required this.recipe, super.key});
 

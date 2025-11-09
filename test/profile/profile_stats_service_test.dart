@@ -73,11 +73,7 @@ void main() {
 
     test('should add XP correctly without leveling up', () async {
       // Arrange
-      const ProfileStats initialStats = ProfileStats(
-        level: 1,
-        xp: 50,
-        nextLevelXp: 200,
-      );
+      const ProfileStats initialStats = ProfileStats(xp: 50);
       await service.save(initialStats);
 
       // Act
@@ -91,11 +87,7 @@ void main() {
 
     test('should level up when XP threshold is reached', () async {
       // Arrange
-      const ProfileStats initialStats = ProfileStats(
-        level: 1,
-        xp: 150,
-        nextLevelXp: 200,
-      );
+      const ProfileStats initialStats = ProfileStats(xp: 150);
       await service.save(initialStats);
 
       // Act
@@ -109,11 +101,7 @@ void main() {
 
     test('should handle multiple level ups', () async {
       // Arrange
-      const ProfileStats initialStats = ProfileStats(
-        level: 1,
-        xp: 0,
-        nextLevelXp: 200,
-      );
+      const ProfileStats initialStats = ProfileStats();
       await service.save(initialStats);
 
       // Act - Add enough XP for 2 level ups
@@ -145,9 +133,7 @@ void main() {
       await service.save(initialStats);
 
       // Act
-      final ProfileStats updated = await service.incrementUserRecipes(
-        withPhoto: false,
-      );
+      final ProfileStats updated = await service.incrementUserRecipes();
 
       // Assert
       expect(updated.userRecipes, equals(4));

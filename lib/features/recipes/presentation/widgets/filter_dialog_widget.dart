@@ -22,7 +22,8 @@ class FilterDialogWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Set<String> inc = <String>{
-      ...?((currentFilters['ingredients'] as List?)?.cast<String>()),
+      ...?((currentFilters['ingredients'] as List<dynamic>?)
+          ?.cast<String>()),
     };
     String? meal = currentFilters['meal'] as String?;
     int? maxCal = currentFilters['maxCalories'] as int?;

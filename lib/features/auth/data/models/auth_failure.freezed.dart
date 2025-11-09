@@ -12,7 +12,8 @@ part of 'auth_failure.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 /// @nodoc
 mixin _$AuthFailure {
@@ -23,8 +24,7 @@ mixin _$AuthFailure {
     required TResult Function() weakPassword,
     required TResult Function() network,
     required TResult Function(String? message) unknown,
-  }) =>
-      throw _privateConstructorUsedError;
+  }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? invalidCredentials,
@@ -32,8 +32,7 @@ mixin _$AuthFailure {
     TResult? Function()? weakPassword,
     TResult? Function()? network,
     TResult? Function(String? message)? unknown,
-  }) =>
-      throw _privateConstructorUsedError;
+  }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? invalidCredentials,
@@ -42,18 +41,16 @@ mixin _$AuthFailure {
     TResult Function()? network,
     TResult Function(String? message)? unknown,
     required TResult orElse(),
-  }) =>
-      throw _privateConstructorUsedError;
+  }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(InvalidCredentialsFailure value)
-        invalidCredentials,
+    invalidCredentials,
     required TResult Function(EmailAlreadyInUseFailure value) emailAlreadyInUse,
     required TResult Function(WeakPasswordFailure value) weakPassword,
     required TResult Function(NetworkFailure value) network,
     required TResult Function(UnknownFailure value) unknown,
-  }) =>
-      throw _privateConstructorUsedError;
+  }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(InvalidCredentialsFailure value)? invalidCredentials,
@@ -61,8 +58,7 @@ mixin _$AuthFailure {
     TResult? Function(WeakPasswordFailure value)? weakPassword,
     TResult? Function(NetworkFailure value)? network,
     TResult? Function(UnknownFailure value)? unknown,
-  }) =>
-      throw _privateConstructorUsedError;
+  }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
     TResult Function(InvalidCredentialsFailure value)? invalidCredentials,
@@ -71,15 +67,15 @@ mixin _$AuthFailure {
     TResult Function(NetworkFailure value)? network,
     TResult Function(UnknownFailure value)? unknown,
     required TResult orElse(),
-  }) =>
-      throw _privateConstructorUsedError;
+  }) => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $AuthFailureCopyWith<$Res> {
   factory $AuthFailureCopyWith(
-          AuthFailure value, $Res Function(AuthFailure) then) =
-      _$AuthFailureCopyWithImpl<$Res, AuthFailure>;
+    AuthFailure value,
+    $Res Function(AuthFailure) then,
+  ) = _$AuthFailureCopyWithImpl<$Res, AuthFailure>;
 }
 
 /// @nodoc
@@ -99,9 +95,9 @@ class _$AuthFailureCopyWithImpl<$Res, $Val extends AuthFailure>
 /// @nodoc
 abstract class _$$InvalidCredentialsFailureImplCopyWith<$Res> {
   factory _$$InvalidCredentialsFailureImplCopyWith(
-          _$InvalidCredentialsFailureImpl value,
-          $Res Function(_$InvalidCredentialsFailureImpl) then) =
-      __$$InvalidCredentialsFailureImplCopyWithImpl<$Res>;
+    _$InvalidCredentialsFailureImpl value,
+    $Res Function(_$InvalidCredentialsFailureImpl) then,
+  ) = __$$InvalidCredentialsFailureImplCopyWithImpl<$Res>;
 }
 
 /// @nodoc
@@ -109,9 +105,9 @@ class __$$InvalidCredentialsFailureImplCopyWithImpl<$Res>
     extends _$AuthFailureCopyWithImpl<$Res, _$InvalidCredentialsFailureImpl>
     implements _$$InvalidCredentialsFailureImplCopyWith<$Res> {
   __$$InvalidCredentialsFailureImplCopyWithImpl(
-      _$InvalidCredentialsFailureImpl _value,
-      $Res Function(_$InvalidCredentialsFailureImpl) _then)
-      : super(_value, _then);
+    _$InvalidCredentialsFailureImpl _value,
+    $Res Function(_$InvalidCredentialsFailureImpl) _then,
+  ) : super(_value, _then);
 
   /// Create a copy of AuthFailure
   /// with the given fields replaced by the non-null parameter values.
@@ -181,7 +177,7 @@ class _$InvalidCredentialsFailureImpl implements InvalidCredentialsFailure {
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(InvalidCredentialsFailure value)
-        invalidCredentials,
+    invalidCredentials,
     required TResult Function(EmailAlreadyInUseFailure value) emailAlreadyInUse,
     required TResult Function(WeakPasswordFailure value) weakPassword,
     required TResult Function(NetworkFailure value) network,
@@ -226,9 +222,9 @@ abstract class InvalidCredentialsFailure implements AuthFailure {
 /// @nodoc
 abstract class _$$EmailAlreadyInUseFailureImplCopyWith<$Res> {
   factory _$$EmailAlreadyInUseFailureImplCopyWith(
-          _$EmailAlreadyInUseFailureImpl value,
-          $Res Function(_$EmailAlreadyInUseFailureImpl) then) =
-      __$$EmailAlreadyInUseFailureImplCopyWithImpl<$Res>;
+    _$EmailAlreadyInUseFailureImpl value,
+    $Res Function(_$EmailAlreadyInUseFailureImpl) then,
+  ) = __$$EmailAlreadyInUseFailureImplCopyWithImpl<$Res>;
 }
 
 /// @nodoc
@@ -236,9 +232,9 @@ class __$$EmailAlreadyInUseFailureImplCopyWithImpl<$Res>
     extends _$AuthFailureCopyWithImpl<$Res, _$EmailAlreadyInUseFailureImpl>
     implements _$$EmailAlreadyInUseFailureImplCopyWith<$Res> {
   __$$EmailAlreadyInUseFailureImplCopyWithImpl(
-      _$EmailAlreadyInUseFailureImpl _value,
-      $Res Function(_$EmailAlreadyInUseFailureImpl) _then)
-      : super(_value, _then);
+    _$EmailAlreadyInUseFailureImpl _value,
+    $Res Function(_$EmailAlreadyInUseFailureImpl) _then,
+  ) : super(_value, _then);
 
   /// Create a copy of AuthFailure
   /// with the given fields replaced by the non-null parameter values.
@@ -308,7 +304,7 @@ class _$EmailAlreadyInUseFailureImpl implements EmailAlreadyInUseFailure {
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(InvalidCredentialsFailure value)
-        invalidCredentials,
+    invalidCredentials,
     required TResult Function(EmailAlreadyInUseFailure value) emailAlreadyInUse,
     required TResult Function(WeakPasswordFailure value) weakPassword,
     required TResult Function(NetworkFailure value) network,
@@ -352,18 +348,20 @@ abstract class EmailAlreadyInUseFailure implements AuthFailure {
 
 /// @nodoc
 abstract class _$$WeakPasswordFailureImplCopyWith<$Res> {
-  factory _$$WeakPasswordFailureImplCopyWith(_$WeakPasswordFailureImpl value,
-          $Res Function(_$WeakPasswordFailureImpl) then) =
-      __$$WeakPasswordFailureImplCopyWithImpl<$Res>;
+  factory _$$WeakPasswordFailureImplCopyWith(
+    _$WeakPasswordFailureImpl value,
+    $Res Function(_$WeakPasswordFailureImpl) then,
+  ) = __$$WeakPasswordFailureImplCopyWithImpl<$Res>;
 }
 
 /// @nodoc
 class __$$WeakPasswordFailureImplCopyWithImpl<$Res>
     extends _$AuthFailureCopyWithImpl<$Res, _$WeakPasswordFailureImpl>
     implements _$$WeakPasswordFailureImplCopyWith<$Res> {
-  __$$WeakPasswordFailureImplCopyWithImpl(_$WeakPasswordFailureImpl _value,
-      $Res Function(_$WeakPasswordFailureImpl) _then)
-      : super(_value, _then);
+  __$$WeakPasswordFailureImplCopyWithImpl(
+    _$WeakPasswordFailureImpl _value,
+    $Res Function(_$WeakPasswordFailureImpl) _then,
+  ) : super(_value, _then);
 
   /// Create a copy of AuthFailure
   /// with the given fields replaced by the non-null parameter values.
@@ -433,7 +431,7 @@ class _$WeakPasswordFailureImpl implements WeakPasswordFailure {
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(InvalidCredentialsFailure value)
-        invalidCredentials,
+    invalidCredentials,
     required TResult Function(EmailAlreadyInUseFailure value) emailAlreadyInUse,
     required TResult Function(WeakPasswordFailure value) weakPassword,
     required TResult Function(NetworkFailure value) network,
@@ -477,9 +475,10 @@ abstract class WeakPasswordFailure implements AuthFailure {
 
 /// @nodoc
 abstract class _$$NetworkFailureImplCopyWith<$Res> {
-  factory _$$NetworkFailureImplCopyWith(_$NetworkFailureImpl value,
-          $Res Function(_$NetworkFailureImpl) then) =
-      __$$NetworkFailureImplCopyWithImpl<$Res>;
+  factory _$$NetworkFailureImplCopyWith(
+    _$NetworkFailureImpl value,
+    $Res Function(_$NetworkFailureImpl) then,
+  ) = __$$NetworkFailureImplCopyWithImpl<$Res>;
 }
 
 /// @nodoc
@@ -487,8 +486,9 @@ class __$$NetworkFailureImplCopyWithImpl<$Res>
     extends _$AuthFailureCopyWithImpl<$Res, _$NetworkFailureImpl>
     implements _$$NetworkFailureImplCopyWith<$Res> {
   __$$NetworkFailureImplCopyWithImpl(
-      _$NetworkFailureImpl _value, $Res Function(_$NetworkFailureImpl) _then)
-      : super(_value, _then);
+    _$NetworkFailureImpl _value,
+    $Res Function(_$NetworkFailureImpl) _then,
+  ) : super(_value, _then);
 
   /// Create a copy of AuthFailure
   /// with the given fields replaced by the non-null parameter values.
@@ -557,7 +557,7 @@ class _$NetworkFailureImpl implements NetworkFailure {
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(InvalidCredentialsFailure value)
-        invalidCredentials,
+    invalidCredentials,
     required TResult Function(EmailAlreadyInUseFailure value) emailAlreadyInUse,
     required TResult Function(WeakPasswordFailure value) weakPassword,
     required TResult Function(NetworkFailure value) network,
@@ -601,9 +601,10 @@ abstract class NetworkFailure implements AuthFailure {
 
 /// @nodoc
 abstract class _$$UnknownFailureImplCopyWith<$Res> {
-  factory _$$UnknownFailureImplCopyWith(_$UnknownFailureImpl value,
-          $Res Function(_$UnknownFailureImpl) then) =
-      __$$UnknownFailureImplCopyWithImpl<$Res>;
+  factory _$$UnknownFailureImplCopyWith(
+    _$UnknownFailureImpl value,
+    $Res Function(_$UnknownFailureImpl) then,
+  ) = __$$UnknownFailureImplCopyWithImpl<$Res>;
   @useResult
   $Res call({String? message});
 }
@@ -613,22 +614,23 @@ class __$$UnknownFailureImplCopyWithImpl<$Res>
     extends _$AuthFailureCopyWithImpl<$Res, _$UnknownFailureImpl>
     implements _$$UnknownFailureImplCopyWith<$Res> {
   __$$UnknownFailureImplCopyWithImpl(
-      _$UnknownFailureImpl _value, $Res Function(_$UnknownFailureImpl) _then)
-      : super(_value, _then);
+    _$UnknownFailureImpl _value,
+    $Res Function(_$UnknownFailureImpl) _then,
+  ) : super(_value, _then);
 
   /// Create a copy of AuthFailure
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? message = freezed,
-  }) {
-    return _then(_$UnknownFailureImpl(
-      freezed == message
-          ? _value.message
-          : message // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ));
+  $Res call({Object? message = freezed}) {
+    return _then(
+      _$UnknownFailureImpl(
+        freezed == message
+            ? _value.message
+            : message // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
   }
 }
 
@@ -663,7 +665,9 @@ class _$UnknownFailureImpl implements UnknownFailure {
   @pragma('vm:prefer-inline')
   _$$UnknownFailureImplCopyWith<_$UnknownFailureImpl> get copyWith =>
       __$$UnknownFailureImplCopyWithImpl<_$UnknownFailureImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 
   @override
   @optionalTypeArgs
@@ -709,7 +713,7 @@ class _$UnknownFailureImpl implements UnknownFailure {
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(InvalidCredentialsFailure value)
-        invalidCredentials,
+    invalidCredentials,
     required TResult Function(EmailAlreadyInUseFailure value) emailAlreadyInUse,
     required TResult Function(WeakPasswordFailure value) weakPassword,
     required TResult Function(NetworkFailure value) network,

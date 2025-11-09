@@ -81,8 +81,10 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
 
   @override
   Widget build(BuildContext context) {
-    final Color categoryColor = CategoryColors.getCategoryColor(widget.category);
-    final Color categoryIconColor = CategoryColors.getCategoryIconColor(widget.category);
+    final Color categoryColor =
+        CategoryColors.getCategoryColor(widget.category);
+    final Color categoryIconColor =
+        CategoryColors.getCategoryIconColor(widget.category);
 
     return Padding(
       padding: EdgeInsets.only(bottom: AppSizes.verticalSpacingM),
@@ -138,7 +140,8 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
                   ),
                   SizedBox(width: AppSizes.spacingS),
                   RotationTransition(
-                    turns: Tween<double>(begin: 0.0, end: 0.5).animate(_expandAnimation),
+                    turns: Tween<double>(begin: 0.0, end: 0.5)
+                        .animate(_expandAnimation),
                     child: Icon(
                       Icons.keyboard_arrow_down,
                       color: categoryIconColor,

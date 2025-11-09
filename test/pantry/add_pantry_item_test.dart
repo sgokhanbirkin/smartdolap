@@ -64,14 +64,12 @@ void main() {
       const PantryItem inputItem = PantryItem(
         id: '',
         name: 'Süt',
-        quantity: 1,
         unit: 'litre',
         category: 'Süt Ürünleri',
       );
       const PantryItem expectedItem = PantryItem(
         id: 'item-456',
         name: 'Süt',
-        quantity: 1,
         unit: 'litre',
         category: 'Süt Ürünleri',
       );

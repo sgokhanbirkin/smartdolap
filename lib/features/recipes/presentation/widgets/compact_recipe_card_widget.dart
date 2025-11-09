@@ -91,27 +91,21 @@ class _CompactRecipeCardWidgetState extends State<CompactRecipeCardWidget> {
             child: Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                widget.recipe.imageUrl != null &&
-                        widget.recipe.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        widget.recipe.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, Object error, StackTrace? stackTrace) {
-                          debugPrint(
-                            'Resim yüklenemedi: ${widget.recipe.imageUrl} - $error',
-                          );
-                          return Container(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                            child: Icon(
-                              Icons.restaurant_menu,
-                              size: AppSizes.icon,
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
+                if (widget.recipe.imageUrl != null &&
+                    widget.recipe.imageUrl!.isNotEmpty)
+                  Image.network(
+                    widget.recipe.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (
+                      _,
+                      Object error,
+                      StackTrace? stackTrace,
+                    ) {
+                      debugPrint(
+                        'Resim yüklenemedi: '
+                        '${widget.recipe.imageUrl} - $error',
+                      );
+                      return Container(
                         color: Theme.of(
                           context,
                         ).colorScheme.surfaceContainerHighest,
@@ -119,7 +113,20 @@ class _CompactRecipeCardWidgetState extends State<CompactRecipeCardWidget> {
                           Icons.restaurant_menu,
                           size: AppSizes.icon,
                         ),
-                      ),
+                      );
+                    },
+                  ),
+                if (widget.recipe.imageUrl == null ||
+                    widget.recipe.imageUrl!.isEmpty)
+                  Container(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.restaurant_menu,
+                      size: AppSizes.icon,
+                    ),
+                  ),
                 Positioned(
                   right: AppSizes.spacingXS,
                   top: AppSizes.spacingXS,

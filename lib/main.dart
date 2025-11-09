@@ -54,7 +54,8 @@ class SmartDolapApp extends StatelessWidget {
         ),
       ],
       child: Builder(
-        builder: (BuildContext innerContext) => BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (BuildContext innerContext) =>
+            BlocBuilder<ThemeCubit, ThemeState>(
           builder: (BuildContext context, ThemeState themeState) => MaterialApp(
             onGenerateTitle: (BuildContext ctx) => tr('app_name'),
             debugShowCheckedModeBanner: false,

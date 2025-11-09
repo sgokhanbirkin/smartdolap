@@ -39,7 +39,9 @@ class BadgeRepositoryImpl implements IBadgeRepository {
     return snapshot.docs
         .map((QueryDocumentSnapshot<Map<String, dynamic>> doc) {
       final Map<String, dynamic> data = doc.data();
-      final Badge? definition = BadgeDefinitions.getBadgeById(data['id'] as String);
+      final Badge? definition = BadgeDefinitions.getBadgeById(
+        data['id'] as String,
+      );
       if (definition == null) {
         return Badge.fromMap(data);
       }

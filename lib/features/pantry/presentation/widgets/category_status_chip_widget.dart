@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 
-/// Widget that displays the category detection status (loading, suggested, or empty)
+/// Widget that displays the category detection status
+/// (loading, suggested, or empty)
 class CategoryStatusChipWidget extends StatelessWidget {
   /// Creates a category status chip widget
   const CategoryStatusChipWidget({
@@ -66,4 +67,3 @@ class CategoryStatusChipWidget extends StatelessWidget {
     return const SizedBox.shrink();
   }
 }
-

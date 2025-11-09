@@ -12,6 +12,18 @@ class Badge {
     this.unlockedAt,
   });
 
+  /// Creates a badge from map (for Firestore/Hive)
+  factory Badge.fromMap(Map<dynamic, dynamic> map) => Badge(
+    id: map['id'] as String,
+    nameKey: map['nameKey'] as String,
+    descriptionKey: map['descriptionKey'] as String,
+    icon: map['icon'] as String,
+    unlockCondition: (_) => false, // Not serializable, use definitions
+    unlockedAt: map['unlockedAt'] != null
+        ? DateTime.parse(map['unlockedAt'] as String)
+        : null,
+  );
+
   /// Badge unique identifier
   final String id;
 
@@ -30,40 +42,25 @@ class Badge {
   /// Timestamp when badge was unlocked (null if locked)
   final DateTime? unlockedAt;
 
-  /// Creates a badge from map (for Firestore/Hive)
-  factory Badge.fromMap(Map<dynamic, dynamic> map) {
-    return Badge(
-      id: map['id'] as String,
-      nameKey: map['nameKey'] as String,
-      descriptionKey: map['descriptionKey'] as String,
-      icon: map['icon'] as String,
-      unlockCondition: (_) => false, // Not serializable, use definitions
-      unlockedAt: map['unlockedAt'] != null
-          ? DateTime.parse(map['unlockedAt'] as String)
-          : null,
-    );
-  }
-
   /// Converts badge to map (for Firestore/Hive)
   Map<String, dynamic> toMap() => <String, dynamic>{
-        'id': id,
-        'nameKey': nameKey,
-        'descriptionKey': descriptionKey,
-        'icon': icon,
-        'unlockedAt': unlockedAt?.toIso8601String(),
-      };
+    'id': id,
+    'nameKey': nameKey,
+    'descriptionKey': descriptionKey,
+    'icon': icon,
+    'unlockedAt': unlockedAt?.toIso8601String(),
+  };
 
   /// Creates a copy with updated unlockedAt
   Badge copyWith({DateTime? unlockedAt}) => Badge(
-        id: id,
-        nameKey: nameKey,
-        descriptionKey: descriptionKey,
-        icon: icon,
-        unlockCondition: unlockCondition,
-        unlockedAt: unlockedAt ?? this.unlockedAt,
-      );
+    id: id,
+    nameKey: nameKey,
+    descriptionKey: descriptionKey,
+    icon: icon,
+    unlockCondition: unlockCondition,
+    unlockedAt: unlockedAt ?? this.unlockedAt,
+  );
 
   /// Checks if badge is unlocked
   bool get isUnlocked => unlockedAt != null;
 }
-

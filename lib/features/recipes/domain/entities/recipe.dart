@@ -15,6 +15,22 @@ class Recipe {
     this.fiber,
   });
 
+  factory Recipe.fromMap(Map<dynamic, dynamic> map) => Recipe(
+        id: (map['id'] as String?) ?? '',
+        title: (map['title'] as String?) ?? '',
+        ingredients:
+            (map['ingredients'] as List<dynamic>? ?? <dynamic>[])
+                .cast<String>(),
+        steps: (map['steps'] as List<dynamic>? ?? <dynamic>[]).cast<String>(),
+        calories: (map['calories'] as num?)?.toInt(),
+        durationMinutes: (map['durationMinutes'] as num?)?.toInt(),
+        difficulty: map['difficulty'] as String?,
+        imageUrl: map['imageUrl'] as String?,
+        category: map['category'] as String?,
+        missingCount: (map['missingCount'] as num?)?.toInt(),
+        fiber: (map['fiber'] as num?)?.toInt(),
+      );
+
   final String id;
   final String title;
   final List<String> ingredients;
@@ -40,20 +56,4 @@ class Recipe {
         'missingCount': missingCount,
         'fiber': fiber,
       };
-
-  factory Recipe.fromMap(Map<dynamic, dynamic> map) => Recipe(
-        id: (map['id'] as String?) ?? '',
-        title: (map['title'] as String?) ?? '',
-        ingredients:
-            (map['ingredients'] as List<dynamic>? ?? <dynamic>[])
-                .cast<String>(),
-        steps: (map['steps'] as List<dynamic>? ?? <dynamic>[]).cast<String>(),
-        calories: (map['calories'] as num?)?.toInt(),
-        durationMinutes: (map['durationMinutes'] as num?)?.toInt(),
-        difficulty: map['difficulty'] as String?,
-        imageUrl: map['imageUrl'] as String?,
-        category: map['category'] as String?,
-        missingCount: (map['missingCount'] as num?)?.toInt(),
-        fiber: (map['fiber'] as num?)?.toInt(),
-      );
 }

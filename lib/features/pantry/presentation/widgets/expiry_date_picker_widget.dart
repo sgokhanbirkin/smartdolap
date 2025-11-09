@@ -73,7 +73,9 @@ class ExpiryDatePickerWidget extends StatelessWidget {
                   Text(
                     expiryDate == null
                         ? tr('expiry_date')
-                        : '${expiryDate!.day}.${expiryDate!.month}.${expiryDate!.year}',
+                        : '${expiryDate!.day}.'
+                              '${expiryDate!.month}.'
+                              '${expiryDate!.year}',
                     style: TextStyle(
                       fontSize: AppSizes.textS,
                       color: expiryDate == null
@@ -95,4 +97,3 @@ class ExpiryDatePickerWidget extends StatelessWidget {
     ),
   );
 }
-

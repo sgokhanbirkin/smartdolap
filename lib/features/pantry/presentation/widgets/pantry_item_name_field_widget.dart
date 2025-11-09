@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/pantry_categories.dart';
 
-/// Widget for the name field with camera button, image preview, and category chip
+/// Widget for the name field with camera button,
+/// image preview, and category chip
 class PantryItemNameFieldWidget extends StatelessWidget {
   /// Creates a pantry item name field widget
   const PantryItemNameFieldWidget({
@@ -12,9 +13,9 @@ class PantryItemNameFieldWidget extends StatelessWidget {
     required this.category,
     required this.isProcessingPhoto,
     required this.isImageLoading,
-    this.imageUrl,
     required this.onCameraPressed,
     required this.fieldDecoration,
+    this.imageUrl,
     super.key,
   });
 
@@ -90,8 +91,10 @@ class PantryItemNameFieldWidget extends StatelessWidget {
                     : const Icon(Icons.camera_alt),
                 tooltip: tr('take_photo'),
                 style: IconButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onPrimaryContainer,
                 ),
               ),
             ],

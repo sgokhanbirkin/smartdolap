@@ -13,8 +13,13 @@ class BadgeService {
     required this.userId,
   });
 
+  /// Profile stats service for checking badge conditions
   final ProfileStatsService statsService;
+
+  /// Badge repository for saving/loading badges
   final IBadgeRepository badgeRepository;
+
+  /// User ID for badge operations
   final String userId;
 
   /// Checks and awards badges based on current stats
@@ -48,9 +53,7 @@ class BadgeService {
           ...currentStats.badges,
           badge.id,
         ];
-        await statsService.save(
-          currentStats.copyWith(badges: updatedBadges),
-        );
+        await statsService.save(currentStats.copyWith(badges: updatedBadges));
       }
     }
 
@@ -71,4 +74,3 @@ class BadgeService {
     }).toList();
   }
 }
-

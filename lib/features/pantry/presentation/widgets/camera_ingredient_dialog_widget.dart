@@ -6,10 +6,7 @@ import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 /// Dialog widget for selecting an ingredient from camera-detected ingredients
 class CameraIngredientDialogWidget extends StatelessWidget {
   /// Creates a camera ingredient dialog widget
-  const CameraIngredientDialogWidget({
-    required this.ingredients,
-    super.key,
-  });
+  const CameraIngredientDialogWidget({required this.ingredients, super.key});
 
   /// List of detected ingredients from camera
   final List<Ingredient> ingredients;
@@ -18,14 +15,11 @@ class CameraIngredientDialogWidget extends StatelessWidget {
   static Future<Ingredient?> show(
     BuildContext context,
     List<Ingredient> ingredients,
-  ) async {
-    return showDialog<Ingredient>(
-      context: context,
-      builder: (BuildContext context) => CameraIngredientDialogWidget(
-        ingredients: ingredients,
-      ),
-    );
-  }
+  ) async => showDialog<Ingredient>(
+    context: context,
+    builder: (BuildContext context) =>
+        CameraIngredientDialogWidget(ingredients: ingredients),
+  );
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -47,4 +41,3 @@ class CameraIngredientDialogWidget extends StatelessWidget {
     ),
   );
 }
-

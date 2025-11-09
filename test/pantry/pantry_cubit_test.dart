@@ -62,7 +62,7 @@ void main() {
 
         when(
           () => mockListPantryItems(userId: testUserId),
-        ).thenAnswer((_) => Stream.value(testItems));
+        ).thenAnswer((_) => Stream<List<PantryItem>>.value(testItems));
       },
       build: () => PantryCubit(
         listPantryItems: mockListPantryItems,
@@ -91,7 +91,7 @@ void main() {
 
         when(
           () => mockListPantryItems(userId: testUserId),
-        ).thenAnswer((_) => Stream.value(<PantryItem>[]));
+        ).thenAnswer((_) => Stream<List<PantryItem>>.value(<PantryItem>[]));
       },
       build: () => PantryCubit(
         listPantryItems: mockListPantryItems,
@@ -237,7 +237,7 @@ void main() {
 
         when(
           () => mockListPantryItems(userId: testUserId),
-        ).thenAnswer((_) => Stream.value(testItems));
+        ).thenAnswer((_) => Stream<List<PantryItem>>.value(testItems));
       },
       build: () => PantryCubit(
         listPantryItems: mockListPantryItems,

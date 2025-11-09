@@ -33,7 +33,8 @@ class ViewModeToggleWidget extends StatelessWidget {
       ),
     ],
     selected: <PantryViewMode>{viewMode},
-    onSelectionChanged: (Set<PantryViewMode> value) => onViewModeChanged(value.first),
+    onSelectionChanged: (Set<PantryViewMode> value) =>
+        onViewModeChanged(value.first),
   );
 }
 

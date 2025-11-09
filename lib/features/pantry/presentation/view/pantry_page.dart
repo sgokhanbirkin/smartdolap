@@ -15,7 +15,6 @@ import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart'
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.dart';
-import 'package:smartdolap/features/pantry/presentation/widgets/category_filter_chips_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_header_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_dismissible_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_group_widget.dart';
@@ -46,8 +45,9 @@ class PantryPage extends StatefulWidget {
 class _PantryPageState extends State<PantryPage> {
   final TextEditingController _searchController = TextEditingController();
   final ValueNotifier<String> _searchQuery = ValueNotifier<String>('');
-  final ValueNotifier<String?> _selectedCategory = ValueNotifier<String?>(null);
-  final ValueNotifier<PantryViewMode> _viewMode = ValueNotifier<PantryViewMode>(PantryViewMode.grouped);
+  final ValueNotifier<PantryViewMode> _viewMode = ValueNotifier<PantryViewMode>(
+    PantryViewMode.grouped,
+  );
   Timer? _searchDebounce;
   PantryItem? _lastDeletedItem;
   String? _lastDeletedUserId;
@@ -73,7 +73,6 @@ class _PantryPageState extends State<PantryPage> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchQuery.dispose();
-    _selectedCategory.dispose();
     _viewMode.dispose();
     super.dispose();
   }
@@ -81,7 +80,6 @@ class _PantryPageState extends State<PantryPage> {
   Widget _buildHeader(BuildContext context) => PantryHeaderWidget(
     searchController: _searchController,
     searchQuery: _searchQuery,
-    viewMode: _viewMode,
   );
 
   @override
@@ -142,120 +140,94 @@ class _PantryPageState extends State<PantryPage> {
                             );
                           }
 
-                          final List<String> categories =
-                              loaded.items
-                                  .map(
-                                    (PantryItem i) =>
-                                        PantryCategoryHelper.normalize(
-                                          i.category,
-                                        ),
-                                  )
-                                  .toSet()
-                                  .toList()
-                                ..sort(
-                                  (String a, String b) => PantryCategoryHelper
-                                      .categories
-                                      .indexOf(a)
-                                      .compareTo(
-                                        PantryCategoryHelper.categories.indexOf(
-                                          b,
-                                        ),
-                                      ),
-                                );
-
                           return ValueListenableBuilder<String>(
                             valueListenable: _searchQuery,
-                            builder: (BuildContext context, String query, Widget? child) => 
-                                ValueListenableBuilder<String?>(
-                              valueListenable: _selectedCategory,
-                              builder: (BuildContext context, String? selectedCat, Widget? child2) {
-                                final List<PantryItem> filtered = _filterItems(loaded.items);
-                                return ValueListenableBuilder<PantryViewMode>(
-                                  valueListenable: _viewMode,
-                                  builder: (BuildContext context, PantryViewMode mode, Widget? child3) {
-                                    return Column(
-                                      children: <Widget>[
-                                        if (categories.isNotEmpty) ...<Widget>[
-                                          SizedBox(height: AppSizes.verticalSpacingS),
-                                          CategoryFilterChipsWidget(
-                                            categories: categories,
-                                            selectedCategory: selectedCat,
-                                            onCategorySelected: (String? cat) => _selectedCategory.value = cat,
-                                          ),
-                                        ],
-                                        SizedBox(height: AppSizes.verticalSpacingM),
-                                        Expanded(
-                                          child: RefreshIndicator(
-                                            onRefresh: () async {
-                                              await context.read<PantryCubit>().refresh(
-                                                user.id,
-                                              );
-                                            },
-                                            child: filtered.isEmpty
-                                                ? ListView(
-                                                    physics:
-                                                        const AlwaysScrollableScrollPhysics(),
-                                                    padding: EdgeInsets.zero,
+                            builder: (BuildContext context, String query, Widget? child) {
+                              final List<PantryItem> filtered =
+                                  _filterItems(loaded.items);
+                              return ValueListenableBuilder<PantryViewMode>(
+                                valueListenable: _viewMode,
+                                builder: (
+                                  BuildContext context,
+                                  PantryViewMode mode,
+                                  Widget? child3,
+                                ) {
+                                  return RefreshIndicator(
+                                    onRefresh: () async {
+                                      await context
+                                          .read<PantryCubit>()
+                                          .refresh(user.id);
+                                    },
+                                    child: filtered.isEmpty
+                                        ? ListView(
+                                            physics:
+                                                const AlwaysScrollableScrollPhysics(),
+                                            padding:
+                                                EdgeInsets.zero,
+                                            children: <Widget>[
+                                              SizedBox(
+                                                height:
+                                                    MediaQuery.of(
+                                                          context,
+                                                        )
+                                                        .size
+                                                        .height *
+                                                    0.4,
+                                                child: Center(
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: <Widget>[
+                                                      Icon(
+                                                        Icons
+                                                            .search_off,
+                                                        size:
+                                                            AppSizes
+                                                                .iconXXL *
+                                                            1.14,
+                                                        color: Theme.of(
+                                                          context,
+                                                        ).colorScheme.onSurfaceVariant,
+                                                      ),
                                                       SizedBox(
-                                                        height:
-                                                            MediaQuery.of(
-                                                              context,
-                                                            ).size.height *
-                                                            0.4,
-                                                        child: Center(
-                                                          child: Column(
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment.center,
-                                                            children: <Widget>[
-                                                              Icon(
-                                                                Icons.search_off,
-                                                                size:
-                                                                    AppSizes.iconXXL *
-                                                                    1.14,
-                                                                color: Theme.of(context)
-                                                                    .colorScheme
-                                                                    .onSurfaceVariant,
-                                                              ),
-                                                              SizedBox(
-                                                                height: AppSizes
-                                                                    .verticalSpacingM,
-                                                              ),
-                                                              Text(
-                                                                tr('no_items_found'),
-                                                                style: TextStyle(
-                                                                  fontSize:
-                                                                      AppSizes.textM,
-                                                                  color: Theme.of(context)
-                                                                      .colorScheme
-                                                                      .onSurfaceVariant,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
+                                                        height: AppSizes
+                                                            .verticalSpacingM,
+                                                      ),
+                                                      Text(
+                                                        tr(
+                                                          'no_items_found',
+                                                        ),
+                                                        style: TextStyle(
+                                                          fontSize:
+                                                              AppSizes.textM,
+                                                          color: Theme.of(
+                                                            context,
+                                                          ).colorScheme.onSurfaceVariant,
                                                         ),
                                                       ),
                                                     ],
-                                                  )
-                                                : mode == PantryViewMode.flat
-                                                ? _buildFlatList(
-                                                    context,
-                                                    filtered,
-                                                    user.id,
-                                                  )
-                                                : _buildGroupedList(
-                                                    context,
-                                                    filtered,
-                                                    user.id,
                                                   ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : mode ==
+                                              PantryViewMode.flat
+                                        ? _buildFlatList(
+                                            context,
+                                            filtered,
+                                            user.id,
+                                          )
+                                        : _buildGroupedList(
+                                            context,
+                                            filtered,
+                                            user.id,
                                           ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+                                  );
+                                },
+                              );
+                            },
                           );
                         },
                       ),
@@ -293,7 +265,6 @@ class _PantryPageState extends State<PantryPage> {
 
   List<PantryItem> _filterItems(List<PantryItem> items) {
     final String query = _searchQuery.value.toLowerCase();
-    final String? selectedCat = _selectedCategory.value;
     return items.where((PantryItem item) {
       final String normalizedCategory = PantryCategoryHelper.normalize(
         item.category,
@@ -302,9 +273,7 @@ class _PantryPageState extends State<PantryPage> {
           query.isEmpty ||
           item.name.toLowerCase().contains(query) ||
           normalizedCategory.toLowerCase().contains(query);
-      final bool matchesCategory =
-          selectedCat == null || normalizedCategory == selectedCat;
-      return matchesSearch && matchesCategory;
+      return matchesSearch;
     }).toList();
   }
 

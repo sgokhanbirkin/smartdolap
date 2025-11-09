@@ -36,7 +36,10 @@ class PantryItemQuantityUnitWidget extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSizes.radius * 1.5),
             side: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+              color: Theme.of(context)
+                  .colorScheme
+                  .outline
+                  .withValues(alpha: 0.1),
             ),
           ),
           child: Padding(

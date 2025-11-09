@@ -19,11 +19,7 @@ class ExpiryNotificationService {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-        );
+        DarwinInitializationSettings();
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -71,7 +67,10 @@ class ExpiryNotificationService {
         await _scheduleNotification(
           id: item.id.hashCode,
           title: tr('expiry_expired_title'),
-          body: tr('expiry_expired_body', namedArgs: {'name': item.name}),
+          body: tr(
+            'expiry_expired_body',
+            namedArgs: <String, String>{'name': item.name},
+          ),
           scheduledDate: now.add(const Duration(seconds: 5)),
         );
         continue;
@@ -83,13 +82,15 @@ class ExpiryNotificationService {
         await _scheduleNotification(
           id: item.id.hashCode + 1000,
           title: tr('expiry_3days_title'),
-          body: tr('expiry_3days_body', namedArgs: {'name': item.name}),
+          body: tr(
+            'expiry_3days_body',
+            namedArgs: <String, String>{'name': item.name},
+          ),
           scheduledDate: DateTime(
             threeDaysBefore.year,
             threeDaysBefore.month,
             threeDaysBefore.day,
             9,
-            0,
           ),
         );
       }
@@ -100,7 +101,10 @@ class ExpiryNotificationService {
         await _scheduleNotification(
           id: item.id.hashCode + 2000,
           title: tr('expiry_1day_title'),
-          body: tr('expiry_1day_body', namedArgs: {'name': item.name}),
+          body: tr(
+            'expiry_1day_body',
+            namedArgs: <String, String>{'name': item.name},
+          ),
           scheduledDate: DateTime(
             oneDayBefore.year,
             oneDayBefore.month,
@@ -122,7 +126,10 @@ class ExpiryNotificationService {
           await _scheduleNotification(
             id: item.id.hashCode + 3000,
             title: tr('expiry_today_title'),
-            body: tr('expiry_today_body', namedArgs: {'name': item.name}),
+            body: tr(
+              'expiry_today_body',
+              namedArgs: <String, String>{'name': item.name},
+            ),
             scheduledDate: expiryMorning,
           );
         }
@@ -148,7 +155,6 @@ class ExpiryNotificationService {
               'Dolaptaki ürünlerin son kullanma tarihi bildirimleri',
           importance: Importance.high,
           priority: Priority.high,
-          showWhen: true,
         );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -174,9 +180,8 @@ class ExpiryNotificationService {
     );
   }
 
-  tz.TZDateTime _convertToTZDateTime(DateTime dateTime) {
-    return tz.TZDateTime.from(dateTime, tz.local);
-  }
+  tz.TZDateTime _convertToTZDateTime(DateTime dateTime) =>
+      tz.TZDateTime.from(dateTime, tz.local);
 
   /// Cancel notification for a specific item
   Future<void> cancelItemNotifications(String itemId) async {

@@ -82,29 +82,36 @@ class _RecipeCardState extends State<RecipeCard> {
               ),
               child: Row(
                 children: <Widget>[
-                  Chip(
-                    label: Text(
-                      widget.recipe.category!,
-                      style: TextStyle(fontSize: AppSizes.textS),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const Spacer(),
-                  if (widget.recipe.missingCount != null)
-                    Chip(
-                      backgroundColor: _badgeColor(
-                        context,
-                        widget.recipe.missingCount!,
-                      ),
+                  Flexible(
+                    child: Chip(
                       label: Text(
-                        _badgeText(context, widget.recipe.missingCount!),
-                        style: TextStyle(
-                          fontSize: AppSizes.textS,
-                          color: Colors.white,
-                        ),
+                        widget.recipe.category!,
+                        style: TextStyle(fontSize: AppSizes.textS),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       visualDensity: VisualDensity.compact,
                     ),
+                  ),
+                  if (widget.recipe.missingCount != null) ...[
+                    SizedBox(width: AppSizes.spacingXS),
+                    Flexible(
+                      child: Chip(
+                        backgroundColor: _badgeColor(
+                          context,
+                          widget.recipe.missingCount!,
+                        ),
+                        label: Text(
+                          _badgeText(context, widget.recipe.missingCount!),
+                          style: TextStyle(
+                            fontSize: AppSizes.textS,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -119,9 +126,14 @@ class _RecipeCardState extends State<RecipeCard> {
                     ? Image.network(
                         widget.recipe.imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, Object error, StackTrace? stackTrace) {
+                        errorBuilder: (
+                          _,
+                          Object error,
+                          StackTrace? stackTrace,
+                        ) {
                           debugPrint(
-                            'Resim yüklenemedi: ${widget.recipe.imageUrl} - $error',
+                            'Resim yüklenemedi: '
+                            '${widget.recipe.imageUrl} - $error',
                           );
                           return Container(
                             color: Theme.of(
@@ -291,7 +303,7 @@ class _InfoBadge extends StatelessWidget {
     decoration: BoxDecoration(
       color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(AppSizes.radius),
-      border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+      border: Border.all(color: color.withValues(alpha: 0.3)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,

@@ -44,13 +44,13 @@ class ImageLookupService {
       }
       final Map<String, dynamic> first = results.first as Map<String, dynamic>;
       return first['image'] as String?;
-    } catch (_) {
+    } on Exception {
       return null;
     }
   }
 
   String? _extractToken(String body) {
-    final RegExpMatch? match = RegExp(r"vqd='([^']+)'").firstMatch(body);
+    final RegExpMatch? match = RegExp("vqd='([^']+)'").firstMatch(body);
     return match?.group(1);
   }
 }

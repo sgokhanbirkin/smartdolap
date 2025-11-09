@@ -159,11 +159,16 @@ class _FavoritesShelfWidgetState extends State<FavoritesShelfWidget>
                     vertical: AppSizes.spacingS,
                   ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(AppSizes.radius),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                      width: 1,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
@@ -193,22 +198,22 @@ class _FavoritesShelfWidgetState extends State<FavoritesShelfWidget>
                             'count': '${updatedFavorites.length}',
                           },
                         ),
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.primaryContainer,
-                        textColor: Theme.of(
-                          context,
-                        ).colorScheme.onPrimaryContainer,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        textColor:
+                            Theme.of(context).colorScheme.onPrimaryContainer,
                         delay: 100,
                       ),
                       const Spacer(),
-                      // Tümünü Gör butonu - InkWell'in tıklamasını engellemek için GestureDetector
+                      // Tümünü Gör butonu - InkWell'in tıklamasını
+                      // engellemek için GestureDetector
                       GestureDetector(
                         onTap: () {
                           Navigator.of(context).pushNamed(AppRouter.favorites);
                         },
                         child: TextButton.icon(
-                          onPressed: null, // null yaparak InkWell'in tıklamasını engelle
+                          // null yaparak InkWell'in tıklamasını engelle
+                          onPressed: null,
                           icon: Icon(
                             Icons.arrow_forward_ios,
                             size: AppSizes.iconXS,

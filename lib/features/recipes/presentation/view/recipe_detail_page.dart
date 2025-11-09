@@ -5,25 +5,19 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
-
 import 'package:smartdolap/core/constants/app_sizes.dart';
-import 'package:smartdolap/core/di/dependency_injection.dart';
-import 'package:smartdolap/features/profile/data/badge_service.dart';
-import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
-import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
-import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_detail_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/hero_image_widget.dart';
-import 'package:smartdolap/features/recipes/presentation/widgets/recipe_chips_widget.dart';
-import 'package:smartdolap/features/recipes/presentation/widgets/progress_card_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/ingredients_list_widget.dart';
-import 'package:smartdolap/features/recipes/presentation/widgets/steps_list_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/mark_as_made_button_widget.dart';
-import 'package:smartdolap/product/services/storage/i_storage_service.dart';
+import 'package:smartdolap/features/recipes/presentation/widgets/progress_card_widget.dart';
+import 'package:smartdolap/features/recipes/presentation/widgets/recipe_chips_widget.dart';
+import 'package:smartdolap/features/recipes/presentation/widgets/steps_list_widget.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
 
 /// Recipe detail screen
@@ -40,9 +34,18 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   bool _isSaving = false;
   final Set<int> _completedSteps = <int>{};
   final Set<int> _collectedIngredients = <int>{};
+  late final RecipeDetailService _recipeDetailService;
+
+  @override
+  void initState() {
+    super.initState();
+    _recipeDetailService = RecipeDetailService();
+  }
 
   double get _stepProgress {
-    if (widget.recipe == null || widget.recipe!.steps.isEmpty) return 0.0;
+    if (widget.recipe == null || widget.recipe!.steps.isEmpty) {
+      return 0.0;
+    }
     return _completedSteps.length / widget.recipe!.steps.length;
   }
 
@@ -54,7 +57,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   }
 
   Future<void> _shareRecipe() async {
-    if (widget.recipe == null) return;
+    if (widget.recipe == null) {
+      return;
+    }
     final Recipe recipe = widget.recipe!;
     final StringBuffer buffer = StringBuffer();
     buffer.writeln(recipe.title);
@@ -72,7 +77,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   }
 
   Future<void> _printRecipe() async {
-    if (widget.recipe == null) return;
+    if (widget.recipe == null) {
+      return;
+    }
     final Recipe recipe = widget.recipe!;
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async {
@@ -80,47 +87,45 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         doc.addPage(
           pw.Page(
             pageFormat: format,
-            build: (pw.Context context) {
-              return pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: <pw.Widget>[
-                  pw.Text(
-                    recipe.title,
-                    style: pw.Theme.of(
-                      context,
-                    ).defaultTextStyle.copyWith(fontSize: 24),
+            build: (pw.Context context) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: <pw.Widget>[
+                pw.Text(
+                  recipe.title,
+                  style: pw.Theme.of(
+                    context,
+                  ).defaultTextStyle.copyWith(fontSize: 24),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text(
+                  tr('ingredients_label'),
+                  style: pw.Theme.of(
+                    context,
+                  ).defaultTextStyle.copyWith(fontSize: 18),
+                ),
+                pw.SizedBox(height: 10),
+                ...recipe.ingredients.map<pw.Widget>(
+                  (String i) => pw.Text(
+                    '• $i',
+                    style: pw.Theme.of(context).defaultTextStyle,
                   ),
-                  pw.SizedBox(height: 20),
-                  pw.Text(
-                    tr('ingredients_label'),
-                    style: pw.Theme.of(
-                      context,
-                    ).defaultTextStyle.copyWith(fontSize: 18),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text(
+                  tr('steps_label'),
+                  style: pw.Theme.of(
+                    context,
+                  ).defaultTextStyle.copyWith(fontSize: 18),
+                ),
+                pw.SizedBox(height: 10),
+                ...recipe.steps.asMap().entries.map<pw.Widget>(
+                  (MapEntry<int, String> e) => pw.Text(
+                    '${e.key + 1}. ${e.value}',
+                    style: pw.Theme.of(context).defaultTextStyle,
                   ),
-                  pw.SizedBox(height: 10),
-                  ...recipe.ingredients.map(
-                    (i) => pw.Text(
-                      '• $i',
-                      style: pw.Theme.of(context).defaultTextStyle,
-                    ),
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.Text(
-                    tr('steps_label'),
-                    style: pw.Theme.of(
-                      context,
-                    ).defaultTextStyle.copyWith(fontSize: 18),
-                  ),
-                  pw.SizedBox(height: 10),
-                  ...recipe.steps.asMap().entries.map(
-                    (e) => pw.Text(
-                      '${e.key + 1}. ${e.value}',
-                      style: pw.Theme.of(context).defaultTextStyle,
-                    ),
-                  ),
-                ],
-              );
-            },
+                ),
+              ],
+            ),
           ),
         );
         return doc.save();
@@ -129,7 +134,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   }
 
   Future<void> _markAsMade() async {
-    if (widget.recipe == null) return;
+    if (widget.recipe == null) {
+      return;
+    }
 
     final bool? addPhoto = await showDialog<bool>(
       context: context,
@@ -149,7 +156,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       ),
     );
 
-    if (addPhoto == null) return;
+    if (addPhoto == null) {
+      return;
+    }
 
     String? imageUrl;
     if (addPhoto == true) {
@@ -164,7 +173,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         // Upload to Firebase Storage
         final String? userId = FirebaseAuth.instance.currentUser?.uid;
         if (userId == null) {
-          if (!mounted) return;
+          if (!mounted) {
+            return;
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(tr('recipe_made_error')),
@@ -177,16 +188,17 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
         setState(() => _isSaving = true);
         try {
-          final IStorageService storageService = sl<IStorageService>();
           final File imageFile = File(image.path);
           final List<int> imageBytes = await imageFile.readAsBytes();
-          imageUrl = await storageService.uploadRecipePhoto(
+          imageUrl = await _recipeDetailService.uploadRecipePhoto(
             userId: userId,
             recipeId: widget.recipe!.id,
             imageBytes: imageBytes as Uint8List,
           );
-        } catch (e) {
-          if (!mounted) return;
+        } on Exception {
+          if (!mounted) {
+            return;
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(tr('recipe_made_error')),
@@ -202,55 +214,30 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
     setState(() => _isSaving = true);
 
-    try {
-      final UserRecipeService userRecipeService = sl<UserRecipeService>();
-      final ProfileStatsService statsService = sl<ProfileStatsService>();
+    final RecipeMadeResult result = await _recipeDetailService.markRecipeAsMade(
+      recipe: widget.recipe!,
+      imageUrl: imageUrl,
+    );
 
-      // Convert Recipe to UserRecipe
-      await userRecipeService.createManual(
-        title: widget.recipe!.title,
-        ingredients: widget.recipe!.ingredients,
-        steps: widget.recipe!.steps,
-        description: widget.recipe!.category ?? '',
-        tags: <String>[
-          if (widget.recipe!.category != null) widget.recipe!.category!,
-          if (widget.recipe!.difficulty != null) widget.recipe!.difficulty!,
-        ],
-        imagePath: imageUrl, // Now it's a Firebase Storage URL
-      );
+    if (!mounted) {
+      return;
+    }
 
-      // Add XP (base 50 XP, +25 if with photo)
-      final int xpGained = imageUrl != null ? 75 : 50;
-      await statsService.incrementUserRecipes(withPhoto: imageUrl != null);
-      await statsService.addXp(xpGained);
-
-      // Check for badges
-      final String? userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId != null) {
-        final BadgeService badgeService = BadgeService(
-          statsService: statsService,
-          badgeRepository: sl<IBadgeRepository>(),
-          userId: userId,
-        );
-        await badgeService.checkAndAwardBadges();
-      }
-
-      if (!mounted) return;
+    if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             tr(
               'recipe_made_success',
-              namedArgs: <String, String>{'xp': '$xpGained'},
+              namedArgs: <String, String>{'xp': '${result.xpGained ?? 0}'},
             ),
           ),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      Navigator.of(context).pop();
-    } catch (e) {
-      if (!mounted) return;
+      Navigator.of(context).pop(true); // true döndür - yaptıklarım güncellensin
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(tr('recipe_made_error')),
@@ -258,11 +245,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
     }
+
+    setState(() => _isSaving = false);
   }
 
   void _toggleIngredient(int index) {
