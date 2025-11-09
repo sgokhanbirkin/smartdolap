@@ -1,12 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/theme/theme_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/language_dialog_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/theme_dialog_widget.dart';
+import 'package:smartdolap/product/router/app_router.dart';
 
 /// Settings menu widget
 class SettingsMenuWidget extends StatelessWidget {
@@ -74,19 +77,48 @@ class SettingsMenuWidget extends StatelessWidget {
           ),
           const Divider(height: 1),
           // Logout
-          ListTile(
-            leading: Icon(
-              Icons.logout,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            title: Text(
-              tr('logout'),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              context.read<AuthCubit>().logout();
+          BlocListener<AuthCubit, AuthState>(
+            listener: (BuildContext context, AuthState state) {
+              state.when(
+                initial: () {},
+                loading: () {},
+                authenticated: (user) {},
+                unauthenticated: () {
+                  debugPrint('[SettingsMenuWidget] Logout successful - navigating to login');
+                  Navigator.pop(context); // Close bottom sheet
+                  AppRouter.pushNamedAndRemoveUntil(context, AppRouter.login);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(tr('session_ended')),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                error: (failure) {
+                  debugPrint('[SettingsMenuWidget] Logout error: $failure');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(tr('error')),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                },
+              );
             },
+            child: ListTile(
+              leading: Icon(
+                Icons.logout,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                tr('logout'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              onTap: () {
+                debugPrint('[SettingsMenuWidget] Logout button tapped');
+                context.read<AuthCubit>().logout();
+              },
+            ),
           ),
           SizedBox(height: AppSizes.verticalSpacingS),
         ],

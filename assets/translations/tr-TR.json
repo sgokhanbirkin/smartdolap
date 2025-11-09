@@ -244,5 +244,7 @@
   "delete_recipes": "Tarifleri Sil",
   "delete_recipes_confirm": "{count} tarifi silmek istediğinizden emin misiniz?",
   "recipes_deleted": "{count} tarif silindi",
-  "load_more_recipes": "Daha Fazla Yükle"
+  "load_more_recipes": "Daha Fazla Yükle",
+  "splash_preparing": "Dolabını hazırlıyoruz...",
+  "session_ended": "Oturum sonlandırıldı"
 }

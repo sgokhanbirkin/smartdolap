@@ -240,5 +240,7 @@
   "delete_recipes": "Delete Recipes",
   "delete_recipes_confirm": "Are you sure you want to delete {count} recipe(s)?",
   "recipes_deleted": "{count} recipe(s) deleted",
-  "load_more_recipes": "Load More"
+  "load_more_recipes": "Load More",
+  "splash_preparing": "Preparing your pantry...",
+  "session_ended": "Session ended"
 }

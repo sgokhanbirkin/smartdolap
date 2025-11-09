@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
@@ -15,10 +16,14 @@ import 'package:smartdolap/features/recipes/presentation/view/get_suggestions_pa
 import 'package:smartdolap/features/recipes/presentation/view/meal_recipes_page.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/features/recipes/presentation/view/recipe_detail_page.dart';
+import 'package:smartdolap/core/widgets/splash_page.dart';
 import 'package:smartdolap/product/widgets/app_shell.dart';
 
 /// App router configuration
 class AppRouter {
+  /// Splash route path
+  static const String splash = '/splash';
+
   /// Login route path
   static const String login = '/login';
 
@@ -49,9 +54,15 @@ class AppRouter {
   /// Generate route based on route settings
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case splash:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const SplashPage(),
+          settings: settings,
+        );
       case login:
         return MaterialPageRoute<dynamic>(
           builder: (BuildContext context) => const LoginPage(),
+          settings: settings,
         );
       case register:
         return MaterialPageRoute<dynamic>(
@@ -183,7 +194,22 @@ class AppRouter {
       default:
         return MaterialPageRoute<dynamic>(
           builder: (BuildContext context) => const AppShell(),
+          settings: settings,
         );
     }
+  }
+
+  /// Push named route and remove all previous routes
+  static Future<void> pushNamedAndRemoveUntil(
+    BuildContext context,
+    String routeName, {
+    Object? arguments,
+  }) {
+    debugPrint('[AppRouter] pushNamedAndRemoveUntil: $routeName');
+    return Navigator.of(context).pushNamedAndRemoveUntil(
+      routeName,
+      (Route<dynamic> route) => false,
+      arguments: arguments,
+    );
   }
 }

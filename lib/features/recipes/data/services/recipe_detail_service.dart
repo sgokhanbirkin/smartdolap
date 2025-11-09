@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs
 
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,13 +20,10 @@ class RecipeDetailService {
     ProfileStatsService? profileStatsService,
     IStorageService? storageService,
     IBadgeRepository? badgeRepository,
-  })  : _userRecipeService =
-            userRecipeService ?? sl<UserRecipeService>(),
-        _profileStatsService =
-            profileStatsService ?? sl<ProfileStatsService>(),
-        _storageService = storageService ?? sl<IStorageService>(),
-        _badgeRepository =
-            badgeRepository ?? sl<IBadgeRepository>();
+  }) : _userRecipeService = userRecipeService ?? sl<UserRecipeService>(),
+       _profileStatsService = profileStatsService ?? sl<ProfileStatsService>(),
+       _storageService = storageService ?? sl<IStorageService>(),
+       _badgeRepository = badgeRepository ?? sl<IBadgeRepository>();
 
   final UserRecipeService _userRecipeService;
   final ProfileStatsService _profileStatsService;
@@ -89,16 +85,10 @@ class RecipeDetailService {
         await badgeService.checkAndAwardBadges();
       }
 
-      return RecipeMadeResult(
-        success: true,
-        xpGained: xpGained,
-      );
+      return RecipeMadeResult(success: true, xpGained: xpGained);
     } on Exception catch (e) {
       debugPrint('[RecipeDetailService] Tarif kaydetme hatası: $e');
-      return RecipeMadeResult(
-        success: false,
-        error: e.toString(),
-      );
+      return RecipeMadeResult(success: false, error: e.toString());
     }
   }
 }
@@ -106,11 +96,7 @@ class RecipeDetailService {
 /// Result of marking recipe as made
 class RecipeMadeResult {
   /// Constructor
-  const RecipeMadeResult({
-    required this.success,
-    this.xpGained,
-    this.error,
-  });
+  const RecipeMadeResult({required this.success, this.xpGained, this.error});
 
   /// Whether the operation was successful
   final bool success;
@@ -121,4 +107,3 @@ class RecipeMadeResult {
   /// Error message if operation failed
   final String? error;
 }
-

@@ -25,6 +25,7 @@ class LoginPage extends StatelessWidget {
             initial: () {},
             loading: () {},
             authenticated: (User user) {
+              debugPrint('[LoginPage] Authenticated - navigating to home');
               Navigator.of(context).pushReplacementNamed(AppRouter.home);
             },
             unauthenticated: () {},

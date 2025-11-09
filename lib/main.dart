@@ -1,7 +1,6 @@
-// ignore_for_file: directives_ordering
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,6 +10,7 @@ import 'package:smartdolap/firebase_options.dart';
 import 'package:smartdolap/core/theme/app_theme.dart';
 import 'package:smartdolap/core/theme/theme_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
 
@@ -56,17 +56,42 @@ class SmartDolapApp extends StatelessWidget {
       child: Builder(
         builder: (BuildContext innerContext) =>
             BlocBuilder<ThemeCubit, ThemeState>(
-          builder: (BuildContext context, ThemeState themeState) => MaterialApp(
-            onGenerateTitle: (BuildContext ctx) => tr('app_name'),
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light(),
-            darkTheme: AppTheme.dark(),
-            themeMode: themeState.themeMode,
-            localizationsDelegates: innerContext.localizationDelegates,
-            supportedLocales: innerContext.supportedLocales,
-            locale: innerContext.locale,
-            onGenerateRoute: AppRouter.onGenerateRoute,
-            initialRoute: AppRouter.login,
+          builder: (BuildContext context, ThemeState themeState) =>
+              BlocListener<AuthCubit, AuthState>(
+            listener: (BuildContext context, AuthState authState) {
+              debugPrint('[SmartDolapApp] AuthState changed: $authState');
+              authState.when(
+                initial: () {
+                  debugPrint('[SmartDolapApp] AuthState: initial');
+                },
+                loading: () {
+                  debugPrint('[SmartDolapApp] AuthState: loading');
+                },
+                authenticated: (user) {
+                  debugPrint('[SmartDolapApp] AuthState: authenticated - ${user.email}');
+                  // Don't navigate here, let the route guard handle it
+                },
+                unauthenticated: () {
+                  debugPrint('[SmartDolapApp] AuthState: unauthenticated');
+                  // Don't navigate here, let the route guard handle it
+                },
+                error: (failure) {
+                  debugPrint('[SmartDolapApp] AuthState: error - $failure');
+                },
+              );
+            },
+            child: MaterialApp(
+              onGenerateTitle: (BuildContext ctx) => tr('app_name'),
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: themeState.themeMode,
+              localizationsDelegates: innerContext.localizationDelegates,
+              supportedLocales: innerContext.supportedLocales,
+              locale: innerContext.locale,
+              onGenerateRoute: AppRouter.onGenerateRoute,
+              initialRoute: AppRouter.splash,
+            ),
           ),
         ),
       ),
