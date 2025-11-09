@@ -143,89 +143,81 @@ class _PantryPageState extends State<PantryPage> {
                           return ValueListenableBuilder<String>(
                             valueListenable: _searchQuery,
                             builder: (BuildContext context, String query, Widget? child) {
-                              final List<PantryItem> filtered =
-                                  _filterItems(loaded.items);
+                              final List<PantryItem> filtered = _filterItems(
+                                loaded.items,
+                              );
                               return ValueListenableBuilder<PantryViewMode>(
                                 valueListenable: _viewMode,
-                                builder: (
-                                  BuildContext context,
-                                  PantryViewMode mode,
-                                  Widget? child3,
-                                ) {
-                                  return RefreshIndicator(
-                                    onRefresh: () async {
-                                      await context
-                                          .read<PantryCubit>()
-                                          .refresh(user.id);
-                                    },
-                                    child: filtered.isEmpty
-                                        ? ListView(
-                                            physics:
-                                                const AlwaysScrollableScrollPhysics(),
-                                            padding:
-                                                EdgeInsets.zero,
-                                            children: <Widget>[
-                                              SizedBox(
-                                                height:
-                                                    MediaQuery.of(
-                                                          context,
-                                                        )
-                                                        .size
-                                                        .height *
-                                                    0.4,
-                                                child: Center(
-                                                  child: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: <Widget>[
-                                                      Icon(
-                                                        Icons
-                                                            .search_off,
-                                                        size:
-                                                            AppSizes
-                                                                .iconXXL *
-                                                            1.14,
-                                                        color: Theme.of(
-                                                          context,
-                                                        ).colorScheme.onSurfaceVariant,
-                                                      ),
-                                                      SizedBox(
-                                                        height: AppSizes
-                                                            .verticalSpacingM,
-                                                      ),
-                                                      Text(
-                                                        tr(
-                                                          'no_items_found',
+                                builder:
+                                    (
+                                      BuildContext context,
+                                      PantryViewMode mode,
+                                      Widget? child3,
+                                    ) => RefreshIndicator(
+                                      onRefresh: () async {
+                                        await context
+                                            .read<PantryCubit>()
+                                            .refresh(user.id);
+                                      },
+                                      child: filtered.isEmpty
+                                          ? ListView(
+                                              physics:
+                                                  const AlwaysScrollableScrollPhysics(),
+                                              padding: EdgeInsets.zero,
+                                              children: <Widget>[
+                                                SizedBox(
+                                                  height:
+                                                      MediaQuery.of(
+                                                        context,
+                                                      ).size.height *
+                                                      0.4,
+                                                  child: Center(
+                                                    child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: <Widget>[
+                                                        Icon(
+                                                          Icons.search_off,
+                                                          size:
+                                                              AppSizes.iconXXL *
+                                                              1.14,
+                                                          color: Theme.of(context)
+                                                              .colorScheme
+                                                              .onSurfaceVariant,
                                                         ),
-                                                        style: TextStyle(
-                                                          fontSize:
-                                                              AppSizes.textM,
-                                                          color: Theme.of(
-                                                            context,
-                                                          ).colorScheme.onSurfaceVariant,
+                                                        SizedBox(
+                                                          height: AppSizes
+                                                              .verticalSpacingM,
                                                         ),
-                                                      ),
-                                                    ],
+                                                        Text(
+                                                          tr('no_items_found'),
+                                                          style: TextStyle(
+                                                            fontSize:
+                                                                AppSizes.textM,
+                                                            color: Theme.of(context)
+                                                                .colorScheme
+                                                                .onSurfaceVariant,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          )
-                                        : mode ==
-                                              PantryViewMode.flat
-                                        ? _buildFlatList(
-                                            context,
-                                            filtered,
-                                            user.id,
-                                          )
-                                        : _buildGroupedList(
-                                            context,
-                                            filtered,
-                                            user.id,
-                                          ),
-                                  );
-                                },
+                                              ],
+                                            )
+                                          : mode == PantryViewMode.flat
+                                          ? _buildFlatList(
+                                              context,
+                                              filtered,
+                                              user.id,
+                                            )
+                                          : _buildGroupedList(
+                                              context,
+                                              filtered,
+                                              user.id,
+                                            ),
+                                    ),
                               );
                             },
                           );

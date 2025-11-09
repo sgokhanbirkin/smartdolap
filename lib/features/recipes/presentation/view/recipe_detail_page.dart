@@ -226,12 +226,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            tr(
-              'recipe_made_success',
-              namedArgs: <String, String>{'xp': '${result.xpGained ?? 0}'},
-            ),
-          ),
+          content: Text(tr('recipes.marked_as_made')),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           behavior: SnackBarBehavior.floating,
         ),
@@ -240,7 +235,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(tr('recipe_made_error')),
+          content: Text(tr('common.unexpected_error')),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
           behavior: SnackBarBehavior.floating,
         ),

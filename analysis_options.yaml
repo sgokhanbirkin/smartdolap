@@ -35,6 +35,7 @@ analyzer:
     deprecated_member_use: warning
     # Treat deprecated member usage from same package as errors
     deprecated_member_use_from_same_package: error
+    lines_longer_than_80_chars: ignore
 
   language:
     strict-casts: true

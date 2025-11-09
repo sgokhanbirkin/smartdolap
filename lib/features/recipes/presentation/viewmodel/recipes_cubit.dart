@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
@@ -20,6 +21,7 @@ import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_fro
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
+import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
 import 'package:uuid/uuid.dart';
 
 class RecipesCubit extends Cubit<RecipesState> {
@@ -93,12 +95,18 @@ class RecipesCubit extends Cubit<RecipesState> {
       _seenTitles.addAll(recipes.map((Recipe e) => e.title));
 
       // promptPreferences.incrementGenerated kaldırıldı - repository içinde zaten güncelleniyor
-    } on Exception catch (e) {
-      debugPrint('[RecipesCubit] load hatası: $e');
+    } on OpenAIParsingException catch (e) {
+      Logger.error('[RecipesCubit] OpenAI parsing error in load()', e);
       if (isClosed) {
         return;
       }
-      emit(RecipesFailure(e.toString()));
+      emit(const RecipesFailure('openai_parse_error'));
+    } catch (e, s) {
+      Logger.error('[RecipesCubit] load error', e, s);
+      if (isClosed) {
+        return;
+      }
+      emit(const RecipesFailure('unknown_error'));
     }
   }
 
@@ -401,109 +409,12 @@ class RecipesCubit extends Cubit<RecipesState> {
       return recipesWithImages;
     }
 
-    // Cache boşsa yeni istek at
-    debugPrint('[RecipesCubit] Cache boş, meal bazlı istek atılıyor: $meal');
-    // NOT: emit etmiyoruz çünkü bu sadece bir meal için yükleme
-    // UI loading state'i recipes_page'de yönetiliyor
-
-    try {
-      // 🔄 OpenAI'ye meal bazlı istek atılıyor
-      //   1. Pantry items yükleniyor
-      //   2. Meal bazlı prompt oluşturuluyor
-      //   3. OpenAI'ye istek atılıyor
-      //   4. Görseller düzeltiliyor
-      //   5. Cache'e ve Hive'a kaydediliyor
-      //   ⚠️ Firestore'a kaydedilmiyor!
-      final PromptPreferences prefs = promptPreferences.getPreferences();
-
-      // Pantry items'ı al
-      final List<dynamic> pantryItemsRaw = await sl<IPantryRepository>()
-          .getItems(userId: userId);
-      final List<PantryItem> pantryItems = pantryItemsRaw.cast<PantryItem>();
-      final List<Ingredient> ingredients = pantryItems
-          .map<Ingredient>(
-            (PantryItem i) =>
-                Ingredient(name: i.name, unit: i.unit, quantity: i.quantity),
-          )
-          .toList();
-
-      // Meal bazlı prompt oluştur
-      final String mealName = MealNameMapper.getMealName(meal);
-      final String mealPrompt = tr(
-        'meal_type',
-        namedArgs: <String, String>{'meal': mealName},
-      );
-      final String contextPrompt = prefs.composePrompt(
-        '${tr('pantry_ingredients_prompt', namedArgs: <String, String>{'ingredients': ingredients.map((Ingredient e) => e.name).join(', ')})} $mealPrompt',
-      );
-
-      // 🔄 YENİ AKIŞ: Firestore-önce, sonra OpenAI mantığı
-      // Repository helper'ı kullanarak önce Firestore'dan oku, eksik kalanı OpenAI ile tamamla
-      final List<Recipe> recipes = await recipesRepository
-          .getRecipesFromFirestoreFirst(
-            userId: userId,
-            meal: meal,
-            ingredients: ingredients,
-            prompt: contextPrompt,
-            targetCount: 6,
-            excludeTitles: _seenTitles.toList(),
-          );
-
-      _seenTitles.addAll(recipes.map((Recipe e) => e.title));
-
-      // Cache'e kaydet - cacheService kullan
-      await cacheService.saveRecipes(cacheKey, recipes);
-
-      // Yeni tarifleri UserRecipeService'e kaydet (Hive'a) - userRecipeRepository kullan
-      try {
-        final List<UserRecipe> existingRecipes = userRecipeRepository.fetch();
-        final Set<String> existingTitles = existingRecipes
-            .map((UserRecipe r) => r.title)
-            .toSet();
-
-        for (final Recipe recipe in recipes) {
-          // Duplicate kontrolü
-          if (existingTitles.contains(recipe.title)) {
-            continue;
-          }
-
-          // UserRecipe oluştur ve kaydet
-          final UserRecipe userRecipe = UserRecipe(
-            id: const Uuid().v4(),
-            title: recipe.title,
-            description: '',
-            ingredients: recipe.ingredients,
-            steps: recipe.steps,
-            imagePath: recipe.imageUrl,
-            tags: recipe.category != null
-                ? <String>[recipe.category!]
-                : <String>[],
-            isAIRecommendation: true,
-            createdAt: DateTime.now(),
-          );
-
-          await userRecipeRepository.addRecipe(userRecipe);
-        }
-      } on Exception catch (e) {
-        debugPrint(
-          '[RecipesCubit] UserRecipeRepository\'e kaydetme hatası (meal: $meal): $e',
-        );
-        // Hata olsa bile devam et
-      }
-
-      // promptPreferences.incrementGenerated kaldırıldı - repository içinde zaten güncelleniyor
-
-      // NOT: emit etmiyoruz çünkü bu sadece bir meal için yükleme
-      // UI güncellemesi recipes_page'deki _loadAllData tarafından yapılacak
-
-      return recipes;
-    } on Exception catch (e) {
-      debugPrint('[RecipesCubit] loadMeal hatası (meal: $meal): $e');
-      if (!isClosed) {
-        emit(RecipesFailure(e.toString()));
-      }
-      return <Recipe>[];
-    }
+    // Cache boşsa boş liste döndür - OpenAI isteği atma
+    // Kullanıcı "Dolaptakilerden Tarif Öner" butonuna bastığında yeni tarifler gelecek
+    debugPrint(
+      '[RecipesCubit] Cache boş, meal: $meal - boş liste döndürülüyor (isteğe gerek yok)',
+    );
+    return <Recipe>[];
   }
 
   /// Load more recipes for a specific meal - bypasses cache and requests new recipes

@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
@@ -15,6 +16,7 @@ import 'package:smartdolap/features/recipes/data/services/recipe_image_service.d
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
+import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
 
 /// Repository implementation for recipes
 /// Follows SOLID principles:
@@ -194,30 +196,64 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       );
 
       if (remaining > 0) {
-        final List<Recipe> generated = await _generateRecipesWithOpenAIAndSave(
-          userId: userId,
-          ingredients: ingredients,
-          prompt: prompt,
-          count: remaining,
-          meal: meal,
-          excludeTitles: <String>[
-            ...excludeTitles,
-            ...firestoreRecipes.map((Recipe r) => r.title),
-          ],
-        );
+        try {
+          final List<Recipe> generated = await _generateRecipesWithOpenAIAndSave(
+            userId: userId,
+            ingredients: ingredients,
+            prompt: prompt,
+            count: remaining,
+            meal: meal,
+            excludeTitles: <String>[
+              ...excludeTitles,
+              ...firestoreRecipes.map((Recipe r) => r.title),
+            ],
+          );
 
-        final List<Recipe> combined = <Recipe>[...firestoreRecipes, ...generated];
-        print(
-          '[RecipesRepository] getRecipesFromFirestoreFirst tamamlandı - '
-          'Toplam ${combined.length} tarif (${firestoreRecipes.length} Firestore, '
-          '${generated.length} OpenAI)',
-        );
-        return combined;
+          final List<Recipe> combined = <Recipe>[...firestoreRecipes, ...generated];
+          print(
+            '[RecipesRepository] getRecipesFromFirestoreFirst tamamlandı - '
+            'Toplam ${combined.length} tarif (${firestoreRecipes.length} Firestore, '
+            '${generated.length} OpenAI)',
+          );
+          return combined;
+        } on OpenAIParsingException catch (e) {
+          Logger.error(
+            '[RecipesRepository] OpenAI parsing error in getRecipesFromFirestoreFirst',
+            e,
+          );
+          // OpenAI hatası durumunda Firestore'dan gelen tarifleri yine de döndür
+          if (firestoreRecipes.isNotEmpty) {
+            print(
+              '[RecipesRepository] OpenAI hatası, Firestore\'dan ${firestoreRecipes.length} tarif döndürülüyor',
+            );
+            return firestoreRecipes;
+          }
+          // Hem Firestore boş hem OpenAI hata → exception fırlat
+          rethrow;
+        } catch (e) {
+          Logger.error(
+            '[RecipesRepository] OpenAI error in getRecipesFromFirestoreFirst',
+            e,
+          );
+          // OpenAI hatası durumunda Firestore'dan gelen tarifleri yine de döndür
+          if (firestoreRecipes.isNotEmpty) {
+            print(
+              '[RecipesRepository] OpenAI hatası, Firestore\'dan ${firestoreRecipes.length} tarif döndürülüyor',
+            );
+            return firestoreRecipes;
+          }
+          // Hem Firestore boş hem OpenAI hata → exception fırlat
+          rethrow;
+        }
       }
 
       return firestoreRecipes;
     } on Exception catch (e) {
       // Firestore hatasında direkt OpenAI'ye fallback yap
+      Logger.error(
+        '[RecipesRepository] Firestore error in getRecipesFromFirestoreFirst',
+        e,
+      );
       print(
         '[RecipesRepository] Firestore hatası: $e, OpenAI\'ye fallback yapılıyor',
       );

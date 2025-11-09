@@ -1,16 +1,24 @@
+import 'dart:async';
+
 import 'package:hive/hive.dart';
 import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
 
 /// Handles gamification XP/level calculations.
+/// Follows Single Responsibility Principle - only handles stats management
 class ProfileStatsService {
   /// Creates a service backed by the provided Hive box.
-  ProfileStatsService(this._box, {this.onStatsChanged});
+  ProfileStatsService(this._box, {this.onStatsChanged})
+      : _controller = StreamController<ProfileStats>.broadcast();
 
   final Box<dynamic> _box;
   static const String _statsKey = 'profile_stats';
+  final StreamController<ProfileStats> _controller;
 
   /// Optional callback when stats change (for badge checking)
   final Future<void> Function(ProfileStats stats)? onStatsChanged;
+
+  /// Stream of profile stats changes
+  Stream<ProfileStats> watch() => _controller.stream;
 
   /// Reads the latest profile stats or returns defaults.
   ProfileStats load() =>
@@ -19,6 +27,7 @@ class ProfileStatsService {
   /// Persists the given stats atomically.
   Future<void> save(ProfileStats stats) async {
     await _box.put(_statsKey, stats.toMap());
+    _controller.add(stats);
     await onStatsChanged?.call(stats);
   }
 
@@ -58,5 +67,10 @@ class ProfileStatsService {
     );
     await save(updated);
     return updated;
+  }
+
+  /// Dispose the stream controller
+  void dispose() {
+    _controller.close();
   }
 }

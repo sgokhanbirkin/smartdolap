@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/category_colors.dart';
@@ -282,41 +281,6 @@ class _PantryItemCardState extends State<PantryItemCard>
                     ],
                   ),
                 ),
-                // Category badge - Top right
-                if (widget.item.category != null)
-                  Positioned(
-                    top: AppSizes.spacingXS,
-                    right: AppSizes.spacingXS,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSizes.spacingS,
-                        vertical: AppSizes.spacingXS * 0.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: CategoryColors.getCategoryBadgeColor(
-                          widget.item.category!,
-                        ),
-                        borderRadius: BorderRadius.circular(AppSizes.radius),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: AppSizes.spacingXS,
-                            offset: Offset(0, 1.h),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        widget.item.category!,
-                        style: TextStyle(
-                          fontSize: AppSizes.textXS,
-                          fontWeight: FontWeight.w600,
-                          color: CategoryColors.getCategoryBadgeTextColor(
-                            widget.item.category!,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

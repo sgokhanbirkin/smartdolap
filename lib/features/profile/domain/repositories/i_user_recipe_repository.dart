@@ -20,6 +20,7 @@ abstract class IUserRecipeRepository {
     List<String>? tags,
     String? imagePath,
     String? videoPath,
+    bool isAIRecommendation = false,
   });
 
   /// Deletes recipes by their titles

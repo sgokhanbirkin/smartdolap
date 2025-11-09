@@ -177,7 +177,7 @@ class AppRouter {
           builder: (BuildContext context) => MultiBlocProvider(
             providers: <BlocProvider<dynamic>>[
               BlocProvider<RecipesCubit>(
-                create: (_) => sl<RecipesCubit>(),
+            create: (_) => sl<RecipesCubit>(),
               ),
               BlocProvider<PantryCubit>(
                 create: (_) => sl<PantryCubit>()..watch(args['userId'] as String),

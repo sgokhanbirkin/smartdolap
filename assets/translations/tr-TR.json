@@ -246,5 +246,13 @@
   "recipes_deleted": "{count} tarif silindi",
   "load_more_recipes": "Daha Fazla Yükle",
   "splash_preparing": "Dolabını hazırlıyoruz...",
-  "session_ended": "Oturum sonlandırıldı"
+  "session_ended": "Oturum sonlandırıldı",
+  "recipes.suggest_from_pantry": "Dolaptakilerden Tarif Öner",
+  "recipes.marked_as_made": "Tarif yapıldı olarak işaretlendi",
+  "recipes.openai_parse_error": "Tarifleri işlerken bir hata oluştu, lütfen tekrar deneyin.",
+  "recipes.unknown_error": "Beklenmedik bir hata oluştu.",
+  "recipes.no_suggestions_yet": "Henüz öneri almadın. Dolabına eklediğin ürünlere göre tarif önerisi almak için yukarıdaki butona tıkla.",
+  "recipes.suggestions_error": "Tarif önerirken bir sorun oluştu.",
+  "recipes.try_again": "Tekrar Dene",
+  "common.unexpected_error": "Beklenmedik bir hata oluştu"
 }

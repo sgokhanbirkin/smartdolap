@@ -45,6 +45,7 @@ class UserRecipeService implements IUserRecipeRepository {
     List<String>? tags,
     String? imagePath,
     String? videoPath,
+    bool isAIRecommendation = false,
   }) async {
     final UserRecipe recipe = UserRecipe(
       id: _uuid.v4(),
@@ -55,6 +56,7 @@ class UserRecipeService implements IUserRecipeRepository {
       tags: tags ?? <String>[],
       imagePath: imagePath,
       videoPath: videoPath,
+      isAIRecommendation: isAIRecommendation,
       createdAt: DateTime.now(),
     );
     return addRecipe(recipe);

@@ -6,9 +6,13 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
+import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
 
+/// OpenAI Service implementation
+/// Follows Single Responsibility Principle - only handles OpenAI API communication
 class OpenAIService implements IOpenAIService {
   OpenAIService({Dio? dio, String? apiKey})
     : _dio = dio ?? Dio(BaseOptions(baseUrl: 'https://api.openai.com/v1')),
@@ -139,71 +143,155 @@ class OpenAIService implements IOpenAIService {
       '[OpenAIService] API yanıtı geldi - Süre: ${duration.inSeconds} saniye',
     );
 
-    final Map<String, dynamic> data2 = res.data as Map<String, dynamic>;
-    final List<dynamic> choices2 = data2['choices'] as List<dynamic>;
-    final Map<String, dynamic> message2 =
-        (choices2.first as Map<String, dynamic>)['message']
-            as Map<String, dynamic>;
-    final String content = message2['content'] as String;
-    final Map<String, dynamic> json =
-        jsonDecode(content) as Map<String, dynamic>;
-    final List<dynamic> recipes =
-        (json['recipes'] as List<dynamic>?) ?? <dynamic>[];
-    print('[OpenAIService] ${recipes.length} tarif parse ediliyor...');
-    final List<RecipeSuggestion> result = recipes.map((Object? r) {
-      final Map<String, dynamic>? recipeMap = r as Map<String, dynamic>?;
-      if (recipeMap == null) {
-        return const RecipeSuggestion(
-          title: '',
-          ingredients: <String>[],
-          steps: <String>[],
-        );
+    try {
+      // Parse response safely
+      final Map<String, dynamic> data2 = res.data as Map<String, dynamic>;
+      
+      // Validate response structure
+      if (!data2.containsKey('choices')) {
+        Logger.error('[OpenAIService] Invalid response structure - missing choices');
+        throw const OpenAIParsingException('invalid_format');
       }
-      return RecipeSuggestion(
-        title: (recipeMap['title'] as String?) ?? '',
-        ingredients:
-            (recipeMap['ingredients'] as List<dynamic>?)?.map<String>((
-              dynamic e,
-            ) {
-              if (e is String) {
-                return e;
-              }
-              if (e is Map<String, dynamic>) {
-                // Eğer Map ise, 'name' veya ilk değeri al
-                return (e['name'] as String?) ??
-                    (e.values.first as String?) ??
-                    e.toString();
-              }
-              return e.toString();
-            }).toList() ??
-            <String>[],
-        steps:
-            (recipeMap['steps'] as List<dynamic>?)?.map<String>((dynamic e) {
-              if (e is String) {
-                return e;
-              }
-              if (e is Map<String, dynamic>) {
-                // Eğer Map ise, 'step' veya ilk değeri al
-                return (e['step'] as String?) ??
-                    (e['text'] as String?) ??
-                    (e.values.first as String?) ??
-                    e.toString();
-              }
-              return e.toString();
-            }).toList() ??
-            <String>[],
-        calories: (recipeMap['calories'] as num?)?.toInt(),
-        durationMinutes: (recipeMap['durationMinutes'] as num?)?.toInt(),
-        difficulty: recipeMap['difficulty'] as String?,
-        imageUrl: recipeMap['imageUrl'] as String?,
-        category: recipeMap['category'] as String?,
-        fiber: (recipeMap['fiber'] as num?)?.toInt(),
+
+      final List<dynamic> choices2 = data2['choices'] as List<dynamic>;
+      if (choices2.isEmpty) {
+        Logger.error('[OpenAIService] Empty choices array');
+        throw const OpenAIParsingException('empty_response');
+      }
+
+      final Map<String, dynamic> message2 =
+          (choices2.first as Map<String, dynamic>)['message']
+              as Map<String, dynamic>;
+      
+      if (!message2.containsKey('content')) {
+        Logger.error('[OpenAIService] Invalid message structure - missing content');
+        throw const OpenAIParsingException('invalid_format');
+      }
+
+      final String content = message2['content'] as String;
+      
+      if (content.isEmpty) {
+        Logger.error('[OpenAIService] Empty content');
+        throw const OpenAIParsingException('empty_response');
+      }
+
+      // Parse JSON safely
+      Map<String, dynamic> json;
+      try {
+        json = jsonDecode(content) as Map<String, dynamic>;
+      } on FormatException catch (e, s) {
+        Logger.error('[OpenAIService] JSON decode error', e, s);
+        throw const OpenAIParsingException('invalid_format');
+      }
+
+      // Validate recipes array
+      if (!json.containsKey('recipes')) {
+        Logger.error('[OpenAIService] Invalid JSON structure - missing recipes');
+        throw const OpenAIParsingException('invalid_format');
+      }
+
+      final dynamic recipesJson = json['recipes'];
+      if (recipesJson is! List) {
+        Logger.error('[OpenAIService] Invalid recipes format - not a list');
+        throw const OpenAIParsingException('invalid_format');
+      }
+
+      final List<dynamic> recipes = recipesJson;
+      print('[OpenAIService] ${recipes.length} tarif parse ediliyor...');
+
+      // Parse each recipe with schema validation
+      final List<RecipeSuggestion> result = <RecipeSuggestion>[];
+      for (final Object? r in recipes) {
+        try {
+          final Map<String, dynamic>? recipeMap = r as Map<String, dynamic>?;
+          if (recipeMap == null) {
+            Logger.error('[OpenAIService] Null recipe map');
+            continue;
+          }
+
+          // Schema validation - required fields
+          if (!recipeMap.containsKey('title') || recipeMap['title'] is! String) {
+            Logger.error('[OpenAIService] Invalid recipe - missing or invalid title');
+            continue;
+          }
+
+          if (!recipeMap.containsKey('ingredients') || recipeMap['ingredients'] is! List) {
+            Logger.error('[OpenAIService] Invalid recipe - missing or invalid ingredients');
+            continue;
+          }
+
+          if (!recipeMap.containsKey('steps') || recipeMap['steps'] is! List) {
+            Logger.error('[OpenAIService] Invalid recipe - missing or invalid steps');
+            continue;
+          }
+
+          // Parse ingredients
+          final List<String> ingredients = (recipeMap['ingredients'] as List<dynamic>)
+              .map<String>((dynamic e) {
+                if (e is String) {
+                  return e;
+                }
+                if (e is Map<String, dynamic>) {
+                  return (e['name'] as String?) ??
+                      (e.values.first as String?) ??
+                      e.toString();
+                }
+                return e.toString();
+              })
+              .toList();
+
+          // Parse steps
+          final List<String> steps = (recipeMap['steps'] as List<dynamic>)
+              .map<String>((dynamic e) {
+                if (e is String) {
+                  return e;
+                }
+                if (e is Map<String, dynamic>) {
+                  return (e['step'] as String?) ??
+                      (e['text'] as String?) ??
+                      (e.values.first as String?) ??
+                      e.toString();
+                }
+                return e.toString();
+              })
+              .toList();
+
+          result.add(RecipeSuggestion(
+            title: recipeMap['title'] as String,
+            ingredients: ingredients,
+            steps: steps,
+            calories: (recipeMap['calories'] as num?)?.toInt(),
+            durationMinutes: (recipeMap['durationMinutes'] as num?)?.toInt(),
+            difficulty: recipeMap['difficulty'] as String?,
+            imageUrl: recipeMap['imageUrl'] as String?,
+            category: recipeMap['category'] as String?,
+            fiber: (recipeMap['fiber'] as num?)?.toInt(),
+          ));
+        } catch (e) {
+          Logger.error('[OpenAIService] Error parsing individual recipe', e);
+          // Continue with next recipe instead of failing completely
+          continue;
+        }
+      }
+
+      if (result.isEmpty) {
+        Logger.error('[OpenAIService] No valid recipes parsed');
+        throw const OpenAIParsingException('empty_response');
+      }
+
+      print(
+        '[OpenAIService] suggestRecipes tamamlandı - ${result.length} tarif döndürüldü',
       );
-    }).toList();
-    print(
-      '[OpenAIService] suggestRecipes tamamlandı - ${result.length} tarif döndürüldü',
-    );
-    return result;
+      return result;
+    } on OpenAIParsingException {
+      rethrow;
+    } on FormatException catch (e, s) {
+      Logger.error('[OpenAIService] JSON format error', e, s);
+      throw const OpenAIParsingException('invalid_format');
+    } catch (e, s) {
+      Logger.error('[OpenAIService] Unexpected error during parsing', e, s);
+      throw const OpenAIParsingException('unknown');
+    }
   }
 
   @override

@@ -242,5 +242,13 @@
   "recipes_deleted": "{count} recipe(s) deleted",
   "load_more_recipes": "Load More",
   "splash_preparing": "Preparing your pantry...",
-  "session_ended": "Session ended"
+  "session_ended": "Session ended",
+  "recipes.suggest_from_pantry": "Suggest Recipes from Pantry",
+  "recipes.marked_as_made": "Recipe marked as made",
+  "recipes.openai_parse_error": "An error occurred while processing recipes, please try again.",
+  "recipes.unknown_error": "An unexpected error occurred.",
+  "recipes.no_suggestions_yet": "You haven't received suggestions yet. Tap the button above to get recipe suggestions based on items in your pantry.",
+  "recipes.suggestions_error": "A problem occurred while suggesting recipes.",
+  "recipes.try_again": "Try Again",
+  "common.unexpected_error": "An unexpected error occurred"
 }

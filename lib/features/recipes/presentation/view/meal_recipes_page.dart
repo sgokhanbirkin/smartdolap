@@ -215,8 +215,8 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
       // Cache'den sil
       if (_recipesCubit != null) {
         await _recipesCubit!.deleteRecipesFromCache(
-          widget.userId,
-          widget.meal,
+        widget.userId,
+        widget.meal,
           titlesToDelete,
         );
       }
@@ -346,20 +346,20 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
     floatingActionButton: _isSelectionMode
         ? null
         : BlocBuilder<AuthCubit, AuthState>(
-            builder: (BuildContext context, AuthState state) {
-              return state.when(
-                initial: () => const SizedBox.shrink(),
-                loading: () => const SizedBox.shrink(),
-                error: (_) => const SizedBox.shrink(),
-                unauthenticated: () => const SizedBox.shrink(),
+      builder: (BuildContext context, AuthState state) {
+        return state.when(
+          initial: () => const SizedBox.shrink(),
+          loading: () => const SizedBox.shrink(),
+          error: (_) => const SizedBox.shrink(),
+          unauthenticated: () => const SizedBox.shrink(),
                 authenticated: (domain.User user) =>
                     FloatingActionButton.extended(
-                      onPressed: () => _showGetSuggestionsDialog(context),
-                      icon: const Icon(Icons.lightbulb),
-                      label: Text(tr('get_suggestions')),
-                    ),
-              );
-            },
+            onPressed: () => _showGetSuggestionsDialog(context),
+            icon: const Icon(Icons.lightbulb),
+            label: Text(tr('get_suggestions')),
           ),
+        );
+      },
+    ),
   );
 }

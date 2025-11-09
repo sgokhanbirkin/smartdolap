@@ -49,11 +49,17 @@ class RecipeDetailService {
   }
 
   /// Save recipe as made
+  /// Handles both AI recommendations and manual recipes
+  /// Follows Single Responsibility Principle - only handles recipe marking logic
   Future<RecipeMadeResult> markRecipeAsMade({
     required Recipe recipe,
     String? imageUrl,
   }) async {
     try {
+      // Determine if recipe is AI recommendation (recipes from AI typically have Firestore IDs)
+      // For MVP, we assume recipes with non-empty IDs are AI recommendations
+      final bool isAIRecommendation = recipe.id.isNotEmpty;
+
       // Convert Recipe to UserRecipe
       await _userRecipeService.createManual(
         title: recipe.title,
@@ -65,13 +71,23 @@ class RecipeDetailService {
           if (recipe.difficulty != null) recipe.difficulty!,
         ],
         imagePath: imageUrl,
+        isAIRecommendation: isAIRecommendation,
       );
 
-      // Add XP (base 50 XP, +25 if with photo)
+      // Update stats based on recipe type
       final int xpGained = imageUrl != null ? 75 : 50;
-      await _profileStatsService.incrementUserRecipes(
-        withPhoto: imageUrl != null,
-      );
+
+      if (isAIRecommendation) {
+        // AI recipe: increment AI recipes counter
+        await _profileStatsService.incrementAiRecipes();
+      } else {
+        // Manual recipe: increment user recipes counter
+        await _profileStatsService.incrementUserRecipes(
+          withPhoto: imageUrl != null,
+        );
+      }
+
+      // Add XP
       await _profileStatsService.addXp(xpGained);
 
       // Check for badges

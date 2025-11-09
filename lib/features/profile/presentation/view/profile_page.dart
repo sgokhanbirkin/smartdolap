@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,10 +7,10 @@ import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/constants/mvp_flags.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
-import 'package:smartdolap/features/auth/domain/entities/user.dart'
-    as domain;
+import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/profile/data/badge_service.dart';
@@ -46,13 +48,14 @@ class _ProfilePageState extends State<ProfilePage>
   final UserRecipeService _userRecipeService = sl<UserRecipeService>();
 
   late PromptPreferences _prefs;
-  late ProfileStats _stats;
+  ProfileStats _stats = const ProfileStats();
   List<UserRecipe> _userRecipes = <UserRecipe>[];
   List<domain.Badge> _badges = <domain.Badge>[];
 
   bool _isLoading = true;
   late AnimationController _pulseController;
   int _favoritesCount = 0;
+  StreamSubscription<ProfileStats>? _statsSubscription;
 
   @override
   void initState() {
@@ -64,6 +67,13 @@ class _ProfilePageState extends State<ProfilePage>
       upperBound: 1.04,
     )..repeat(reverse: true);
     _loadInitialData();
+
+    // Listen to stats changes
+    _statsSubscription = _statsService.watch().listen((ProfileStats stats) {
+      if (mounted) {
+        setState(() => _stats = stats);
+      }
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -100,6 +110,7 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void dispose() {
     _pulseController.dispose();
+    _statsSubscription?.cancel();
     super.dispose();
   }
 
@@ -137,14 +148,6 @@ class _ProfilePageState extends State<ProfilePage>
                       SizedBox(height: AppSizes.verticalSpacingL),
                       StatsTablesWidget(prefs: _prefs),
                       SizedBox(height: AppSizes.verticalSpacingL),
-                      CollectionCardWidget(
-                        stats: _stats,
-                        userRecipes: _userRecipes,
-                        onSimulateAiRecipe: _simulateAiRecipe,
-                        onCreateManualRecipe: _createManualRecipe,
-                        onUploadDishPhoto: _uploadDishPhoto,
-                      ),
-                      SizedBox(height: AppSizes.verticalSpacingL),
                       PreferenceControlsWidget(
                         prefs: _prefs,
                         onPrefsChanged: _savePrefs,
@@ -162,9 +165,9 @@ class _ProfilePageState extends State<ProfilePage>
                                   Icon(
                                     Icons.emoji_events,
                                     size: AppSizes.icon,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                   SizedBox(width: AppSizes.spacingS),
                                   Text(
@@ -184,9 +187,8 @@ class _ProfilePageState extends State<ProfilePage>
                                   onBadgeTap: (domain.Badge badge) {
                                     showDialog<void>(
                                       context: context,
-                                      builder: (_) => BadgeDetailDialogWidget(
-                                        badge: badge,
-                                      ),
+                                      builder: (_) =>
+                                          BadgeDetailDialogWidget(badge: badge),
                                     );
                                   },
                                 ),
@@ -195,6 +197,17 @@ class _ProfilePageState extends State<ProfilePage>
                           ),
                         ),
                       ),
+                      // Advanced sections (optional - can be hidden)
+                      if (kEnableAdvancedProfileSections) ...[
+                        SizedBox(height: AppSizes.verticalSpacingL),
+                        CollectionCardWidget(
+                          stats: _stats,
+                          userRecipes: _userRecipes,
+                          onSimulateAiRecipe: _simulateAiRecipe,
+                          onCreateManualRecipe: _createManualRecipe,
+                          onUploadDishPhoto: _uploadDishPhoto,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -254,7 +267,7 @@ class _ProfilePageState extends State<ProfilePage>
       return;
     }
     setState(() => _stats = stats);
-    
+
     // Check for badges
     final AuthState authState = context.read<AuthCubit>().state;
     await authState.whenOrNull(
@@ -264,8 +277,8 @@ class _ProfilePageState extends State<ProfilePage>
           badgeRepository: sl<IBadgeRepository>(),
           userId: user.id,
         );
-        final List<domain.Badge> newlyUnlocked =
-            await badgeService.checkAndAwardBadges();
+        final List<domain.Badge> newlyUnlocked = await badgeService
+            .checkAndAwardBadges();
         if (newlyUnlocked.isNotEmpty && mounted) {
           _badges = await badgeService.getAllBadgesWithStatus();
           setState(() {});
@@ -277,9 +290,9 @@ class _ProfilePageState extends State<ProfilePage>
       return;
     }
     final BuildContext snackbarContext = context;
-    ScaffoldMessenger.of(snackbarContext).showSnackBar(
-      SnackBar(content: Text(tr('profile_ai_recipe_recorded'))),
-    );
+    ScaffoldMessenger.of(
+      snackbarContext,
+    ).showSnackBar(SnackBar(content: Text(tr('profile_ai_recipe_recorded'))));
   }
 
   Future<void> _createManualRecipe() async {
@@ -336,8 +349,8 @@ class _ProfilePageState extends State<ProfilePage>
             badgeRepository: sl<IBadgeRepository>(),
             userId: user.id,
           );
-          final List<domain.Badge> newlyUnlocked =
-              await badgeService.checkAndAwardBadges();
+          final List<domain.Badge> newlyUnlocked = await badgeService
+              .checkAndAwardBadges();
           if (newlyUnlocked.isNotEmpty && mounted) {
             _badges = await badgeService.getAllBadgesWithStatus();
             setState(() {});
@@ -372,8 +385,8 @@ class _ProfilePageState extends State<ProfilePage>
             badgeRepository: sl<IBadgeRepository>(),
             userId: user.id,
           );
-          final List<domain.Badge> newlyUnlocked =
-              await badgeService.checkAndAwardBadges();
+          final List<domain.Badge> newlyUnlocked = await badgeService
+              .checkAndAwardBadges();
           if (newlyUnlocked.isNotEmpty && mounted) {
             _badges = await badgeService.getAllBadgesWithStatus();
             setState(() {});
