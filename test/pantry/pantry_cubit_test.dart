@@ -10,6 +10,7 @@ import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.da
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.dart';
+import 'package:smartdolap/product/services/expiry_notification_service.dart';
 
 /// Mock UseCases
 class MockListPantryItems extends Mock implements ListPantryItems {}
@@ -20,18 +21,31 @@ class MockUpdatePantryItem extends Mock implements UpdatePantryItem {}
 
 class MockDeletePantryItem extends Mock implements DeletePantryItem {}
 
+class MockExpiryNotificationService extends Mock
+    implements ExpiryNotificationService {}
+
 void main() {
   group('PantryCubit', () {
     late MockListPantryItems mockListPantryItems;
     late MockAddPantryItem mockAddPantryItem;
     late MockUpdatePantryItem mockUpdatePantryItem;
     late MockDeletePantryItem mockDeletePantryItem;
+    late MockExpiryNotificationService mockExpiryNotificationService;
 
     setUp(() {
       mockListPantryItems = MockListPantryItems();
       mockAddPantryItem = MockAddPantryItem();
       mockUpdatePantryItem = MockUpdatePantryItem();
       mockDeletePantryItem = MockDeletePantryItem();
+      mockExpiryNotificationService = MockExpiryNotificationService();
+
+      // Setup default mock behaviors
+      when(
+        () => mockExpiryNotificationService.schedulePerItem(any()),
+      ).thenAnswer((_) async => {});
+      when(
+        () => mockExpiryNotificationService.cancelItemNotifications(any()),
+      ).thenAnswer((_) async => {});
     });
 
     test('initial state should be PantryInitial', () {
@@ -41,6 +55,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       );
 
       // Assert
@@ -69,6 +84,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       ),
       act: (PantryCubit cubit) => cubit.watch('test-user-123'),
       wait: const Duration(milliseconds: 100),
@@ -98,6 +114,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       ),
       act: (PantryCubit cubit) => cubit.watch('test-user-123'),
       wait: const Duration(milliseconds: 100),
@@ -126,6 +143,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       ),
       act: (PantryCubit cubit) => cubit.watch('test-user-123'),
       wait: const Duration(milliseconds: 100),
@@ -155,6 +173,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       ),
       act: (PantryCubit cubit) => cubit.add(
         'test-user-123',
@@ -188,6 +207,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       ),
       act: (PantryCubit cubit) => cubit.update(
         'test-user-123',
@@ -218,6 +238,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       ),
       act: (PantryCubit cubit) => cubit.remove('test-user-123', 'item-1'),
       expect: () => <Matcher>[
@@ -244,6 +265,7 @@ void main() {
         addPantryItem: mockAddPantryItem,
         updatePantryItem: mockUpdatePantryItem,
         deletePantryItem: mockDeletePantryItem,
+        expiryNotificationService: mockExpiryNotificationService,
       ),
       act: (PantryCubit cubit) => cubit.refresh('test-user-123'),
       wait: const Duration(milliseconds: 100),

@@ -1,18 +1,24 @@
 // ignore_for_file: public_member_api_docs, avoid_catches_without_on_clauses
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 /// Service for managing expiry date notifications
+/// Follows Single Responsibility Principle - only handles notification scheduling and cancellation
 class ExpiryNotificationService {
   ExpiryNotificationService(this._notifications) {
     tz_data.initializeTimeZones();
   }
 
   final FlutterLocalNotificationsPlugin _notifications;
+  bool _permissionChecked = false;
+  bool? _permissionGranted;
 
   /// Initialize notification service
   Future<void> initialize() async {
@@ -31,39 +37,128 @@ class ExpiryNotificationService {
     );
 
     // Request permissions
-    await _notifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
+    await _checkAndRequestPermissions();
   }
+
+  /// Check and request notification permissions
+  Future<void> _checkAndRequestPermissions() async {
+    try {
+      // Android permission check
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          _notifications
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+
+      if (androidImplementation != null) {
+        final bool? granted = await androidImplementation
+            .areNotificationsEnabled();
+        _permissionGranted = granted ?? false;
+        _permissionChecked = true;
+
+        if (_permissionGranted == false) {
+          Logger.error('[ExpiryNotificationService] Notifications not enabled');
+          await androidImplementation.requestNotificationsPermission();
+          // Re-check after request
+          _permissionGranted =
+              await androidImplementation.areNotificationsEnabled() ?? false;
+        }
+      } else {
+        // iOS - permissions are requested automatically
+        _permissionGranted = true;
+        _permissionChecked = true;
+      }
+
+      debugPrint(
+        '[ExpiryNotificationService] Permission status: $_permissionGranted',
+      );
+    } catch (e) {
+      Logger.error('[ExpiryNotificationService] Error checking permissions', e);
+      _permissionGranted = false;
+      _permissionChecked = true;
+    }
+  }
+
+  /// Get permission status (for UI feedback)
+  bool? get permissionGranted => _permissionGranted;
 
   void _onNotificationTapped(NotificationResponse response) {
     // Handle notification tap (navigate to pantry page)
+    debugPrint(
+      '[ExpiryNotificationService] Notification tapped: ${response.id}',
+    );
   }
 
   /// Schedule notifications for pantry items
+  /// Cancels existing notifications for each item before scheduling new ones
   Future<void> scheduleNotifications(List<PantryItem> items) async {
-    // Cancel all existing notifications
-    await _notifications.cancelAll();
+    if (!_permissionChecked) {
+      await _checkAndRequestPermissions();
+    }
 
-    final DateTime now = DateTime.now();
+    if (_permissionGranted == false) {
+      Logger.error(
+        '[ExpiryNotificationService] Cannot schedule notifications - permission not granted',
+      );
+      return;
+    }
 
-    for (final PantryItem item in items) {
-      if (item.expiryDate == null) {
-        continue;
+    try {
+      for (final PantryItem item in items) {
+        // Cancel existing notifications for this item first
+        await cancelItemNotifications(item.id);
+
+        // Schedule new notifications for this item
+        await schedulePerItem(item);
       }
 
+      debugPrint(
+        '[ExpiryNotificationService] Scheduled notifications for ${items.length} items',
+      );
+    } catch (e) {
+      Logger.error(
+        '[ExpiryNotificationService] Error scheduling notifications',
+        e,
+      );
+    }
+  }
+
+  /// Schedule notifications for a single pantry item
+  /// Handles 3 days before, 1 day before, and same day notifications
+  Future<void> schedulePerItem(PantryItem item) async {
+    if (item.expiryDate == null) {
+      return;
+    }
+
+    if (!_permissionChecked) {
+      await _checkAndRequestPermissions();
+    }
+
+    if (_permissionGranted == false) {
+      Logger.error(
+        '[ExpiryNotificationService] Cannot schedule notification for ${item.name} - permission not granted',
+      );
+      return;
+    }
+
+    try {
+      final DateTime now = DateTime.now();
       final DateTime expiry = item.expiryDate!;
       final Duration difference = expiry.difference(now);
 
       // Skip if already expired (more than 1 day ago)
       if (difference.inDays < -1) {
-        continue;
+        debugPrint(
+          '[ExpiryNotificationService] Skipping expired item: ${item.name}',
+        );
+        return;
       }
 
       // Expired notification (within last day)
       if (difference.isNegative) {
+        final tz.TZDateTime scheduledDate = _convertToTZDateTime(
+          now.add(const Duration(seconds: 5)),
+        );
         await _scheduleNotification(
           id: item.id.hashCode,
           title: tr('expiry_expired_title'),
@@ -71,14 +166,25 @@ class ExpiryNotificationService {
             'expiry_expired_body',
             namedArgs: <String, String>{'name': item.name},
           ),
-          scheduledDate: now.add(const Duration(seconds: 5)),
+          scheduledDate: scheduledDate,
         );
-        continue;
+        debugPrint(
+          '[ExpiryNotificationService] Scheduled expired notification for ${item.name} @ $scheduledDate',
+        );
+        return;
       }
 
       // 3 days before expiry
       final DateTime threeDaysBefore = expiry.subtract(const Duration(days: 3));
       if (threeDaysBefore.isAfter(now) && difference.inDays >= 3) {
+        final tz.TZDateTime scheduledDate = _convertToTZDateTime(
+          DateTime(
+            threeDaysBefore.year,
+            threeDaysBefore.month,
+            threeDaysBefore.day,
+            9,
+          ),
+        );
         await _scheduleNotification(
           id: item.id.hashCode + 1000,
           title: tr('expiry_3days_title'),
@@ -86,18 +192,19 @@ class ExpiryNotificationService {
             'expiry_3days_body',
             namedArgs: <String, String>{'name': item.name},
           ),
-          scheduledDate: DateTime(
-            threeDaysBefore.year,
-            threeDaysBefore.month,
-            threeDaysBefore.day,
-            9,
-          ),
+          scheduledDate: scheduledDate,
+        );
+        debugPrint(
+          '[ExpiryNotificationService] Scheduled 3-day notification for ${item.name} @ $scheduledDate',
         );
       }
 
       // 1 day before expiry
       final DateTime oneDayBefore = expiry.subtract(const Duration(days: 1));
       if (oneDayBefore.isAfter(now) && difference.inDays >= 1) {
+        final tz.TZDateTime scheduledDate = _convertToTZDateTime(
+          DateTime(oneDayBefore.year, oneDayBefore.month, oneDayBefore.day, 9),
+        );
         await _scheduleNotification(
           id: item.id.hashCode + 2000,
           title: tr('expiry_1day_title'),
@@ -105,12 +212,10 @@ class ExpiryNotificationService {
             'expiry_1day_body',
             namedArgs: <String, String>{'name': item.name},
           ),
-          scheduledDate: DateTime(
-            oneDayBefore.year,
-            oneDayBefore.month,
-            oneDayBefore.day,
-            9,
-          ),
+          scheduledDate: scheduledDate,
+        );
+        debugPrint(
+          '[ExpiryNotificationService] Scheduled 1-day notification for ${item.name} @ $scheduledDate',
         );
       }
 
@@ -123,6 +228,9 @@ class ExpiryNotificationService {
           9,
         );
         if (expiryMorning.isAfter(now)) {
+          final tz.TZDateTime scheduledDate = _convertToTZDateTime(
+            expiryMorning,
+          );
           await _scheduleNotification(
             id: item.id.hashCode + 3000,
             title: tr('expiry_today_title'),
@@ -130,10 +238,18 @@ class ExpiryNotificationService {
               'expiry_today_body',
               namedArgs: <String, String>{'name': item.name},
             ),
-            scheduledDate: expiryMorning,
+            scheduledDate: scheduledDate,
+          );
+          debugPrint(
+            '[ExpiryNotificationService] Scheduled today notification for ${item.name} @ $scheduledDate',
           );
         }
       }
+    } catch (e) {
+      Logger.error(
+        '[ExpiryNotificationService] Error scheduling notification for ${item.name}',
+        e,
+      );
     }
   }
 
@@ -141,9 +257,12 @@ class ExpiryNotificationService {
     required int id,
     required String title,
     required String body,
-    required DateTime scheduledDate,
+    required tz.TZDateTime scheduledDate,
   }) async {
-    if (scheduledDate.isBefore(DateTime.now())) {
+    if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
+      debugPrint(
+        '[ExpiryNotificationService] Skipping notification - scheduled date is in the past',
+      );
       return;
     }
 
@@ -172,7 +291,7 @@ class ExpiryNotificationService {
       id,
       title,
       body,
-      _convertToTZDateTime(scheduledDate),
+      scheduledDate,
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
@@ -184,10 +303,22 @@ class ExpiryNotificationService {
       tz.TZDateTime.from(dateTime, tz.local);
 
   /// Cancel notification for a specific item
+  /// Cancels all 4 notification IDs associated with the item
   Future<void> cancelItemNotifications(String itemId) async {
-    await _notifications.cancel(itemId.hashCode);
-    await _notifications.cancel(itemId.hashCode + 1000);
-    await _notifications.cancel(itemId.hashCode + 2000);
-    await _notifications.cancel(itemId.hashCode + 3000);
+    try {
+      final int baseId = itemId.hashCode;
+      await _notifications.cancel(baseId);
+      await _notifications.cancel(baseId + 1000);
+      await _notifications.cancel(baseId + 2000);
+      await _notifications.cancel(baseId + 3000);
+      debugPrint(
+        '[ExpiryNotificationService] Cancelled alarms for item: $itemId',
+      );
+    } catch (e) {
+      Logger.error(
+        '[ExpiryNotificationService] Error cancelling notifications for item: $itemId',
+        e,
+      );
+    }
   }
 }

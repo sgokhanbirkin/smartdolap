@@ -128,6 +128,7 @@ Future<void> setupLocator() async {
       addPantryItem: sl(),
       updatePantryItem: sl(),
       deletePantryItem: sl(),
+      expiryNotificationService: sl(),
     ),
   );
 
