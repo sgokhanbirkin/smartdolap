@@ -7,28 +7,259 @@ import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
 import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
+import 'package:smartdolap/features/recipes/data/services/firestore_recipe_mapper.dart';
+import 'package:smartdolap/features/recipes/data/services/firestore_recipe_query_builder.dart';
+import 'package:smartdolap/features/recipes/data/services/missing_ingredient_calculator.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_filter_service.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
-import 'package:smartdolap/product/services/image_lookup_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 
+/// Repository implementation for recipes
+/// Follows SOLID principles:
+/// - Single Responsibility: Only handles recipe data operations
+/// - Dependency Inversion: Depends on abstractions (IRecipesRepository)
+/// - Open/Closed: Open for extension via new methods, closed for modification
 class RecipesRepositoryImpl implements IRecipesRepository {
   RecipesRepositoryImpl(
     this._firestore,
     this._pantry,
     this._openai,
     this._promptPrefs,
-    this._imageLookup,
+    this._recipeImageService,
   );
 
   final FirebaseFirestore _firestore;
   final IPantryRepository _pantry;
   final IOpenAIService _openai;
   final PromptPreferenceService _promptPrefs;
-  final ImageLookupService _imageLookup;
+  final RecipeImageService _recipeImageService;
+
+  // ============================================================================
+  // PRIVATE HELPER: OpenAI + Firestore yazma işlemini tek bir yerde topla
+  // Follows Single Responsibility Principle - delegates to specialized services
+  // ============================================================================
+  /// Generates recipes using OpenAI and saves them to Firestore
+  /// Returns the generated Recipe list with Firestore document IDs
+  Future<List<Recipe>> _generateRecipesWithOpenAIAndSave({
+    required String userId,
+    required List<Ingredient> ingredients,
+    required String prompt,
+    required int count,
+    String? meal,
+    List<String> excludeTitles = const <String>[],
+  }) async {
+    print(
+      '[RecipesRepository] _generateRecipesWithOpenAIAndSave başladı - '
+      'count: $count, meal: $meal, excludeTitles: ${excludeTitles.length}',
+    );
+
+    final PromptPreferences prefs = _promptPrefs.getPreferences();
+
+    // OpenAI'ye istek at
+    final List<RecipeSuggestion> suggestions = await _openai.suggestRecipes(
+      ingredients,
+      servings: prefs.servings,
+      count: count,
+      query: prompt,
+      excludeTitles: excludeTitles,
+    );
+
+    print(
+      '[RecipesRepository] OpenAI yanıtı geldi - ${suggestions.length} öneri',
+    );
+
+    // Her tarif için görsel düzelt ve Firestore'a kaydet
+    final List<Recipe> recipes = <Recipe>[];
+    for (final RecipeSuggestion s in suggestions) {
+      final DocumentReference<Map<String, dynamic>> doc = _firestore
+          .collection('recipes')
+          .doc();
+
+      // MissingCount hesapla - MissingIngredientCalculator servisi kullan
+      final int missing = MissingIngredientCalculator.calculateMissingCount(
+        s.ingredients,
+        ingredients,
+      );
+
+      // Görsel düzelt - RecipeImageService kullan
+      final String? imageUrl = await _recipeImageService.fixImageUrl(
+        s.imageUrl,
+        s.title,
+      );
+
+      // Recipe objesi oluştur
+      final Recipe recipe = Recipe(
+        id: doc.id,
+        title: s.title,
+        ingredients: s.ingredients,
+        steps: s.steps,
+        calories: s.calories,
+        durationMinutes: s.durationMinutes,
+        difficulty: s.difficulty,
+        imageUrl: imageUrl,
+        category: s.category ?? meal,
+        missingCount: missing,
+        fiber: s.fiber,
+      );
+
+      // Firestore'a kaydet - FirestoreRecipeMapper kullan
+      await doc.set(FirestoreRecipeMapper.toMap(recipe));
+
+      recipes.add(recipe);
+    }
+
+    // PromptPreferences güncelle
+    await _promptPrefs.incrementGenerated(recipes.length);
+
+    print(
+      '[RecipesRepository] _generateRecipesWithOpenAIAndSave tamamlandı - '
+      '${recipes.length} tarif Firestore\'a kaydedildi',
+    );
+
+    return recipes;
+  }
+
+  // ============================================================================
+  // PUBLIC HELPER: Firestore-önce, sonra OpenAI mantığı
+  // ============================================================================
+  /// Gets recipes from Firestore first, then generates remaining with OpenAI
+  /// Returns combined list of Firestore recipes + newly generated recipes
+  Future<List<Recipe>> getRecipesFromFirestoreFirst({
+    required String userId,
+    String? meal,
+    required List<Ingredient> ingredients,
+    required String prompt,
+    required int targetCount,
+    List<String> excludeTitles = const <String>[],
+  }) async {
+    print(
+      '[RecipesRepository] getRecipesFromFirestoreFirst başladı - '
+      'userId: $userId, meal: $meal, targetCount: $targetCount',
+    );
+
+    try {
+      // 1. Önce Firestore'dan oku
+      // FirestoreRecipeQueryBuilder servisi kullan - SRP
+      final CollectionReference<Map<String, dynamic>> collection =
+          _firestore.collection('recipes');
+      final Query<Map<String, dynamic>> query =
+          FirestoreRecipeQueryBuilder.buildQuery(
+        collection: collection,
+        meal: meal,
+        limit: targetCount * 2, // Biraz fazla al (filtreleme için)
+      );
+
+      final QuerySnapshot<Map<String, dynamic>> snapshot = await query.get();
+
+      // Firestore document'lerini Recipe listesine map et
+      // FirestoreRecipeMapper servisi kullan - SRP
+      final List<Recipe> allRecipes =
+          FirestoreRecipeMapper.fromQuerySnapshot(snapshot);
+
+      print(
+        '[RecipesRepository] Firestore\'dan ${allRecipes.length} tarif bulundu',
+      );
+
+      // Filtreleme işlemleri - RecipeFilterService kullan - SRP
+      List<Recipe> firestoreRecipes = RecipeFilterService.applyFilters(
+        allRecipes,
+        excludeTitles,
+        ingredients,
+      );
+
+      // targetCount kadar al - RecipeFilterService kullan
+      firestoreRecipes = RecipeFilterService.takeFirst(
+        firestoreRecipes,
+        targetCount,
+      );
+
+      print(
+        '[RecipesRepository] Filtreleme sonrası ${firestoreRecipes.length} tarif',
+      );
+
+      // 2. Eğer Firestore yeterliyse direkt dön
+      if (firestoreRecipes.length >= targetCount) {
+        print(
+          '[RecipesRepository] Firestore yeterli, ${firestoreRecipes.length} tarif döndürülüyor',
+        );
+        return firestoreRecipes;
+      }
+
+      // 3. Eksik kalanı OpenAI ile tamamla
+      final int remaining = targetCount - firestoreRecipes.length;
+      print(
+        '[RecipesRepository] Firestore yetersiz, $remaining tarif OpenAI ile tamamlanacak',
+      );
+
+      if (remaining > 0) {
+        final List<Recipe> generated = await _generateRecipesWithOpenAIAndSave(
+          userId: userId,
+          ingredients: ingredients,
+          prompt: prompt,
+          count: remaining,
+          meal: meal,
+          excludeTitles: <String>[
+            ...excludeTitles,
+            ...firestoreRecipes.map((Recipe r) => r.title),
+          ],
+        );
+
+        final List<Recipe> combined = <Recipe>[...firestoreRecipes, ...generated];
+        print(
+          '[RecipesRepository] getRecipesFromFirestoreFirst tamamlandı - '
+          'Toplam ${combined.length} tarif (${firestoreRecipes.length} Firestore, '
+          '${generated.length} OpenAI)',
+        );
+        return combined;
+      }
+
+      return firestoreRecipes;
+    } on Exception catch (e) {
+      // Firestore hatasında direkt OpenAI'ye fallback yap
+      print(
+        '[RecipesRepository] Firestore hatası: $e, OpenAI\'ye fallback yapılıyor',
+      );
+      return _generateRecipesWithOpenAIAndSave(
+        userId: userId,
+        ingredients: ingredients,
+        prompt: prompt,
+        count: targetCount,
+        meal: meal,
+        excludeTitles: excludeTitles,
+      );
+    }
+  }
 
   @override
   Future<List<Recipe>> suggestFromPantry({required String userId}) async {
+    // ============================================================================
+    // 🔄 AKIŞ 1: RecipesRepositoryImpl.suggestFromPantry() - load() metodundan çağrılıyor
+    // ============================================================================
+    // Bu metod SADECE load() metodu tarafından kullanılıyor ve Firestore'a kaydediyor!
+    //
+    // ADIMLAR:
+    //   1. Pantry items yükleniyor (_pantry.getItems())
+    //   2. Ingredient listesine dönüştürülüyor
+    //   3. Prompt oluşturuluyor (PromptPreferences ile)
+    //   4. OpenAI'ye istek atılıyor (_openai.suggestRecipes())
+    //   5. Her tarif için:
+    //      a) Firestore'da yeni document oluşturuluyor (_firestore.collection('recipes').doc())
+    //      b) Görsel düzeltiliyor (ImageLookupService ile, eğer OpenAI'den gelen görsel geçersizse)
+    //      c) missingCount hesaplanıyor (pantry'de olmayan malzemeler)
+    //      d) Firestore'a kaydediliyor (doc.set())
+    //      e) Recipe objesi oluşturuluyor (Firestore doc.id ile)
+    //   6. PromptPreferences güncelleniyor (incrementGenerated)
+    //   7. Recipe listesi döndürülüyor
+    //
+    // ✅ Firestore'a kaydediliyor: EVET (her tarif için ayrı document)
+    // ❌ Hive cache'e kaydediliyor: HAYIR (sadece Firestore'a kaydediliyor)
+    // ❌ UserRecipeService'e kaydediliyor: HAYIR
+    //
+    // ⚠️ NOT: Bu metod diğer metodlardan (loadMeal, loadMoreMealRecipes, loadWithSelection)
+    //    farklı olarak Firestore'a kaydediyor. Bu tutarsızlık var!
+    // ============================================================================
     print('[RecipesRepository] suggestFromPantry başladı - userId: $userId');
     final DateTime repoStartTime = DateTime.now();
     
@@ -54,74 +285,16 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       ),
     );
 
-    print('[RecipesRepository] OpenAI suggestRecipes çağrılıyor...');
-    final DateTime openaiStartTime = DateTime.now();
-    final List<RecipeSuggestion> suggestions = await _openai.suggestRecipes(
-      ingredients,
-      servings: prefs.servings,
-      query: contextPrompt,
+    // OpenAI çağrısını ve Firestore'a yazma işini private helper'a delega et
+    // Davranış değişmedi, sadece kod tekrarı azaltıldı
+    final List<Recipe> recipes = await _generateRecipesWithOpenAIAndSave(
+      userId: userId,
+      ingredients: ingredients,
+      prompt: contextPrompt,
+      count: 6, // Default count (OpenAI'den kaç tarif isteniyor)
+      excludeTitles: const <String>[],
     );
-    final Duration openaiDuration = DateTime.now().difference(openaiStartTime);
-    print('[RecipesRepository] OpenAI yanıtı geldi - ${suggestions.length} öneri, Süre: ${openaiDuration.inSeconds} saniye');
 
-    print('[RecipesRepository] Tarifler Firestore\'a kaydediliyor ve görseller düzeltiliyor...');
-    final List<Recipe> recipes = <Recipe>[];
-    for (final RecipeSuggestion s in suggestions) {
-      final DocumentReference<Map<String, dynamic>> doc = _firestore
-          .collection('recipes')
-          .doc();
-      final Set<String> pantryNames = ingredients
-          .map((Ingredient e) => e.name.toLowerCase())
-          .toSet();
-      final int missing = s.ingredients
-          .where((String name) => !pantryNames.contains(name.toLowerCase()))
-          .length;
-
-      String? imageUrl = s.imageUrl;
-      // OpenAI'den gelen imageUrl'ler genelde çalışmıyor,
-      // ImageLookupService kullan
-      if (imageUrl == null ||
-          imageUrl.isEmpty ||
-          imageUrl.contains('example.com')) {
-        print('[RecipesRepository] Görsel aranıyor: ${s.title}');
-        final DateTime imageStartTime = DateTime.now();
-        imageUrl = await _imageLookup.search(
-          '${s.title} ${tr('recipe_search_suffix')}',
-        );
-        final Duration imageDuration = DateTime.now().difference(imageStartTime);
-        print('[RecipesRepository] Görsel bulundu - Süre: ${imageDuration.inMilliseconds}ms');
-      }
-
-      await doc.set(<String, dynamic>{
-        'title': s.title,
-        'ingredients': s.ingredients,
-        'steps': s.steps,
-        'calories': s.calories,
-        'durationMinutes': s.durationMinutes,
-        'difficulty': s.difficulty,
-        'imageUrl': imageUrl,
-        'category': s.category,
-        'missingCount': missing,
-        'fiber': s.fiber,
-        'createdAt': DateTime.now().toIso8601String(),
-      });
-      recipes.add(
-        Recipe(
-          id: doc.id,
-          title: s.title,
-          ingredients: s.ingredients,
-          steps: s.steps,
-          calories: s.calories,
-          durationMinutes: s.durationMinutes,
-          difficulty: s.difficulty,
-          imageUrl: imageUrl,
-          category: s.category,
-          missingCount: missing,
-          fiber: s.fiber,
-        ),
-      );
-    }
-    await _promptPrefs.incrementGenerated(recipes.length);
     final Duration repoDuration = DateTime.now().difference(repoStartTime);
     print('[RecipesRepository] suggestFromPantry tamamlandı - ${recipes.length} tarif, Toplam süre: ${repoDuration.inSeconds} saniye');
     return recipes;
@@ -139,26 +312,8 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         return null;
       }
 
-      final Map<String, dynamic> data = doc.data()!;
-      return Recipe(
-        id: doc.id,
-        title: data['title'] as String? ?? '',
-        ingredients: (data['ingredients'] as List<dynamic>?)
-                ?.map<String>((dynamic e) => e.toString())
-                .toList() ??
-            <String>[],
-        steps: (data['steps'] as List<dynamic>?)
-                ?.map<String>((dynamic e) => e.toString())
-                .toList() ??
-            <String>[],
-        calories: data['calories'] as int?,
-        durationMinutes: data['durationMinutes'] as int?,
-        difficulty: data['difficulty'] as String?,
-        imageUrl: data['imageUrl'] as String?,
-        category: data['category'] as String?,
-        missingCount: data['missingCount'] as int?,
-        fiber: (data['fiber'] as num?)?.toInt(),
-      );
+      // FirestoreRecipeMapper servisi kullan - SRP
+      return FirestoreRecipeMapper.fromDocumentSnapshot(doc);
     } on Exception {
       return null;
     }

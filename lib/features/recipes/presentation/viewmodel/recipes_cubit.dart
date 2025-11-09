@@ -15,6 +15,7 @@ import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.d
 import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_mapper.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart';
@@ -30,6 +31,7 @@ class RecipesCubit extends Cubit<RecipesState> {
     required this.cacheService,
     required this.imageService,
     required this.userRecipeRepository,
+    required this.recipesRepository,
   }) : super(const RecipesInitial());
 
   final SuggestRecipesFromPantry suggest;
@@ -39,6 +41,7 @@ class RecipesCubit extends Cubit<RecipesState> {
   final RecipeCacheService cacheService;
   final RecipeImageService imageService;
   final IUserRecipeRepository userRecipeRepository;
+  final IRecipesRepository recipesRepository;
 
   final Set<String> _seenTitles = <String>{};
   bool isFetchingMore = false;
@@ -46,9 +49,40 @@ class RecipesCubit extends Cubit<RecipesState> {
   String _currentCategory = 'suggestions';
   String? _selectedMeal;
 
+  // ============================================================================
+  // MEVCUT AKIŞ ANALİZİ - TARİF YÜKLEME VE KAYDETME SÜRECİ
+  // ============================================================================
+  //
+  // 📋 GENEL AKIŞ ÖZETİ:
+  //   1. OpenAI'den tarif önerileri çekiliyor
+  //   2. Görseller düzeltiliyor (ImageLookupService ile)
+  //   3. Tarifler cache'e (Hive) kaydediliyor
+  //   4. Tarifler UserRecipeService'e (Hive) kaydediliyor
+  //   5. SADECE load() metodu Firestore'a kaydediyor (diğerleri kaydetmiyor!)
+  //
+  // ⚠️ TUTARSIZLIK: loadMeal(), loadMoreMealRecipes(), loadWithSelection()
+  //    Firestore'a kaydetmiyor, sadece Hive'a kaydediyor!
+  // ============================================================================
+
   Future<void> load(String userId) async {
     emit(const RecipesLoading());
     try {
+      // 🔄 AKIŞ 1: load() metodu
+      //   1. suggest() use case'i çağrılıyor (SuggestRecipesFromPantry)
+      //   2. Bu use case RecipesRepositoryImpl.suggestFromPantry() çağırıyor
+      //   3. Repository içinde:
+      //      a) Pantry items yükleniyor
+      //      b) OpenAI'ye istek atılıyor (_openai.suggestRecipes())
+      //      c) Her tarif için görsel düzeltiliyor (ImageLookupService)
+      //      d) Her tarif Firestore'a kaydediliyor (_firestore.collection('recipes').doc().set())
+      //      e) Recipe objeleri oluşturulup döndürülüyor
+      //   4. RecipesCubit'e Recipe listesi dönüyor
+      //   5. State emit ediliyor (RecipesLoaded)
+      //   6. PromptPreferences güncelleniyor (incrementGenerated)
+      //
+      // ✅ Firestore'a kaydediliyor: EVET
+      // ✅ Hive cache'e kaydediliyor: HAYIR (sadece repository içinde Firestore'a kaydediliyor)
+      // ✅ UserRecipeService'e kaydediliyor: HAYIR
       // suggest() zaten görselleri düzeltiyor (RecipesRepository içinde)
       final List<Recipe> recipes = await suggest(userId: userId);
 
@@ -58,7 +92,7 @@ class RecipesCubit extends Cubit<RecipesState> {
       emit(RecipesLoaded(recipes, allRecipes: recipes));
       _seenTitles.addAll(recipes.map((Recipe e) => e.title));
 
-      await promptPreferences.incrementGenerated(recipes.length);
+      // promptPreferences.incrementGenerated kaldırıldı - repository içinde zaten güncelleniyor
     } on Exception catch (e) {
       debugPrint('[RecipesCubit] load hatası: $e');
       if (isClosed) {
@@ -76,6 +110,19 @@ class RecipesCubit extends Cubit<RecipesState> {
   }) async {
     emit(const RecipesLoading());
     try {
+      // 🔄 AKIŞ 2: loadWithSelection() metodu (Öneri Al sayfasından)
+      //   1. Seçilen malzemeler Ingredient listesine dönüştürülüyor
+      //   2. Meal prompt'u oluşturuluyor (not varsa ekleniyor)
+      //   3. OpenAI'ye direkt istek atılıyor (openAI.suggestRecipes())
+      //   4. Her tarif için görsel düzeltiliyor (imageService.fixImageUrl())
+      //   5. Recipe objeleri oluşturuluyor
+      //   6. Cache'e kaydediliyor (meal bazlı cache key ile)
+      //   7. UserRecipeService'e kaydediliyor (Hive'a, duplicate kontrolü ile)
+      //   8. State emit ediliyor
+      //
+      // ❌ Firestore'a kaydediliyor: HAYIR
+      // ✅ Hive cache'e kaydediliyor: EVET (cacheService.addRecipesToCache)
+      // ✅ UserRecipeService'e kaydediliyor: EVET (userRecipeRepository.addRecipe)
       final PromptPreferences prefs = promptPreferences.getPreferences();
       final List<Ingredient> ings = names
           .map((String e) => Ingredient(name: e))
@@ -90,35 +137,17 @@ class RecipesCubit extends Cubit<RecipesState> {
         mealPrompt = '$mealPrompt. Not: $note';
       }
 
-      final List<RecipeSuggestion> suggestions = await openAI.suggestRecipes(
-        ings,
-        servings: prefs.servings,
-        query: prefs.composePrompt(mealPrompt),
-        excludeTitles: _seenTitles.toList(),
-      );
-
-      // Görselleri düzelt - imageService kullan
-      final List<Recipe> recipes = await Future.wait(
-        suggestions.map((RecipeSuggestion e) async {
-          final String? imageUrl = await imageService.fixImageUrl(
-            e.imageUrl,
-            e.title,
+      // 🔄 YENİ AKIŞ: Firestore-önce, sonra OpenAI mantığı
+      // Repository helper'ı kullanarak önce Firestore'dan oku, eksik kalanı OpenAI ile tamamla
+      final List<Recipe> recipes = await recipesRepository
+          .getRecipesFromFirestoreFirst(
+            userId: userId,
+            meal: meal,
+            ingredients: ings,
+            prompt: prefs.composePrompt(mealPrompt),
+            targetCount: 6,
+            excludeTitles: _seenTitles.toList(),
           );
-
-          return Recipe(
-            id: '',
-            title: e.title,
-            ingredients: e.ingredients,
-            steps: e.steps,
-            calories: e.calories,
-            durationMinutes: e.durationMinutes,
-            difficulty: e.difficulty,
-            imageUrl: imageUrl,
-            category: e.category ?? meal,
-            fiber: e.fiber,
-          );
-        }),
-      );
 
       _seenTitles.addAll(recipes.map((Recipe e) => e.title));
 
@@ -158,7 +187,7 @@ class RecipesCubit extends Cubit<RecipesState> {
         debugPrint('[RecipesCubit] Hive kaydetme hatası: $e');
       }
 
-      await promptPreferences.incrementGenerated(recipes.length);
+      // promptPreferences.incrementGenerated kaldırıldı - repository içinde zaten güncelleniyor
       if (!isClosed) {
         emit(RecipesLoaded(recipes, allRecipes: recipes));
       }
@@ -313,6 +342,28 @@ class RecipesCubit extends Cubit<RecipesState> {
 
   /// Load recipes for a specific meal - ayrı istek atar ve cache'e kaydeder
   Future<List<Recipe>> loadMeal(String userId, String meal) async {
+    // 🔄 AKIŞ 3: loadMeal() metodu (Yapabileceklerin sayfası - meal bazlı)
+    //   1. Meal bazlı cache key oluşturuluyor
+    //   2. Cache kontrolü yapılıyor (cacheService.getRecipes())
+    //   3. Eğer cache'de varsa:
+    //      a) Cache'den okunuyor
+    //      b) Recipe objelerine dönüştürülüyor
+    //      c) Görseller düzeltiliyor (boşsa)
+    //      d) Döndürülüyor
+    //   4. Eğer cache boşsa:
+    //      a) Pantry items yükleniyor
+    //      b) Meal bazlı prompt oluşturuluyor
+    //      c) OpenAI'ye istek atılıyor (openAI.suggestRecipes())
+    //      d) Her tarif için görsel düzeltiliyor (imageService.fixImageUrl())
+    //      e) Recipe objeleri oluşturuluyor
+    //      f) Cache'e kaydediliyor (cacheService.saveRecipes())
+    //      g) UserRecipeService'e kaydediliyor (Hive'a, duplicate kontrolü ile)
+    //      h) Döndürülüyor
+    //
+    // ❌ Firestore'a kaydediliyor: HAYIR
+    // ✅ Hive cache'e kaydediliyor: EVET (cacheService.saveRecipes)
+    // ✅ UserRecipeService'e kaydediliyor: EVET (userRecipeRepository.addRecipe)
+    //
     // Meal bazlı cache key
     final String cacheKey = cacheService.getMealCacheKey(userId, meal);
 
@@ -356,6 +407,13 @@ class RecipesCubit extends Cubit<RecipesState> {
     // UI loading state'i recipes_page'de yönetiliyor
 
     try {
+      // 🔄 OpenAI'ye meal bazlı istek atılıyor
+      //   1. Pantry items yükleniyor
+      //   2. Meal bazlı prompt oluşturuluyor
+      //   3. OpenAI'ye istek atılıyor
+      //   4. Görseller düzeltiliyor
+      //   5. Cache'e ve Hive'a kaydediliyor
+      //   ⚠️ Firestore'a kaydedilmiyor!
       final PromptPreferences prefs = promptPreferences.getPreferences();
 
       // Pantry items'ı al
@@ -379,36 +437,17 @@ class RecipesCubit extends Cubit<RecipesState> {
         '${tr('pantry_ingredients_prompt', namedArgs: <String, String>{'ingredients': ingredients.map((Ingredient e) => e.name).join(', ')})} $mealPrompt',
       );
 
-      // OpenAI'ye meal bazlı istek at
-      final List<RecipeSuggestion> suggestions = await openAI.suggestRecipes(
-        ingredients,
-        servings: prefs.servings,
-        count: 6, // Her meal için 6 tarif
-        query: contextPrompt,
-        excludeTitles: _seenTitles.toList(),
-      );
-
-      // Recipe'lere dönüştür ve görselleri düzelt - imageService kullan
-      final List<Recipe> recipes = await Future.wait(
-        suggestions.map((RecipeSuggestion e) async {
-          final String? imageUrl = await imageService.fixImageUrl(
-            e.imageUrl,
-            e.title,
+      // 🔄 YENİ AKIŞ: Firestore-önce, sonra OpenAI mantığı
+      // Repository helper'ı kullanarak önce Firestore'dan oku, eksik kalanı OpenAI ile tamamla
+      final List<Recipe> recipes = await recipesRepository
+          .getRecipesFromFirestoreFirst(
+            userId: userId,
+            meal: meal,
+            ingredients: ingredients,
+            prompt: contextPrompt,
+            targetCount: 6,
+            excludeTitles: _seenTitles.toList(),
           );
-          return Recipe(
-            id: '',
-            title: e.title,
-            ingredients: e.ingredients,
-            steps: e.steps,
-            calories: e.calories,
-            durationMinutes: e.durationMinutes,
-            difficulty: e.difficulty,
-            imageUrl: imageUrl,
-            category: e.category ?? meal,
-            fiber: e.fiber,
-          );
-        }),
-      );
 
       _seenTitles.addAll(recipes.map((Recipe e) => e.title));
 
@@ -452,7 +491,7 @@ class RecipesCubit extends Cubit<RecipesState> {
         // Hata olsa bile devam et
       }
 
-      await promptPreferences.incrementGenerated(recipes.length);
+      // promptPreferences.incrementGenerated kaldırıldı - repository içinde zaten güncelleniyor
 
       // NOT: emit etmiyoruz çünkü bu sadece bir meal için yükleme
       // UI güncellemesi recipes_page'deki _loadAllData tarafından yapılacak
@@ -474,6 +513,21 @@ class RecipesCubit extends Cubit<RecipesState> {
     String meal,
     List<String> excludeTitles,
   ) async {
+    // 🔄 AKIŞ 4: loadMoreMealRecipes() metodu (Daha fazla yükle butonu)
+    //   1. Cache bypass ediliyor (direkt OpenAI'ye istek)
+    //   2. Pantry items yükleniyor
+    //   3. Meal bazlı prompt oluşturuluyor
+    //   4. Mevcut tarif başlıkları excludeTitles'a ekleniyor
+    //   5. OpenAI'ye istek atılıyor (excludeTitles ile)
+    //   6. Her tarif için görsel düzeltiliyor
+    //   7. Recipe objeleri oluşturuluyor
+    //   8. Cache'e ekleniyor (mevcut cache'e ekleme - addRecipesToCache)
+    //   9. UserRecipeService'e kaydediliyor (Hive'a)
+    //   10. Döndürülüyor
+    //
+    // ❌ Firestore'a kaydediliyor: HAYIR
+    // ✅ Hive cache'e kaydediliyor: EVET (cacheService.addRecipesToCache)
+    // ✅ UserRecipeService'e kaydediliyor: EVET (userRecipeRepository.addRecipe)
     debugPrint(
       '[RecipesCubit] loadMoreMealRecipes başladı - userId: $userId, meal: $meal, excludeTitles: ${excludeTitles.length}',
     );
@@ -508,36 +562,17 @@ class RecipesCubit extends Cubit<RecipesState> {
         ..._seenTitles.toList(),
       ];
 
-      // OpenAI'ye meal bazlı istek at
-      final List<RecipeSuggestion> suggestions = await openAI.suggestRecipes(
-        ingredients,
-        servings: prefs.servings,
-        count: 6, // Her meal için 6 tarif
-        query: contextPrompt,
-        excludeTitles: allExcludeTitles,
-      );
-
-      // Recipe'lere dönüştür ve görselleri düzelt - imageService kullan
-      final List<Recipe> recipes = await Future.wait(
-        suggestions.map((RecipeSuggestion e) async {
-          final String? imageUrl = await imageService.fixImageUrl(
-            e.imageUrl,
-            e.title,
+      // 🔄 YENİ AKIŞ: Firestore-önce, sonra OpenAI mantığı
+      // Repository helper'ı kullanarak önce Firestore'dan oku, eksik kalanı OpenAI ile tamamla
+      final List<Recipe> recipes = await recipesRepository
+          .getRecipesFromFirestoreFirst(
+            userId: userId,
+            meal: meal,
+            ingredients: ingredients,
+            prompt: contextPrompt,
+            targetCount: 6,
+            excludeTitles: allExcludeTitles,
           );
-          return Recipe(
-            id: '',
-            title: e.title,
-            ingredients: e.ingredients,
-            steps: e.steps,
-            calories: e.calories,
-            durationMinutes: e.durationMinutes,
-            difficulty: e.difficulty,
-            imageUrl: imageUrl,
-            category: e.category ?? meal,
-            fiber: e.fiber,
-          );
-        }),
-      );
 
       _seenTitles.addAll(recipes.map((Recipe e) => e.title));
 
@@ -582,7 +617,7 @@ class RecipesCubit extends Cubit<RecipesState> {
         // Hata olsa bile devam et
       }
 
-      await promptPreferences.incrementGenerated(recipes.length);
+      // promptPreferences.incrementGenerated kaldırıldı - repository içinde zaten güncelleniyor
 
       return recipes;
     } on Exception catch (e) {
