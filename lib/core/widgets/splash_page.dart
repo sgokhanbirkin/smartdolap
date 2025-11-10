@@ -2,9 +2,13 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/core/services/onboarding_service.dart';
+import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
 /// Splash screen - Shows logo and loading message
@@ -17,12 +21,30 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends State<SplashPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _opacityAnimation;
+
   @override
   void initState() {
     super.initState();
     debugPrint('[SplashPage] Splash screen initialized');
-    // Wait 2-3 seconds before checking auth state
+
+    // Initialize opacity animation
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+
+    // Start animation
+    _animationController.forward();
+
+    // Wait 2 seconds before checking auth state
     Future<void>.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         _checkAuthState();
@@ -30,11 +52,27 @@ class _SplashPageState extends State<SplashPage> {
     });
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
   void _checkAuthState() {
     final AuthCubit authCubit = context.read<AuthCubit>();
     final AuthState currentState = authCubit.state;
+    final OnboardingService onboardingService = sl<OnboardingService>();
 
     debugPrint('[SplashPage] Checking auth state: $currentState');
+
+    // Check onboarding first
+    if (!onboardingService.isOnboardingCompleted()) {
+      debugPrint(
+        '[SplashPage] Onboarding not completed - redirecting to onboarding',
+      );
+      Navigator.of(context).pushReplacementNamed(AppRouter.onboarding);
+      return;
+    }
 
     currentState.when(
       initial: () {
@@ -63,6 +101,17 @@ class _SplashPageState extends State<SplashPage> {
   Widget build(BuildContext context) => BlocListener<AuthCubit, AuthState>(
     listener: (BuildContext context, AuthState state) {
       debugPrint('[SplashPage] AuthState changed: $state');
+      final OnboardingService onboardingService = sl<OnboardingService>();
+
+      // Check onboarding first
+      if (!onboardingService.isOnboardingCompleted()) {
+        debugPrint(
+          '[SplashPage] Onboarding not completed - redirecting to onboarding',
+        );
+        Navigator.of(context).pushReplacementNamed(AppRouter.onboarding);
+        return;
+      }
+
       state.when(
         initial: () {},
         loading: () {},
@@ -87,74 +136,57 @@ class _SplashPageState extends State<SplashPage> {
     child: Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-            ],
-          ),
+          gradient: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.redToBlueDark
+              : AppColors.redToBlue,
         ),
         child: SafeArea(
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                // Logo placeholder - Replace with actual logo asset
-                Container(
-                  width: 120.w,
-                  height: 120.w,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.kitchen,
-                    size: 60.sp,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                SizedBox(height: AppSizes.verticalSpacingXL),
-                Text(
-                  tr('app_name'),
-                  style: TextStyle(
-                    fontSize: AppSizes.textXL,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: AppSizes.verticalSpacingL),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.padding * 2,
-                  ),
-                  child: Text(
-                    tr('splash_preparing'),
+            child: FadeTransition(
+              opacity: _opacityAnimation,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  // SmartDolap Logo/Text
+                  Text(
+                    tr('app_name'),
                     style: TextStyle(
-                      fontSize: AppSizes.textM,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: AppSizes.textHeading,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textLight,
+                      letterSpacing: 1.5,
+                      shadows: <Shadow>[
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: AppSizes.verticalSpacingXL),
-                SizedBox(
-                  width: 40.w,
-                  height: 40.w,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  SizedBox(height: AppSizes.verticalSpacingL),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.padding * 2,
+                    ),
+                    child: Text(
+                      tr('splash_preparing'),
+                      style: TextStyle(
+                        fontSize: AppSizes.textM,
+                        color: AppColors.textLight.withValues(alpha: 0.9),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(height: AppSizes.verticalSpacingXL),
+                  CustomLoadingIndicator(
+                    size: 40.w,
+                    color: AppColors.textLight,
+                    type: LoadingType.pulsingGrid,
+                    // Lottie animasyonu için: lottieAsset: 'assets/animations/loading.json',
+                  ),
+                ],
+              ),
             ),
           ),
         ),

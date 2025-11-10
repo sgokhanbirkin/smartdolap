@@ -73,8 +73,7 @@ class PantryItemNameFieldWidget extends StatelessWidget {
                     context,
                     hint: tr('pantry_item_placeholder'),
                   ),
-                  validator: (String? v) =>
-                      (v == null || v.trim().isEmpty)
+                  validator: (String? v) => (v == null || v.trim().isEmpty)
                       ? tr('invalid_name')
                       : null,
                 ),
@@ -91,10 +90,12 @@ class PantryItemNameFieldWidget extends StatelessWidget {
                     : const Icon(Icons.camera_alt),
                 tooltip: tr('take_photo'),
                 style: IconButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  foregroundColor:
-                      Theme.of(context).colorScheme.onPrimaryContainer,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer,
                 ),
               ),
             ],
@@ -120,7 +121,7 @@ class PantryItemNameFieldWidget extends StatelessWidget {
                   ),
                   SizedBox(width: AppSizes.spacingS),
                   Text(
-                    category!,
+                    PantryCategoryHelper.getLocalizedCategoryName(category!),
                     style: TextStyle(
                       fontSize: AppSizes.textS,
                       fontWeight: FontWeight.w600,
@@ -161,4 +162,3 @@ class PantryItemNameFieldWidget extends StatelessWidget {
     ),
   );
 }
-

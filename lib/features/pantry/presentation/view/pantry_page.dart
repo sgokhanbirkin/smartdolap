@@ -18,11 +18,11 @@ import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.d
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_header_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_dismissible_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_group_widget.dart';
+import 'package:smartdolap/features/pantry/data/services/pantry_notification_coordinator.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/product/router/app_router.dart';
-import 'package:smartdolap/product/services/expiry_notification_service.dart';
 
 /// Layout modes for pantry listings.
 enum PantryViewMode {
@@ -34,6 +34,9 @@ enum PantryViewMode {
 }
 
 /// Pantry page - Shows user's pantry items
+/// TODO(SOLID-SRP): Notification scheduling logic should be extracted to a service
+/// TODO(RESPONSIVE): Add tablet/desktop layouts using ResponsiveGrid
+/// TODO(LOCALIZATION): Ensure all category names are localization-ready
 class PantryPage extends StatefulWidget {
   /// Pantry page constructor
   const PantryPage({super.key});
@@ -51,6 +54,11 @@ class _PantryPageState extends State<PantryPage> {
   Timer? _searchDebounce;
   PantryItem? _lastDeletedItem;
   String? _lastDeletedUserId;
+
+  // Debounce for notification scheduling
+  Timer? _notificationDebounceTimer;
+  DateTime? _lastNotificationSchedule;
+  List<String> _lastScheduledItemIds = <String>[];
 
   @override
   void initState() {
@@ -70,11 +78,56 @@ class _PantryPageState extends State<PantryPage> {
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _notificationDebounceTimer?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchQuery.dispose();
     _viewMode.dispose();
     super.dispose();
+  }
+
+  Future<void> _scheduleNotificationsDebounced(List<PantryItem> items) async {
+    // Create a hash of item IDs to check if items actually changed
+    final List<String> currentItemIds =
+        items
+            .map(
+              (PantryItem item) =>
+                  '${item.id}_${item.expiryDate?.millisecondsSinceEpoch ?? 0}',
+            )
+            .toList()
+          ..sort();
+    final String currentHash = currentItemIds.join('|');
+
+    // Check if items actually changed
+    final List<String> lastHash = _lastScheduledItemIds;
+    if (lastHash.join('|') == currentHash) {
+      // Items haven't changed, skip scheduling
+      return;
+    }
+
+    _lastScheduledItemIds = currentItemIds;
+
+    // Debounce: Wait 2 seconds before scheduling
+    final DateTime now = DateTime.now();
+    _notificationDebounceTimer?.cancel();
+
+    if (_lastNotificationSchedule != null &&
+        now.difference(_lastNotificationSchedule!).inSeconds < 2) {
+      _notificationDebounceTimer = Timer(const Duration(seconds: 2), () async {
+        if (mounted) {
+          final PantryNotificationCoordinator coordinator =
+              sl<PantryNotificationCoordinator>();
+          await coordinator.scheduleForItems(items);
+          _lastNotificationSchedule = DateTime.now();
+        }
+      });
+      return;
+    }
+
+    _lastNotificationSchedule = now;
+    final PantryNotificationCoordinator coordinator =
+        sl<PantryNotificationCoordinator>();
+    await coordinator.scheduleForItems(items);
   }
 
   Widget _buildHeader(BuildContext context) => PantryHeaderWidget(
@@ -111,8 +164,8 @@ class _PantryPageState extends State<PantryPage> {
                       listener: (BuildContext context, PantryState state) async {
                         if (state is PantryLoaded) {
                           // Schedule expiry notifications when items are loaded
-                          await sl<ExpiryNotificationService>()
-                              .scheduleNotifications(state.items);
+                          // Use debounced version to avoid excessive calls
+                          await _scheduleNotificationsDebounced(state.items);
                         }
                       },
                       child: BlocBuilder<PantryCubit, PantryState>(
@@ -232,18 +285,6 @@ class _PantryPageState extends State<PantryPage> {
         ),
       ),
     ),
-    floatingActionButton: Builder(
-      builder: (BuildContext context) => FloatingActionButton.extended(
-        onPressed: () {
-          final AuthState state = context.read<AuthCubit>().state;
-          state.whenOrNull(
-            authenticated: (domain.User user) => _addItem(context, user.id),
-          );
-        },
-        label: Text(tr('add_item')),
-        icon: const Icon(Icons.add),
-      ),
-    ),
   );
 
   Future<void> _addItem(BuildContext context, String userId) async {
@@ -342,6 +383,9 @@ class _PantryPageState extends State<PantryPage> {
               userId: userId,
               onItemTap: (PantryItem item) =>
                   _openDetail(context, userId, item),
+              onQuantityChanged: (PantryItem updatedItem) {
+                context.read<PantryCubit>().update(userId, updatedItem);
+              },
               buildDismissibleCard:
                   (
                     BuildContext ctx,

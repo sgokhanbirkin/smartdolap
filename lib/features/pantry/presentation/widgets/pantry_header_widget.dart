@@ -1,7 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/product/router/app_router.dart';
 
 /// Widget for pantry page header with title, subtitle, and search bar
 class PantryHeaderWidget extends StatelessWidget {
@@ -22,13 +27,41 @@ class PantryHeaderWidget extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: <Widget>[
-      Text(
-        tr('pantry_title'),
-        style: TextStyle(
-          fontSize: AppSizes.textHeading,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.5,
-        ),
+      Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              tr('pantry_title'),
+              style: TextStyle(
+                fontSize: AppSizes.textHeading,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          BlocBuilder<AuthCubit, AuthState>(
+            builder: (BuildContext context, AuthState authState) {
+              return authState.whenOrNull(
+                authenticated: (domain.User user) => TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.pantryAdd,
+                      arguments: user.id,
+                    );
+                  },
+                  icon: Icon(Icons.add, size: AppSizes.iconS),
+                  label: Text(tr('add_item')),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.spacingS,
+                      vertical: AppSizes.spacingXS,
+                    ),
+                  ),
+                ),
+              ) ?? const SizedBox.shrink();
+            },
+          ),
+        ],
       ),
       SizedBox(height: AppSizes.spacingXS),
       Text(

@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 
@@ -53,8 +54,40 @@ class _ChipGroupWidgetState extends State<ChipGroupWidget> {
     }
     if (widget.customValues.contains(value)) {
       _controller.clear();
+      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('profile_custom_${widget.fieldKey}_exists'))),
+        SnackBar(
+          content: Row(
+            children: <Widget>[
+              Icon(
+                Icons.info_outline,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                size: AppSizes.iconS,
+              ),
+              SizedBox(width: AppSizes.spacingS),
+              Expanded(
+                child: Text(
+                  tr('profile_custom_${widget.fieldKey}_exists'),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radius),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
       );
       return;
     }
@@ -69,7 +102,14 @@ class _ChipGroupWidgetState extends State<ChipGroupWidget> {
     children: <Widget>[
       Row(
         children: <Widget>[
-          Text(widget.title, style: TextStyle(fontSize: AppSizes.textS)),
+          Text(
+            widget.title,
+            style: TextStyle(
+              fontSize: AppSizes.textM,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           const Spacer(),
           IconButton(
             icon: Icon(_isExpanded ? Icons.close : Icons.add),
@@ -82,6 +122,7 @@ class _ChipGroupWidgetState extends State<ChipGroupWidget> {
         style: TextStyle(
           fontSize: AppSizes.textXS,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
+          height: 1.4,
         ),
       ),
       SizedBox(height: AppSizes.verticalSpacingS),

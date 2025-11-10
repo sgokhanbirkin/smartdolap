@@ -51,6 +51,15 @@ class PantryRepositoryImpl implements IPantryRepository {
 
   @override
   Future<List<PantryItem>> getItems({required String userId}) async {
+    // 1. Önce Hive cache'den kontrol et
+    final List<PantryItem> cached = _readCache(userId);
+    if (cached.isNotEmpty) {
+      // Cache'de veri varsa önce onu döndür, sonra arka planda Firestore'dan güncelle
+      _syncFromFirestoreInBackground(userId);
+      return cached;
+    }
+
+    // 2. Cache boşsa Firestore'dan çek
     try {
       final QuerySnapshot<Map<String, dynamic>> q = await _col(
         userId,
@@ -61,12 +70,27 @@ class PantryRepositoryImpl implements IPantryRepository {
       _writeCache(userId, items);
       return items;
     } catch (e) {
+      // Firestore hatası durumunda cache'i kontrol et (fallback)
       final List<PantryItem> cached = _readCache(userId);
       if (cached.isNotEmpty) {
         return cached;
       }
       rethrow;
     }
+  }
+
+  /// Syncs from Firestore in background without blocking
+  void _syncFromFirestoreInBackground(String userId) {
+    _col(userId).orderBy('createdAt', descending: true).get().then((
+      QuerySnapshot<Map<String, dynamic>> q,
+    ) {
+      final List<PantryItem> items = q.docs
+          .map(_fromDoc)
+          .toList(growable: false);
+      _writeCache(userId, items);
+    }).catchError((dynamic e) {
+      // Silently fail - cache is already available
+    });
   }
 
   @override

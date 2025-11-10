@@ -1,12 +1,14 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// Helper class for meal time ordering based on current time
+/// TODO(LOCALIZATION): Meal names are now localization-ready via tr() calls
 class MealTimeOrderHelper {
   /// Get ordered meal list based on current time
   /// Returns list of meals in order: [first, second, third, fourth]
   static List<String> getOrderedMeals() {
     final int hour = DateTime.now().hour;
-    
+
     // Sabah 7-11 arası: kahvaltı - ara öğün - öğle - akşam
     if (hour >= 7 && hour < 11) {
       return <String>['breakfast', 'snack', 'lunch', 'dinner'];
@@ -22,23 +24,23 @@ class MealTimeOrderHelper {
     // Gece/Yemek sonrası 20-7 arası: ara öğün - kahvaltı - öğle - akşam
     return <String>['snack', 'breakfast', 'lunch', 'dinner'];
   }
-  
-  /// Get meal display name
+
+  /// Get meal display name - now localization-ready
   static String getMealName(String meal) {
     switch (meal) {
       case 'breakfast':
-        return 'Kahvaltı';
+        return tr('meals.breakfast');
       case 'lunch':
-        return 'Öğle';
+        return tr('meals.lunch');
       case 'dinner':
-        return 'Akşam';
+        return tr('meals.dinner');
       case 'snack':
-        return 'Ara Öğün';
+        return tr('meals.snack');
       default:
         return meal;
     }
   }
-  
+
   /// Get meal color
   static Color getMealColor(String meal) {
     switch (meal) {
@@ -54,7 +56,23 @@ class MealTimeOrderHelper {
         return Colors.grey.shade100;
     }
   }
-  
+
+  /// Get meal AppBar color (darker, more vibrant colors for AppBar)
+  static Color getMealAppBarColor(String meal) {
+    switch (meal) {
+      case 'breakfast':
+        return const Color(0xFFFF9800); // Turuncu
+      case 'lunch':
+        return const Color(0xFF4CAF50); // Açık yeşilimsi
+      case 'dinner':
+        return const Color(0xFF00BCD4); // Turkuaz
+      case 'snack':
+        return const Color(0xFF9C27B0); // Mor
+      default:
+        return Colors.grey.shade600;
+    }
+  }
+
   /// Get meal icon
   static IconData getMealIcon(String meal) {
     switch (meal) {
@@ -71,4 +89,3 @@ class MealTimeOrderHelper {
     }
   }
 }
-

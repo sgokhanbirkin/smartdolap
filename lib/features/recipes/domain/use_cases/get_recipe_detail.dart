@@ -8,6 +8,6 @@ class GetRecipeDetail {
 
   final IRecipesRepository repository;
 
-  Future<Recipe?> call(String recipeId) => repository.getRecipeDetail(recipeId);
+  Future<Recipe?> call(String recipeId, {required String userId}) =>
+      repository.getRecipeDetail(recipeId, userId: userId);
 }
-

@@ -1,10 +1,13 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// Centralizes pantry category metadata and keyword heuristics.
+/// TODO(LOCALIZATION): Category names are now localization-ready via tr() calls
 class PantryCategoryHelper {
   PantryCategoryHelper._();
 
   /// Canonical category list shown in selectors.
+  /// TODO(LOCALIZATION): These keys should be mapped to localization keys
   static const List<String> categories = <String>[
     'Süt Ürünleri',
     'Sebze',
@@ -20,8 +23,40 @@ class PantryCategoryHelper {
     'Diğer',
   ];
 
-  static const Map<String, List<String>> _keywords =
-      <String, List<String>>{
+  /// Get localized category name
+  /// TODO(LOCALIZATION): Implement full localization mapping
+  static String getLocalizedCategoryName(String category) {
+    // Map internal category names to localization keys
+    switch (category) {
+      case 'Süt Ürünleri':
+        return tr('categories.dairy');
+      case 'Sebze':
+        return tr('categories.vegetables');
+      case 'Meyve':
+        return tr('categories.fruits');
+      case 'Et / Tavuk / Balık':
+        return tr('categories.meat');
+      case 'Bakliyat':
+        return tr('categories.legumes');
+      case 'Tahıl & Fırın':
+        return tr('categories.grains');
+      case 'Baklagil & Tohum':
+        return tr('categories.nuts');
+      case 'Baharat & Sos':
+        return tr('categories.spices');
+      case 'Atıştırmalık':
+        return tr('categories.snacks');
+      case 'İçecek':
+        return tr('categories.drinks');
+      case 'Dondurulmuş':
+        return tr('categories.frozen');
+      case 'Diğer':
+      default:
+        return tr('categories.other');
+    }
+  }
+
+  static const Map<String, List<String>> _keywords = <String, List<String>>{
     'Süt Ürünleri': <String>[
       'süt',
       'yoğurt',
@@ -103,13 +138,7 @@ class PantryCategoryHelper {
       'sos',
       'baharat',
     ],
-    'Atıştırmalık': <String>[
-      'bisküvi',
-      'kraker',
-      'çikolata',
-      'cips',
-      'gofret',
-    ],
+    'Atıştırmalık': <String>['bisküvi', 'kraker', 'çikolata', 'cips', 'gofret'],
     'İçecek': <String>[
       'su',
       'çay',

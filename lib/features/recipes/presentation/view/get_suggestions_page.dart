@@ -12,6 +12,7 @@ import 'package:smartdolap/features/recipes/presentation/widgets/get_suggestions
 import 'package:smartdolap/features/recipes/presentation/widgets/ingredients_selection_section_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/meal_selector_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/note_field_widget.dart';
+import 'package:smartdolap/features/recipes/presentation/widgets/recipe_loading_overlay_widget.dart';
 
 /// Get suggestions page - Select ingredients by category and get AI suggestions
 class GetSuggestionsPage extends StatefulWidget {
@@ -106,6 +107,19 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
 
     setState(() => _isLoading = true);
 
+    // Show full-screen loading overlay
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.8),
+      builder: (BuildContext context) => RecipeLoadingOverlayWidget(
+        selectedIngredients: _controller.selectedIngredients.toList(),
+        note: _noteController.text.trim().isNotEmpty
+            ? _noteController.text.trim()
+            : null,
+      ),
+    );
+
     try {
       final RecipesCubit recipesCubit = context.read<RecipesCubit>();
       await recipesCubit.loadWithSelection(
@@ -118,10 +132,15 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
       );
 
       if (mounted) {
+        // Close loading overlay
+        Navigator.of(context).pop();
+        // Close suggestions page
         Navigator.of(context).pop(true);
       }
     } on Exception {
       if (mounted) {
+        // Close loading overlay
+        Navigator.of(context).pop();
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

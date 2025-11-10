@@ -2,9 +2,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/validators.dart';
+import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/auth/data/models/auth_failure.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
@@ -41,13 +41,10 @@ class LoginPage extends StatelessWidget {
             );
 
             if (isLoading) {
-              return Center(
-                child: SizedBox(
-                  height: AppSizes.iconXL,
-                  width: AppSizes.iconXL,
-                  child: CircularProgressIndicator(
-                    strokeWidth: AppSizes.spacingXS * 0.75,
-                  ),
+              return const Center(
+                child: CustomLoadingIndicator(
+                  type: LoadingType.pulsingGrid,
+                  size: 50,
                 ),
               );
             }

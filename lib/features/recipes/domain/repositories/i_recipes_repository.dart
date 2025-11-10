@@ -5,7 +5,7 @@ import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 
 abstract class IRecipesRepository {
   Future<List<Recipe>> suggestFromPantry({required String userId});
-  Future<Recipe?> getRecipeDetail(String recipeId);
+  Future<Recipe?> getRecipeDetail(String recipeId, {required String userId});
 
   /// Gets recipes from Firestore first, then generates remaining with OpenAI
   /// Returns combined list of Firestore recipes + newly generated recipes

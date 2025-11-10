@@ -12,6 +12,7 @@ import 'package:smartdolap/features/recipes/data/services/firestore_recipe_mappe
 import 'package:smartdolap/features/recipes/data/services/firestore_recipe_query_builder.dart';
 import 'package:smartdolap/features/recipes/data/services/missing_ingredient_calculator.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_filter_service.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
@@ -30,6 +31,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
     this._openai,
     this._promptPrefs,
     this._recipeImageService,
+    this._recipeCacheService,
   );
 
   final FirebaseFirestore _firestore;
@@ -37,6 +39,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
   final IOpenAIService _openai;
   final PromptPreferenceService _promptPrefs;
   final RecipeImageService _recipeImageService;
+  final RecipeCacheService _recipeCacheService;
 
   // ============================================================================
   // PRIVATE HELPER: OpenAI + Firestore yazma işlemini tek bir yerde topla
@@ -72,12 +75,15 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       '[RecipesRepository] OpenAI yanıtı geldi - ${suggestions.length} öneri',
     );
 
-    // Her tarif için görsel düzelt ve Firestore'a kaydet
-    final List<Recipe> recipes = <Recipe>[];
-    for (final RecipeSuggestion s in suggestions) {
-      final DocumentReference<Map<String, dynamic>> doc = _firestore
-          .collection('recipes')
-          .doc();
+      // Her tarif için görsel düzelt ve Firestore'a kaydet
+      final List<Recipe> recipes = <Recipe>[];
+      for (final RecipeSuggestion s in suggestions) {
+        // Kullanıcıya özel recipes subcollection kullan
+        final DocumentReference<Map<String, dynamic>> doc = _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('recipes')
+            .doc();
 
       // MissingCount hesapla - MissingIngredientCalculator servisi kullan
       final int missing = MissingIngredientCalculator.calculateMissingCount(
@@ -128,6 +134,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
   // ============================================================================
   /// Gets recipes from Firestore first, then generates remaining with OpenAI
   /// Returns combined list of Firestore recipes + newly generated recipes
+  /// Priority: Hive Cache → Firestore → OpenAI
   Future<List<Recipe>> getRecipesFromFirestoreFirst({
     required String userId,
     String? meal,
@@ -141,22 +148,68 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       'userId: $userId, meal: $meal, targetCount: $targetCount',
     );
 
+    // 1. ÖNCE HIVE CACHE'DEN KONTROL ET
+    final String cacheKey = _recipeCacheService.getMealCacheKey(
+      userId,
+      meal ?? 'general',
+    );
+    final List<Recipe>? cachedRecipes = _recipeCacheService.getRecipesAsRecipeList(
+      cacheKey,
+    );
+
+    if (cachedRecipes != null && cachedRecipes.isNotEmpty) {
+      print(
+        '[RecipesRepository] Hive cache\'den ${cachedRecipes.length} tarif bulundu',
+      );
+      
+      // Cache'deki tarifleri filtrele
+      List<Recipe> filteredCached = RecipeFilterService.filterRecipes(
+        cachedRecipes,
+        excludeTitles,
+        ingredients,
+      );
+      
+      filteredCached = RecipeFilterService.takeFirst(
+        filteredCached,
+        targetCount,
+      );
+
+      if (filteredCached.length >= targetCount) {
+        print(
+          '[RecipesRepository] Hive cache yeterli, ${filteredCached.length} tarif döndürülüyor',
+        );
+        // Arka planda Firestore'dan güncelle
+        _syncFromFirestoreInBackground(
+          userId: userId,
+          meal: meal,
+          ingredients: ingredients,
+          prompt: prompt,
+          targetCount: targetCount,
+          excludeTitles: excludeTitles,
+        );
+        return filteredCached;
+      }
+
+      // Cache yetersizse Firestore'dan devam et
+      print(
+        '[RecipesRepository] Hive cache yetersiz (${filteredCached.length}/$targetCount), '
+        'Firestore\'dan devam ediliyor',
+      );
+    }
+
+    // 2. HIVE BOŞ VEYA YETERSİZSE FIRESTORE'DAN ÇEK
     try {
-      // 1. Önce Firestore'dan oku
-      // FirestoreRecipeQueryBuilder servisi kullan - SRP
+      // Kullanıcıya özel recipes subcollection kullan
       final CollectionReference<Map<String, dynamic>> collection =
-          _firestore.collection('recipes');
+          _firestore.collection('users').doc(userId).collection('recipes');
       final Query<Map<String, dynamic>> query =
           FirestoreRecipeQueryBuilder.buildQuery(
         collection: collection,
         meal: meal,
-        limit: targetCount * 2, // Biraz fazla al (filtreleme için)
+        limit: targetCount * 2,
       );
 
       final QuerySnapshot<Map<String, dynamic>> snapshot = await query.get();
-
-      // Firestore document'lerini Recipe listesine map et
-      // FirestoreRecipeMapper servisi kullan - SRP
       final List<Recipe> allRecipes =
           FirestoreRecipeMapper.fromQuerySnapshot(snapshot);
 
@@ -164,14 +217,12 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         '[RecipesRepository] Firestore\'dan ${allRecipes.length} tarif bulundu',
       );
 
-      // Filtreleme işlemleri - RecipeFilterService kullan - SRP
-      List<Recipe> firestoreRecipes = RecipeFilterService.applyFilters(
+      List<Recipe> firestoreRecipes = RecipeFilterService.filterRecipes(
         allRecipes,
         excludeTitles,
         ingredients,
       );
 
-      // targetCount kadar al - RecipeFilterService kullan
       firestoreRecipes = RecipeFilterService.takeFirst(
         firestoreRecipes,
         targetCount,
@@ -181,7 +232,12 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         '[RecipesRepository] Filtreleme sonrası ${firestoreRecipes.length} tarif',
       );
 
-      // 2. Eğer Firestore yeterliyse direkt dön
+      // Firestore'dan gelen tarifleri cache'e kaydet
+      if (firestoreRecipes.isNotEmpty) {
+        await _recipeCacheService.putRecipes(cacheKey, firestoreRecipes);
+      }
+
+      // Eğer Firestore yeterliyse direkt dön
       if (firestoreRecipes.length >= targetCount) {
         print(
           '[RecipesRepository] Firestore yeterli, ${firestoreRecipes.length} tarif döndürülüyor',
@@ -189,7 +245,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         return firestoreRecipes;
       }
 
-      // 3. Eksik kalanı OpenAI ile tamamla
+      // 3. EKSİK KALANI OPENAI İLE TAMAMLA
       final int remaining = targetCount - firestoreRecipes.length;
       print(
         '[RecipesRepository] Firestore yetersiz, $remaining tarif OpenAI ile tamamlanacak',
@@ -210,6 +266,10 @@ class RecipesRepositoryImpl implements IRecipesRepository {
           );
 
           final List<Recipe> combined = <Recipe>[...firestoreRecipes, ...generated];
+          
+          // Yeni tarifleri cache'e ekle
+          await _recipeCacheService.addRecipesToCache(cacheKey, generated);
+          
           print(
             '[RecipesRepository] getRecipesFromFirestoreFirst tamamlandı - '
             'Toplam ${combined.length} tarif (${firestoreRecipes.length} Firestore, '
@@ -221,35 +281,30 @@ class RecipesRepositoryImpl implements IRecipesRepository {
             '[RecipesRepository] OpenAI parsing error in getRecipesFromFirestoreFirst',
             e,
           );
-          // OpenAI hatası durumunda Firestore'dan gelen tarifleri yine de döndür
           if (firestoreRecipes.isNotEmpty) {
             print(
               '[RecipesRepository] OpenAI hatası, Firestore\'dan ${firestoreRecipes.length} tarif döndürülüyor',
             );
             return firestoreRecipes;
           }
-          // Hem Firestore boş hem OpenAI hata → exception fırlat
           rethrow;
         } catch (e) {
           Logger.error(
             '[RecipesRepository] OpenAI error in getRecipesFromFirestoreFirst',
             e,
           );
-          // OpenAI hatası durumunda Firestore'dan gelen tarifleri yine de döndür
           if (firestoreRecipes.isNotEmpty) {
             print(
               '[RecipesRepository] OpenAI hatası, Firestore\'dan ${firestoreRecipes.length} tarif döndürülüyor',
             );
             return firestoreRecipes;
           }
-          // Hem Firestore boş hem OpenAI hata → exception fırlat
           rethrow;
         }
       }
 
       return firestoreRecipes;
     } on Exception catch (e) {
-      // Firestore hatasında direkt OpenAI'ye fallback yap
       Logger.error(
         '[RecipesRepository] Firestore error in getRecipesFromFirestoreFirst',
         e,
@@ -266,6 +321,60 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         excludeTitles: excludeTitles,
       );
     }
+  }
+
+  /// Syncs from Firestore in background without blocking
+  void _syncFromFirestoreInBackground({
+    required String userId,
+    String? meal,
+    required List<Ingredient> ingredients,
+    required String prompt,
+    required int targetCount,
+    List<String> excludeTitles = const <String>[],
+  }) {
+    // Arka planda Firestore'dan güncelle, cache'i güncelle
+    Future<void>.delayed(const Duration(milliseconds: 500), () async {
+      try {
+        // Kullanıcıya özel recipes subcollection kullan
+        final CollectionReference<Map<String, dynamic>> collection =
+            _firestore.collection('users').doc(userId).collection('recipes');
+        final Query<Map<String, dynamic>> query =
+            FirestoreRecipeQueryBuilder.buildQuery(
+          collection: collection,
+          meal: meal,
+          limit: targetCount * 2,
+        );
+
+        final QuerySnapshot<Map<String, dynamic>> snapshot = await query.get();
+        final List<Recipe> allRecipes =
+            FirestoreRecipeMapper.fromQuerySnapshot(snapshot);
+
+        List<Recipe> firestoreRecipes = RecipeFilterService.filterRecipes(
+          allRecipes,
+          excludeTitles,
+          ingredients,
+        );
+
+        firestoreRecipes = RecipeFilterService.takeFirst(
+          firestoreRecipes,
+          targetCount,
+        );
+
+        if (firestoreRecipes.isNotEmpty) {
+          final String cacheKey = _recipeCacheService.getMealCacheKey(
+            userId,
+            meal ?? 'general',
+          );
+          await _recipeCacheService.putRecipes(cacheKey, firestoreRecipes);
+          print(
+            '[RecipesRepository] Arka planda cache güncellendi - ${firestoreRecipes.length} tarif',
+          );
+        }
+      } catch (e) {
+        // Silently fail - cache is already available
+        print('[RecipesRepository] Arka plan sync hatası: $e');
+      }
+    });
   }
 
   @override
@@ -337,9 +446,12 @@ class RecipesRepositoryImpl implements IRecipesRepository {
   }
 
   @override
-  Future<Recipe?> getRecipeDetail(String recipeId) async {
+  Future<Recipe?> getRecipeDetail(String recipeId, {required String userId}) async {
     try {
+      // Kullanıcıya özel recipes subcollection kullan
       final DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
+          .collection('users')
+          .doc(userId)
           .collection('recipes')
           .doc(recipeId)
           .get();

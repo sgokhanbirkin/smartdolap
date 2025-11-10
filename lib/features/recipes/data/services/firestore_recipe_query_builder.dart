@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// Follows Single Responsibility Principle - only handles query building
 class FirestoreRecipeQueryBuilder {
   /// Build query for recipes collection with optional meal filter
+  /// Uses user-specific subcollection: users/{userId}/recipes
   static Query<Map<String, dynamic>> buildQuery({
     required CollectionReference<Map<String, dynamic>> collection,
     String? meal,
@@ -17,7 +18,13 @@ class FirestoreRecipeQueryBuilder {
     }
 
     // Order by creation date (newest first)
-    query = query.orderBy('createdAt', descending: true);
+    // Note: When filtering by category, orderBy requires composite index
+    // To avoid index requirement, we only orderBy when not filtering by meal
+    if (meal == null || meal.isEmpty) {
+      query = query.orderBy('createdAt', descending: true);
+    }
+    // If meal filter is active, skip orderBy to avoid index requirement
+    // Firestore will return results in document order (which is fine for our use case)
 
     // Apply limit if provided
     if (limit != null && limit > 0) {

@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
@@ -30,7 +31,9 @@ class SettingsMenuWidget extends StatelessWidget {
               tr('settings'),
               style: TextStyle(
                 fontSize: AppSizes.textL,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+                height: 1.2,
               ),
             ),
           ),
@@ -87,19 +90,77 @@ class SettingsMenuWidget extends StatelessWidget {
                   debugPrint('[SettingsMenuWidget] Logout successful - navigating to login');
                   Navigator.pop(context); // Close bottom sheet
                   AppRouter.pushNamedAndRemoveUntil(context, AppRouter.login);
+                  HapticFeedback.lightImpact();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(tr('session_ended')),
+                      content: Row(
+                        children: <Widget>[
+                          Icon(
+                            Icons.info_outline,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            size: AppSizes.iconS,
+                          ),
+                          SizedBox(width: AppSizes.spacingS),
+                          Expanded(
+                            child: Text(
+                              tr('session_ended'),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      margin: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).size.height * 0.1,
+                        left: AppSizes.padding,
+                        right: AppSizes.padding,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radius),
+                      ),
                       duration: const Duration(seconds: 2),
                     ),
                   );
                 },
                 error: (failure) {
                   debugPrint('[SettingsMenuWidget] Logout error: $failure');
+                  HapticFeedback.heavyImpact();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(tr('error')),
-                      backgroundColor: Theme.of(context).colorScheme.error,
+                      content: Row(
+                        children: <Widget>[
+                          Icon(
+                            Icons.error_outline,
+                            color: Theme.of(context).colorScheme.onErrorContainer,
+                            size: AppSizes.iconS,
+                          ),
+                          SizedBox(width: AppSizes.spacingS),
+                          Expanded(
+                            child: Text(
+                              tr('error'),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onErrorContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                      margin: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).size.height * 0.1,
+                        left: AppSizes.padding,
+                        right: AppSizes.padding,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radius),
+                      ),
+                      duration: const Duration(seconds: 3),
                     ),
                   );
                 },

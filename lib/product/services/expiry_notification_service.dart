@@ -9,9 +9,11 @@ import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
+
 /// Service for managing expiry date notifications
 /// Follows Single Responsibility Principle - only handles notification scheduling and cancellation
-class ExpiryNotificationService {
+class ExpiryNotificationService implements IExpiryNotificationService {
   ExpiryNotificationService(this._notifications) {
     tz_data.initializeTimeZones();
   }
@@ -91,6 +93,7 @@ class ExpiryNotificationService {
 
   /// Schedule notifications for pantry items
   /// Cancels existing notifications for each item before scheduling new ones
+  /// Optimized to avoid redundant scheduling
   Future<void> scheduleNotifications(List<PantryItem> items) async {
     if (!_permissionChecked) {
       await _checkAndRequestPermissions();
@@ -104,7 +107,16 @@ class ExpiryNotificationService {
     }
 
     try {
-      for (final PantryItem item in items) {
+      // Only schedule for items with expiry dates
+      final List<PantryItem> itemsWithExpiry = items
+          .where((PantryItem item) => item.expiryDate != null)
+          .toList();
+
+      if (itemsWithExpiry.isEmpty) {
+        return;
+      }
+
+      for (final PantryItem item in itemsWithExpiry) {
         // Cancel existing notifications for this item first
         await cancelItemNotifications(item.id);
 
@@ -112,9 +124,12 @@ class ExpiryNotificationService {
         await schedulePerItem(item);
       }
 
-      debugPrint(
-        '[ExpiryNotificationService] Scheduled notifications for ${items.length} items',
-      );
+      // Only log summary, not individual cancellations
+      if (kDebugMode) {
+        debugPrint(
+          '[ExpiryNotificationService] Scheduled notifications for ${itemsWithExpiry.length} items',
+        );
+      }
     } catch (e) {
       Logger.error(
         '[ExpiryNotificationService] Error scheduling notifications',
@@ -148,9 +163,7 @@ class ExpiryNotificationService {
 
       // Skip if already expired (more than 1 day ago)
       if (difference.inDays < -1) {
-        debugPrint(
-          '[ExpiryNotificationService] Skipping expired item: ${item.name}',
-        );
+        // Removed debug print to reduce console spam
         return;
       }
 
@@ -168,9 +181,7 @@ class ExpiryNotificationService {
           ),
           scheduledDate: scheduledDate,
         );
-        debugPrint(
-          '[ExpiryNotificationService] Scheduled expired notification for ${item.name} @ $scheduledDate',
-        );
+        // Removed debug print to reduce console spam
         return;
       }
 
@@ -194,9 +205,7 @@ class ExpiryNotificationService {
           ),
           scheduledDate: scheduledDate,
         );
-        debugPrint(
-          '[ExpiryNotificationService] Scheduled 3-day notification for ${item.name} @ $scheduledDate',
-        );
+        // Removed debug print to reduce console spam
       }
 
       // 1 day before expiry
@@ -214,9 +223,7 @@ class ExpiryNotificationService {
           ),
           scheduledDate: scheduledDate,
         );
-        debugPrint(
-          '[ExpiryNotificationService] Scheduled 1-day notification for ${item.name} @ $scheduledDate',
-        );
+        // Removed debug print to reduce console spam
       }
 
       // On expiry day (morning 9 AM)
@@ -240,9 +247,7 @@ class ExpiryNotificationService {
             ),
             scheduledDate: scheduledDate,
           );
-          debugPrint(
-            '[ExpiryNotificationService] Scheduled today notification for ${item.name} @ $scheduledDate',
-          );
+          // Removed debug print to reduce console spam
         }
       }
     } catch (e) {
@@ -311,9 +316,7 @@ class ExpiryNotificationService {
       await _notifications.cancel(baseId + 1000);
       await _notifications.cancel(baseId + 2000);
       await _notifications.cancel(baseId + 3000);
-      debugPrint(
-        '[ExpiryNotificationService] Cancelled alarms for item: $itemId',
-      );
+      // Removed debug print to reduce console spam
     } catch (e) {
       Logger.error(
         '[ExpiryNotificationService] Error cancelling notifications for item: $itemId',

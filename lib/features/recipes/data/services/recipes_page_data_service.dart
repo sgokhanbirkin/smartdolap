@@ -43,11 +43,9 @@ class RecipesPageDataService {
     final List<UserRecipe> allRecipes = _userRecipeService.fetch();
     debugPrint('[RecipesPageDataService] Toplam ${allRecipes.length} tarif bulundu');
     
-    // Yaptıklarım: createManual ile eklenenler (isAIRecommendation=false) 
-    // VEYA imagePath olanlar (fotoğraf eklenmiş olanlar)
-    final List<UserRecipe> madeUserRecipes = allRecipes
-        .where((UserRecipe r) => !r.isAIRecommendation || (r.imagePath != null && r.imagePath!.isNotEmpty))
-        .toList();
+    // Yaptıklarım: createManual ile eklenen TÜM tarifler
+    // (isAIRecommendation true/false fark etmez, createManual ile eklenen her tarif "yaptım" sayılır)
+    final List<UserRecipe> madeUserRecipes = allRecipes.toList();
     
     debugPrint('[RecipesPageDataService] ${madeUserRecipes.length} yaptıklarım tarifi bulundu');
     for (final UserRecipe ur in madeUserRecipes) {

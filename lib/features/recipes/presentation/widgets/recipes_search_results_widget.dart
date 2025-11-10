@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/utils/responsive_extensions.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/compact_recipe_card_widget.dart';
 
@@ -52,10 +53,10 @@ class RecipesSearchResultsWidget extends StatelessWidget {
       controller: scrollController,
       padding: EdgeInsets.all(AppSizes.padding),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount: ResponsiveGrid.getCrossAxisCount(context),
         crossAxisSpacing: AppSizes.spacingS,
         mainAxisSpacing: AppSizes.spacingS,
-        childAspectRatio: 0.75,
+        childAspectRatio: ResponsiveGrid.getChildAspectRatio(context),
       ),
       itemCount: recipes.length,
       itemBuilder: (BuildContext context, int index) {
@@ -68,4 +69,3 @@ class RecipesSearchResultsWidget extends StatelessWidget {
     );
   }
 }
-

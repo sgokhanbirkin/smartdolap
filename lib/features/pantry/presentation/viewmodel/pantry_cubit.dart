@@ -2,33 +2,32 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
+import 'package:smartdolap/features/pantry/data/services/pantry_notification_coordinator.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.dart';
-import 'package:smartdolap/product/services/expiry_notification_service.dart';
 
 /// Pantry Cubit - Manages pantry state and operations
 /// Follows Single Responsibility Principle - only handles pantry state management
+/// Notification scheduling is delegated to PantryNotificationCoordinator (SRP)
 class PantryCubit extends Cubit<PantryState> {
   PantryCubit({
     required this.listPantryItems,
     required this.addPantryItem,
     required this.updatePantryItem,
     required this.deletePantryItem,
-    required this.expiryNotificationService,
+    required this.notificationCoordinator,
   }) : super(const PantryInitial());
 
   final ListPantryItems listPantryItems;
   final AddPantryItem addPantryItem;
   final UpdatePantryItem updatePantryItem;
   final DeletePantryItem deletePantryItem;
-  final ExpiryNotificationService expiryNotificationService;
+  final PantryNotificationCoordinator notificationCoordinator;
 
   StreamSubscription<List<PantryItem>>? _sub;
 
@@ -48,20 +47,8 @@ class PantryCubit extends Cubit<PantryState> {
   Future<void> add(String userId, PantryItem item) async {
     try {
       await addPantryItem(userId: userId, item: item);
-      // Schedule notification for new item if it has expiry date
-      if (item.expiryDate != null) {
-        try {
-          await expiryNotificationService.schedulePerItem(item);
-          debugPrint(
-            '[PantryCubit] Scheduled notification for new item: ${item.name}',
-          );
-        } catch (e) {
-          Logger.error(
-            '[PantryCubit] Error scheduling notification for new item',
-            e,
-          );
-        }
-      }
+      // Delegate notification scheduling to coordinator
+      await notificationCoordinator.handleItemAdded(item);
     } catch (e) {
       emit(PantryFailure(e.toString()));
     }
@@ -81,29 +68,9 @@ class PantryCubit extends Cubit<PantryState> {
 
       await updatePantryItem(userId: userId, item: item);
 
-      // Cancel old notifications and schedule new ones if expiry date changed
-      final bool expiryDateChanged = oldItem?.expiryDate != item.expiryDate;
-      if (expiryDateChanged) {
-        try {
-          // Cancel old notifications
-          await expiryNotificationService.cancelItemNotifications(item.id);
-          debugPrint(
-            '[PantryCubit] Cancelled old notifications for item: ${item.name}',
-          );
-
-          // Schedule new notifications if item has expiry date
-          if (item.expiryDate != null) {
-            await expiryNotificationService.schedulePerItem(item);
-            debugPrint(
-              '[PantryCubit] Scheduled new notifications for updated item: ${item.name}',
-            );
-          }
-        } catch (e) {
-          Logger.error(
-            '[PantryCubit] Error updating notifications for item',
-            e,
-          );
-        }
+      // Delegate notification updates to coordinator
+      if (oldItem != null) {
+        await notificationCoordinator.handleItemUpdated(oldItem, item);
       }
     } catch (e) {
       emit(PantryFailure(e.toString()));
@@ -112,32 +79,9 @@ class PantryCubit extends Cubit<PantryState> {
 
   Future<void> remove(String userId, String itemId) async {
     try {
-      // Get item before deletion to cancel its notifications
-      final PantryState currentState = state;
-      PantryItem? itemToDelete;
-      if (currentState is PantryLoaded) {
-        itemToDelete = currentState.items.firstWhere(
-          (PantryItem i) => i.id == itemId,
-          orElse: () => PantryItem(id: itemId, name: ''),
-        );
-      }
-
       await deletePantryItem(userId: userId, itemId: itemId);
-
-      // Cancel notifications for deleted item
-      if (itemToDelete != null) {
-        try {
-          await expiryNotificationService.cancelItemNotifications(itemId);
-          debugPrint(
-            '[PantryCubit] Cancelled notifications for deleted item: ${itemToDelete.name}',
-          );
-        } catch (e) {
-          Logger.error(
-            '[PantryCubit] Error cancelling notifications for deleted item',
-            e,
-          );
-        }
-      }
+      // Delegate notification cancellation to coordinator
+      await notificationCoordinator.handleItemDeleted(itemId);
     } catch (e) {
       emit(PantryFailure(e.toString()));
     }

@@ -1,7 +1,5 @@
 // ignore_for_file: public_member_api_docs
 
-import 'dart:typed_data';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';

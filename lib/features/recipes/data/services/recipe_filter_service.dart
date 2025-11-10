@@ -1,51 +1,131 @@
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 
-/// Service responsible for filtering recipes
-/// Follows Single Responsibility Principle - only handles recipe filtering logic
+/// Service for managing recipe filters
+/// Follows Single Responsibility Principle - only handles filter logic
 class RecipeFilterService {
-  /// Filter recipes by excluded titles
-  static List<Recipe> filterByExcludedTitles(
-    List<Recipe> recipes,
-    List<String> excludeTitles,
-  ) {
-    final Set<String> excluded = excludeTitles.toSet();
-    return recipes.where((Recipe r) => !excluded.contains(r.title)).toList();
-  }
+  RecipeFilterService();
 
-  /// Filter recipes by ingredients (at least one ingredient must match)
-  static List<Recipe> filterByIngredients(
-    List<Recipe> recipes,
-    List<Ingredient> ingredients,
-  ) {
-    if (ingredients.isEmpty) {
+  Map<String, dynamic> _activeFilters = <String, dynamic>{};
+
+  /// Get current active filters
+  Map<String, dynamic> get activeFilters => Map<String, dynamic>.unmodifiable(_activeFilters);
+
+  /// Apply filters to recipes
+  List<Recipe> applyFilters(List<Recipe> recipes) {
+    if (_activeFilters.isEmpty) {
       return recipes;
     }
 
-    final List<String> ingredientNames =
-        ingredients.map((Ingredient e) => e.name.toLowerCase()).toList();
+    List<Recipe> filtered = List<Recipe>.from(recipes);
 
-    return recipes.where((Recipe r) {
-      final List<String> recipeIngs =
-          r.ingredients.map((String e) => e.toLowerCase()).toList();
-      return ingredientNames.any((String ing) => recipeIngs.contains(ing));
-    }).toList();
+    // Apply max calories filter
+    if (_activeFilters.containsKey('maxCalories')) {
+      final int? maxCalories = _activeFilters['maxCalories'] as int?;
+      if (maxCalories != null && maxCalories > 0) {
+        filtered = filtered.where((Recipe r) {
+          return r.calories == null || r.calories! <= maxCalories;
+        }).toList();
+      }
+    }
+
+    // Apply min fiber filter
+    if (_activeFilters.containsKey('minFiber')) {
+      final int? minFiber = _activeFilters['minFiber'] as int?;
+      if (minFiber != null && minFiber > 0) {
+        filtered = filtered.where((Recipe r) {
+          return r.fiber == null || r.fiber! >= minFiber;
+        }).toList();
+      }
+    }
+
+    // Apply difficulty filter
+    if (_activeFilters.containsKey('difficulty')) {
+      final String? difficulty = _activeFilters['difficulty'] as String?;
+      if (difficulty != null && difficulty.isNotEmpty) {
+        filtered = filtered.where((Recipe r) {
+          return r.difficulty?.toLowerCase() == difficulty.toLowerCase();
+        }).toList();
+      }
+    }
+
+    // Apply duration filter
+    if (_activeFilters.containsKey('maxDuration')) {
+      final int? maxDuration = _activeFilters['maxDuration'] as int?;
+      if (maxDuration != null && maxDuration > 0) {
+        filtered = filtered.where((Recipe r) {
+          return r.durationMinutes == null || r.durationMinutes! <= maxDuration;
+        }).toList();
+      }
+    }
+
+    return filtered;
   }
 
-  /// Apply all filters (excluded titles + ingredients)
-  static List<Recipe> applyFilters(
+  /// Set a filter value
+  void setFilter(String key, dynamic value) {
+    if (value == null) {
+      _activeFilters.remove(key);
+    } else {
+      _activeFilters[key] = value;
+    }
+  }
+
+  /// Clear all filters
+  void clearFilters() {
+    _activeFilters.clear();
+  }
+
+  /// Check if any filters are active
+  bool get hasActiveFilters => _activeFilters.isNotEmpty;
+
+  /// Get filter count
+  int get filterCount => _activeFilters.length;
+
+  // ============================================================================
+  // STATIC HELPER METHODS for repository use (backward compatibility)
+  // These methods are used by RecipesRepositoryImpl for filtering recipes
+  // ============================================================================
+
+  /// Static helper: Filter recipes by exclude titles and ingredients
+  /// Used by RecipesRepositoryImpl for repository-level filtering
+  static List<Recipe> filterRecipes(
     List<Recipe> recipes,
     List<String> excludeTitles,
     List<Ingredient> ingredients,
   ) {
-    List<Recipe> filtered = filterByExcludedTitles(recipes, excludeTitles);
-    filtered = filterByIngredients(filtered, ingredients);
+    List<Recipe> filtered = List<Recipe>.from(recipes);
+
+    // Filter by exclude titles
+    if (excludeTitles.isNotEmpty) {
+      final Set<String> excludeSet = excludeTitles.map((String s) => s.toLowerCase()).toSet();
+      filtered = filtered.where((Recipe r) {
+        return !excludeSet.contains(r.title.toLowerCase());
+      }).toList();
+    }
+
+    // Filter by ingredients (all ingredients must be present)
+    if (ingredients.isNotEmpty) {
+      final Set<String> ingredientNames = ingredients
+          .map((Ingredient i) => i.name.toLowerCase())
+          .toSet();
+      filtered = filtered.where((Recipe r) {
+        final Set<String> recipeIngredients = r.ingredients
+            .map((String e) => e.toLowerCase())
+            .toSet();
+        return ingredientNames.every((String name) => recipeIngredients.contains(name));
+      }).toList();
+    }
+
     return filtered;
   }
 
-  /// Take first N recipes
+  /// Static helper: Take first N recipes
+  /// Used by RecipesRepositoryImpl for limiting results
   static List<Recipe> takeFirst(List<Recipe> recipes, int count) {
+    if (recipes.length <= count) {
+      return recipes;
+    }
     return recipes.take(count).toList();
   }
 }
-

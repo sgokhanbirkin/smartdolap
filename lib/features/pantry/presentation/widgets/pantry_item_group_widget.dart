@@ -7,12 +7,12 @@ import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 
 /// Widget for displaying a category group with its items
 class PantryItemGroupWidget extends StatefulWidget {
-  /// Creates a pantry item group widget
   const PantryItemGroupWidget({
     required this.category,
     required this.items,
     required this.userId,
     required this.onItemTap,
+    this.onQuantityChanged,
     required this.buildDismissibleCard,
     super.key,
   });
@@ -29,6 +29,9 @@ class PantryItemGroupWidget extends StatefulWidget {
   /// Callback when item is tapped
   final ValueChanged<PantryItem> onItemTap;
 
+  /// Callback when item quantity changes
+  final ValueChanged<PantryItem>? onQuantityChanged;
+
   /// Function to build dismissible card
   final Widget Function(
     BuildContext context,
@@ -36,7 +39,8 @@ class PantryItemGroupWidget extends StatefulWidget {
     String userId,
     VoidCallback onTap,
     int index,
-  ) buildDismissibleCard;
+  )
+  buildDismissibleCard;
 
   @override
   State<PantryItemGroupWidget> createState() => _PantryItemGroupWidgetState();
@@ -81,10 +85,12 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
 
   @override
   Widget build(BuildContext context) {
-    final Color categoryColor =
-        CategoryColors.getCategoryColor(widget.category);
-    final Color categoryIconColor =
-        CategoryColors.getCategoryIconColor(widget.category);
+    final Color categoryColor = CategoryColors.getCategoryColor(
+      widget.category,
+    );
+    final Color categoryIconColor = CategoryColors.getCategoryIconColor(
+      widget.category,
+    );
 
     return Padding(
       padding: EdgeInsets.only(bottom: AppSizes.verticalSpacingM),
@@ -112,7 +118,9 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
                   SizedBox(width: AppSizes.spacingS),
                   Expanded(
                     child: Text(
-                      widget.category,
+                      PantryCategoryHelper.getLocalizedCategoryName(
+                        widget.category,
+                      ),
                       style: TextStyle(
                         fontSize: AppSizes.textM,
                         fontWeight: FontWeight.w600,
@@ -140,8 +148,10 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
                   ),
                   SizedBox(width: AppSizes.spacingS),
                   RotationTransition(
-                    turns: Tween<double>(begin: 0.0, end: 0.5)
-                        .animate(_expandAnimation),
+                    turns: Tween<double>(
+                      begin: 0.0,
+                      end: 0.5,
+                    ).animate(_expandAnimation),
                     child: Icon(
                       Icons.keyboard_arrow_down,
                       color: categoryIconColor,
@@ -176,4 +186,3 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
     );
   }
 }
-

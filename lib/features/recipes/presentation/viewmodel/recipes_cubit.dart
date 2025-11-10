@@ -14,6 +14,7 @@ import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_re
 import 'package:smartdolap/features/recipes/data/services/meal_name_mapper.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_filter_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_mapper.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
@@ -24,6 +25,13 @@ import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
 import 'package:uuid/uuid.dart';
 
+// TODO(SOLID-SRP): This Cubit has been partially refactored:
+// - Filter management moved to RecipeFilterService (SRP)
+// - Image fixing delegated to RecipeImageService (already done)
+// - User recipe management delegated to IUserRecipeRepository (already done)
+// Remaining improvements:
+// - Recipe loading/caching logic could be further extracted to RecipeLoadingService
+// - Consider splitting into multiple smaller cubits for different recipe categories
 class RecipesCubit extends Cubit<RecipesState> {
   RecipesCubit({
     required this.suggest,
@@ -34,7 +42,9 @@ class RecipesCubit extends Cubit<RecipesState> {
     required this.imageService,
     required this.userRecipeRepository,
     required this.recipesRepository,
-  }) : super(const RecipesInitial());
+    RecipeFilterService? filterService,
+  }) : filterService = filterService ?? RecipeFilterService(),
+       super(const RecipesInitial());
 
   final SuggestRecipesFromPantry suggest;
   final IOpenAIService openAI;
@@ -44,10 +54,10 @@ class RecipesCubit extends Cubit<RecipesState> {
   final RecipeImageService imageService;
   final IUserRecipeRepository userRecipeRepository;
   final IRecipesRepository recipesRepository;
+  final RecipeFilterService filterService;
 
   final Set<String> _seenTitles = <String>{};
   bool isFetchingMore = false;
-  Map<String, dynamic> _activeFilters = <String, dynamic>{};
   String _currentCategory = 'suggestions';
   String? _selectedMeal;
 
@@ -348,39 +358,25 @@ class RecipesCubit extends Cubit<RecipesState> {
     return <Recipe>[];
   }
 
-  /// Load recipes for a specific meal - ayrı istek atar ve cache'e kaydeder
+  /// Load recipes for a specific meal - Hive → Firestore → AI priority
   Future<List<Recipe>> loadMeal(String userId, String meal) async {
-    // 🔄 AKIŞ 3: loadMeal() metodu (Yapabileceklerin sayfası - meal bazlı)
-    //   1. Meal bazlı cache key oluşturuluyor
-    //   2. Cache kontrolü yapılıyor (cacheService.getRecipes())
-    //   3. Eğer cache'de varsa:
-    //      a) Cache'den okunuyor
-    //      b) Recipe objelerine dönüştürülüyor
-    //      c) Görseller düzeltiliyor (boşsa)
-    //      d) Döndürülüyor
-    //   4. Eğer cache boşsa:
-    //      a) Pantry items yükleniyor
-    //      b) Meal bazlı prompt oluşturuluyor
-    //      c) OpenAI'ye istek atılıyor (openAI.suggestRecipes())
-    //      d) Her tarif için görsel düzeltiliyor (imageService.fixImageUrl())
-    //      e) Recipe objeleri oluşturuluyor
-    //      f) Cache'e kaydediliyor (cacheService.saveRecipes())
-    //      g) UserRecipeService'e kaydediliyor (Hive'a, duplicate kontrolü ile)
-    //      h) Döndürülüyor
-    //
-    // ❌ Firestore'a kaydediliyor: HAYIR
-    // ✅ Hive cache'e kaydediliyor: EVET (cacheService.saveRecipes)
-    // ✅ UserRecipeService'e kaydediliyor: EVET (userRecipeRepository.addRecipe)
-    //
+    debugPrint(
+      '[RecipesCubit] loadMeal başladı - userId: $userId, meal: $meal',
+    );
+
     // Meal bazlı cache key
     final String cacheKey = cacheService.getMealCacheKey(userId, meal);
 
-    // Cache kontrolü
+    // 1. ÖNCE HIVE CACHE'DEN KONTROL ET
     final List<Map<String, Object?>>? cachedRecipes = cacheService.getRecipes(
       cacheKey,
     );
 
     if (cachedRecipes != null && cachedRecipes.isNotEmpty) {
+      debugPrint(
+        '[RecipesCubit] Cache\'den ${cachedRecipes.length} tarif bulundu (meal: $meal)',
+      );
+
       // Cache'den okunan tarifleri Recipe'e dönüştür
       final List<Recipe> cachedRecipesList = RecipeMapper.fromMapList(
         cachedRecipes,
@@ -406,15 +402,106 @@ class RecipesCubit extends Cubit<RecipesState> {
         ),
       );
 
-      return recipesWithImages;
+      // Cache'den yeterli tarif varsa direkt döndür, API çağrısı yapma
+      if (recipesWithImages.length >= 3) {
+        debugPrint(
+          '[RecipesCubit] Cache\'den yeterli tarif var (${recipesWithImages.length}), API çağrısı yapılmıyor',
+        );
+        // Arka planda sync yapma - cache yeterli, gereksiz API çağrısı yapma
+        // Sadece kullanıcı açıkça "daha fazla yükle" derse sync yapılabilir
+        return recipesWithImages;
+      }
+
+      // Cache'de az tarif varsa Firestore → AI akışına devam et
+      debugPrint(
+        '[RecipesCubit] Cache\'de yetersiz tarif var (${recipesWithImages.length}/3), Firestore → AI akışına devam ediliyor',
+      );
     }
 
-    // Cache boşsa boş liste döndür - OpenAI isteği atma
-    // Kullanıcı "Dolaptakilerden Tarif Öner" butonuna bastığında yeni tarifler gelecek
+    // 2. HIVE BOŞ VEYA YETERSİZSE FIRESTORE → AI AKIŞI
     debugPrint(
-      '[RecipesCubit] Cache boş, meal: $meal - boş liste döndürülüyor (isteğe gerek yok)',
+      '[RecipesCubit] Cache boş, Firestore → AI akışı başlatılıyor (meal: $meal)',
     );
-    return <Recipe>[];
+
+    try {
+      final PromptPreferences prefs = promptPreferences.getPreferences();
+
+      // Pantry items'ı al
+      final List<dynamic> pantryItemsRaw = await sl<IPantryRepository>()
+          .getItems(userId: userId);
+      final List<PantryItem> pantryItems = pantryItemsRaw.cast<PantryItem>();
+      final List<Ingredient> ingredients = pantryItems
+          .map<Ingredient>(
+            (PantryItem i) =>
+                Ingredient(name: i.name, unit: i.unit, quantity: i.quantity),
+          )
+          .toList();
+
+      // Meal bazlı prompt oluştur
+      final String mealName = MealNameMapper.getMealName(meal);
+      final String mealPrompt = tr(
+        'meal_type',
+        namedArgs: <String, String>{'meal': mealName},
+      );
+      final String contextPrompt = prefs.composePrompt(
+        '${tr('pantry_ingredients_prompt', namedArgs: <String, String>{'ingredients': ingredients.map((Ingredient e) => e.name).join(', ')})} $mealPrompt',
+      );
+
+      // 🔄 YENİ AKIŞ: Hive → Firestore → AI mantığı
+      final List<Recipe> recipes = await recipesRepository
+          .getRecipesFromFirestoreFirst(
+            userId: userId,
+            meal: meal,
+            ingredients: ingredients,
+            prompt: contextPrompt,
+            targetCount: 6,
+            excludeTitles: _seenTitles.toList(),
+          );
+
+      _seenTitles.addAll(recipes.map((Recipe e) => e.title));
+
+      // Cache'e kaydet - cacheService kullan
+      if (recipes.isNotEmpty) {
+        await cacheService.addRecipesToCache(cacheKey, recipes);
+      }
+
+      // Yeni tarifleri UserRecipeService'e kaydet - userRecipeRepository kullan
+      try {
+        final List<UserRecipe> existingRecipes = userRecipeRepository.fetch();
+        final Set<String> existingTitles = existingRecipes
+            .map((UserRecipe r) => r.title)
+            .toSet();
+
+        for (final Recipe recipe in recipes) {
+          if (!existingTitles.contains(recipe.title)) {
+            await userRecipeRepository.addRecipe(
+              UserRecipe(
+                id: const Uuid().v4(),
+                title: recipe.title,
+                ingredients: recipe.ingredients,
+                steps: recipe.steps,
+                imagePath: recipe.imageUrl,
+                tags: <String>[meal],
+                isAIRecommendation: true,
+                createdAt: DateTime.now(),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint(
+          '[RecipesCubit] UserRecipeService kaydetme hatası (meal: $meal): $e',
+        );
+      }
+
+      debugPrint(
+        '[RecipesCubit] loadMeal tamamlandı - ${recipes.length} tarif (meal: $meal)',
+      );
+      return recipes;
+    } catch (e) {
+      debugPrint('[RecipesCubit] loadMeal hatası (meal: $meal): $e');
+      return <Recipe>[];
+    }
   }
 
   /// Load more recipes for a specific meal - bypasses cache and requests new recipes
@@ -589,6 +676,7 @@ class RecipesCubit extends Cubit<RecipesState> {
   }
 
   /// Apply client-side filter from UI without exposing emit
+  /// Filter logic is delegated to RecipeFilterService (SRP)
   void applyFilter({
     List<String>? ingredients,
     String? meal,
@@ -601,51 +689,58 @@ class RecipesCubit extends Cubit<RecipesState> {
     }
     final List<Recipe> source = s.allRecipes ?? s.recipes;
 
-    // Update active filters
-    _activeFilters = <String, dynamic>{
-      if (ingredients != null && ingredients.isNotEmpty)
-        'ingredients': ingredients,
-      if (meal != null && meal.isNotEmpty) 'meal': meal,
-      if (maxCalories != null) 'maxCalories': maxCalories,
-      if (minFiber != null) 'minFiber': minFiber,
-    };
+    // Update filters in filter service
+    if (maxCalories != null) {
+      filterService.setFilter('maxCalories', maxCalories);
+    }
+    if (minFiber != null) {
+      filterService.setFilter('minFiber', minFiber);
+    }
+    if (meal != null && meal.isNotEmpty) {
+      filterService.setFilter('meal', meal);
+    }
+    if (ingredients != null && ingredients.isNotEmpty) {
+      filterService.setFilter('ingredients', ingredients);
+    }
 
-    // Apply filters
-    final List<Recipe> filtered = source.where((Recipe r) {
-      final bool ingOk =
-          ingredients == null ||
-          ingredients.isEmpty ||
-          ingredients.every(
-            (String name) => r.ingredients
-                .map((String e) => e.toLowerCase())
-                .contains(name.toLowerCase()),
-          );
-      final bool mealOk =
-          meal == null ||
-          meal.isEmpty ||
-          (r.category ?? '').toLowerCase() == meal.toLowerCase();
-      final bool calOk =
-          maxCalories == null || (r.calories ?? 0) <= maxCalories;
-      final bool fiberOk = minFiber == null || (r.fiber ?? 0) >= minFiber;
-      return ingOk && mealOk && calOk && fiberOk;
-    }).toList();
+    // Apply filters using filter service
+    List<Recipe> filtered = filterService.applyFilters(source);
+
+    // Apply ingredient filter manually (not yet in filter service)
+    if (ingredients != null && ingredients.isNotEmpty) {
+      filtered = filtered.where((Recipe r) {
+        return ingredients.every(
+          (String name) => r.ingredients
+              .map((String e) => e.toLowerCase())
+              .contains(name.toLowerCase()),
+        );
+      }).toList();
+    }
+
+    // Apply meal filter manually (not yet in filter service)
+    if (meal != null && meal.isNotEmpty) {
+      filtered = filtered.where((Recipe r) {
+        return (r.category ?? '').toLowerCase() == meal.toLowerCase();
+      }).toList();
+    }
 
     emit(
       RecipesLoaded(
         filtered,
         allRecipes: source,
-        activeFilters: _activeFilters,
+        activeFilters: filterService.activeFilters,
       ),
     );
   }
 
   /// Reset filters and show all recipes
+  /// Filter logic is delegated to RecipeFilterService (SRP)
   void resetFilters() {
     final RecipesState s = state;
     if (s is! RecipesLoaded) {
       return;
     }
-    _activeFilters = <String, dynamic>{};
+    filterService.clearFilters();
     emit(
       RecipesLoaded(
         s.allRecipes ?? s.recipes,
@@ -699,7 +794,7 @@ class RecipesCubit extends Cubit<RecipesState> {
         RecipesLoaded(
           updated,
           allRecipes: updated,
-          activeFilters: _activeFilters,
+          activeFilters: filterService.activeFilters,
         ),
       );
     } on Exception catch (e) {
@@ -749,7 +844,7 @@ class RecipesCubit extends Cubit<RecipesState> {
         RecipesLoaded(
           updated,
           allRecipes: updated,
-          activeFilters: _activeFilters,
+          activeFilters: filterService.activeFilters,
         ),
       );
     } on Exception {

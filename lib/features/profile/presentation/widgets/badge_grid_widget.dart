@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/profile/domain/entities/badge.dart' as domain;
 import 'package:smartdolap/features/profile/presentation/widgets/badge_card_widget.dart';
@@ -30,6 +31,7 @@ class BadgeGridWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: AppSizes.textM,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
+              height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),
@@ -80,7 +82,12 @@ class BadgeDetailDialogWidget extends StatelessWidget {
         Expanded(
           child: Text(
             tr(badge.nameKey),
-            style: TextStyle(fontSize: AppSizes.textL),
+            style: TextStyle(
+              fontSize: AppSizes.textL,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+              height: 1.2,
+            ),
           ),
         ),
       ],
@@ -91,7 +98,11 @@ class BadgeDetailDialogWidget extends StatelessWidget {
       children: <Widget>[
         Text(
           tr(badge.descriptionKey),
-          style: TextStyle(fontSize: AppSizes.textM),
+          style: TextStyle(
+            fontSize: AppSizes.textM,
+            color: Theme.of(context).colorScheme.onSurface,
+            height: 1.5,
+          ),
         ),
         if (badge.isUnlocked && badge.unlockedAt != null) ...<Widget>[
           SizedBox(height: AppSizes.verticalSpacingM),
@@ -105,6 +116,7 @@ class BadgeDetailDialogWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: AppSizes.textS,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
+              height: 1.4,
             ),
           ),
         ],

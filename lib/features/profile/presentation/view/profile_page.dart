@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/constants/mvp_flags.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
@@ -23,7 +26,9 @@ import 'package:smartdolap/features/profile/domain/entities/badge.dart'
 import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
+import 'package:smartdolap/features/profile/presentation/utils/badge_progress_helper.dart';
 import 'package:smartdolap/features/profile/presentation/view/user_recipe_form_page.dart';
+import 'package:smartdolap/features/profile/presentation/widgets/badge_preview_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/badge_grid_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/collection_card_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/hero_card_widget.dart';
@@ -31,8 +36,15 @@ import 'package:smartdolap/features/profile/presentation/widgets/preference_cont
 import 'package:smartdolap/features/profile/presentation/widgets/prompt_preview_card_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/settings_menu_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/stats_tables_widget.dart';
+import 'package:smartdolap/product/router/app_router.dart';
 
 /// Profile page - User profile and settings
+/// TODO(SOLID-SRP): Too many responsibilities - consider splitting into:
+/// - ProfileDisplayPage (display only)
+/// - ProfileSettingsPage (settings)
+/// - ProfileStatsPage (stats)
+/// TODO(RESPONSIVE): Add tablet/desktop layouts
+/// TODO(LOCALIZATION): Ensure all badge names/descriptions are localization-ready
 class ProfilePage extends StatefulWidget {
   /// Profile page constructor
   const ProfilePage({super.key});
@@ -77,33 +89,53 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _loadInitialData() async {
-    _prefs = _prefService.getPreferences();
-    _stats = _statsService.load();
-    _userRecipes = _userRecipeService.fetch();
-    final Box<dynamic> favBox = Hive.isBoxOpen('favorite_recipes')
-        ? Hive.box<dynamic>('favorite_recipes')
-        : await Hive.openBox<dynamic>('favorite_recipes');
-    _favoritesCount = favBox.length;
+    try {
+      _prefs = _prefService.getPreferences();
+      _stats = _statsService.load();
+      _userRecipes = _userRecipeService.fetch();
+      final Box<dynamic> favBox = Hive.isBoxOpen('favorite_recipes')
+          ? Hive.box<dynamic>('favorite_recipes')
+          : await Hive.openBox<dynamic>('favorite_recipes');
+      _favoritesCount = favBox.length;
 
-    // Load badges
-    if (!mounted) {
-      return;
-    }
-    final BuildContext authContext = context;
-    final AuthState authState = authContext.read<AuthCubit>().state;
-    await authState.whenOrNull(
-      authenticated: (domain.User user) async {
-        final BadgeService badgeService = BadgeService(
-          statsService: _statsService,
-          badgeRepository: sl<IBadgeRepository>(),
-          userId: user.id,
-        );
-        _badges = await badgeService.getAllBadgesWithStatus();
-      },
-    );
+      // Load badges - context'i async gap'ten önce al
+      if (!mounted) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
-    if (mounted) {
-      setState(() => _isLoading = false);
+      final BuildContext authContext = context;
+      final AuthCubit authCubit = authContext.read<AuthCubit>();
+      final AuthState authState = authCubit.state;
+
+      await authState.whenOrNull(
+        authenticated: (domain.User user) async {
+          if (!mounted) {
+            return;
+          }
+          try {
+            final BadgeService badgeService = BadgeService(
+              statsService: _statsService,
+              badgeRepository: sl<IBadgeRepository>(),
+              userId: user.id,
+            );
+            _badges = await badgeService.getAllBadgesWithStatus();
+          } on Exception catch (e) {
+            debugPrint('[ProfilePage] Badge yükleme hatası: $e');
+            // Hata olsa bile devam et, boş liste ile
+            _badges = <domain.Badge>[];
+          }
+        },
+      );
+    } on Exception catch (e, stackTrace) {
+      debugPrint('[ProfilePage] _loadInitialData hatası: $e');
+      debugPrint('[ProfilePage] Stack trace: $stackTrace');
+      // Hata durumunda da loading'i kapat
+    } finally {
+      // Her durumda loading'i kapat
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -121,82 +153,128 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.white,
     body: _isLoading
         ? const Center(
             child: CustomLoadingIndicator(
               type: LoadingType.pulsingGrid,
               size: 50,
             ),
-          )
-        : Stack(
-            children: <Widget>[
-              SafeArea(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(AppSizes.padding),
+          ).animate().fadeIn(duration: 300.ms)
+        : CustomScrollView(
+            slivers: <Widget>[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: AppSizes.padding * 2,
+                    left: AppSizes.padding,
+                    right: AppSizes.padding,
+                    bottom: AppSizes.padding,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       HeroCardWidget(
-                        prefs: _prefs,
-                        stats: _stats,
-                        favoritesCount: _favoritesCount,
-                        pulseController: _pulseController,
-                        onEditNickname: _editNickname,
-                      ),
-                      SizedBox(height: AppSizes.verticalSpacingL),
-                      PromptPreviewCardWidget(prefs: _prefs),
-                      SizedBox(height: AppSizes.verticalSpacingL),
-                      StatsTablesWidget(prefs: _prefs),
-                      SizedBox(height: AppSizes.verticalSpacingL),
-                      PreferenceControlsWidget(
-                        prefs: _prefs,
-                        onPrefsChanged: _savePrefs,
-                      ),
-                      SizedBox(height: AppSizes.verticalSpacingL),
-                      // Badges section
-                      Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(AppSizes.cardPadding),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Row(
-                                children: <Widget>[
-                                  Icon(
-                                    Icons.emoji_events,
-                                    size: AppSizes.icon,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                  SizedBox(width: AppSizes.spacingS),
-                                  Text(
-                                    tr('badges_title'),
-                                    style: TextStyle(
-                                      fontSize: AppSizes.textL,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: AppSizes.verticalSpacingM),
-                              SizedBox(
-                                height: AppSizes.verticalSpacingXXL * 8,
-                                child: BadgeGridWidget(
-                                  badges: _badges,
-                                  onBadgeTap: (domain.Badge badge) {
-                                    showDialog<void>(
-                                      context: context,
-                                      builder: (_) =>
-                                          BadgeDetailDialogWidget(badge: badge),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
+                            prefs: _prefs,
+                            stats: _stats,
+                            favoritesCount: _favoritesCount,
+                            pulseController: _pulseController,
+                            onEditNickname: _editNickname,
+                            onSettingsTap: () =>
+                                SettingsMenuWidget.show(context),
+                          )
+                          .animate()
+                          .fadeIn(
+                            duration: 500.ms,
+                            delay: 100.ms,
+                            curve: Curves.easeOut,
+                          )
+                          .slideY(
+                            begin: 0.1,
+                            end: 0,
+                            duration: 500.ms,
+                            delay: 100.ms,
+                            curve: Curves.easeOutCubic,
                           ),
-                        ),
-                      ),
+                      SizedBox(height: AppSizes.verticalSpacingXL),
+                      PromptPreviewCardWidget(prefs: _prefs)
+                          .animate()
+                          .fadeIn(
+                            duration: 400.ms,
+                            delay: 200.ms,
+                            curve: Curves.easeOut,
+                          )
+                          .slideY(
+                            begin: 0.08,
+                            end: 0,
+                            duration: 400.ms,
+                            delay: 200.ms,
+                            curve: Curves.easeOutCubic,
+                          ),
+                      SizedBox(height: AppSizes.verticalSpacingXL),
+                      StatsTablesWidget(prefs: _prefs)
+                          .animate()
+                          .fadeIn(
+                            duration: 400.ms,
+                            delay: 300.ms,
+                            curve: Curves.easeOut,
+                          )
+                          .slideY(
+                            begin: 0.08,
+                            end: 0,
+                            duration: 400.ms,
+                            delay: 300.ms,
+                            curve: Curves.easeOutCubic,
+                          ),
+                      SizedBox(height: AppSizes.verticalSpacingXL),
+                      PreferenceControlsWidget(
+                            prefs: _prefs,
+                            onPrefsChanged: _savePrefs,
+                          )
+                          .animate()
+                          .fadeIn(
+                            duration: 400.ms,
+                            delay: 400.ms,
+                            curve: Curves.easeOut,
+                          )
+                          .slideY(
+                            begin: 0.08,
+                            end: 0,
+                            duration: 400.ms,
+                            delay: 400.ms,
+                            curve: Curves.easeOutCubic,
+                          ),
+                      SizedBox(height: AppSizes.verticalSpacingXL),
+                      // Badges preview section
+                      BadgePreviewWidget(
+                            badges: BadgeProgressHelper.getPreviewBadges(
+                              _badges,
+                              _stats,
+                            ),
+                            onViewAll: () {
+                              Navigator.of(context).pushNamed(AppRouter.badges);
+                            },
+                            onBadgeTap: (domain.Badge badge) {
+                              showDialog<void>(
+                                context: context,
+                                builder: (_) =>
+                                    BadgeDetailDialogWidget(badge: badge),
+                              );
+                            },
+                          )
+                          .animate()
+                          .fadeIn(
+                            duration: 400.ms,
+                            delay: 500.ms,
+                            curve: Curves.easeOut,
+                          )
+                          .slideY(
+                            begin: 0.08,
+                            end: 0,
+                            duration: 400.ms,
+                            delay: 500.ms,
+                            curve: Curves.easeOutCubic,
+                          ),
                       // Advanced sections (optional - can be hidden)
                       if (kEnableAdvancedProfileSections) ...[
                         SizedBox(height: AppSizes.verticalSpacingL),
@@ -209,20 +287,6 @@ class _ProfilePageState extends State<ProfilePage>
                         ),
                       ],
                     ],
-                  ),
-                ),
-              ),
-              // Sağ üstte ayarlar butonu
-              Positioned(
-                top: MediaQuery.of(context).padding.top + AppSizes.spacingS,
-                right: AppSizes.spacingM,
-                child: IconButton(
-                  icon: const Icon(Icons.settings),
-                  tooltip: tr('settings'),
-                  onPressed: () => SettingsMenuWidget.show(context),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    elevation: 2,
                   ),
                 ),
               ),
@@ -290,9 +354,41 @@ class _ProfilePageState extends State<ProfilePage>
       return;
     }
     final BuildContext snackbarContext = context;
-    ScaffoldMessenger.of(
-      snackbarContext,
-    ).showSnackBar(SnackBar(content: Text(tr('profile_ai_recipe_recorded'))));
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(snackbarContext).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: <Widget>[
+            Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              size: AppSizes.iconS,
+            ),
+            SizedBox(width: AppSizes.spacingS),
+            Expanded(
+              child: Text(
+                tr('profile_ai_recipe_recorded'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.1,
+          left: AppSizes.padding,
+          right: AppSizes.padding,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radius),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _createManualRecipe() async {
@@ -398,8 +494,40 @@ class _ProfilePageState extends State<ProfilePage>
         return;
       }
       final BuildContext snackbarContext = context;
+      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(snackbarContext).showSnackBar(
-        SnackBar(content: Text(tr('profile_photo_upload_placeholder'))),
+        SnackBar(
+          content: Row(
+            children: <Widget>[
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                size: AppSizes.iconS,
+              ),
+              SizedBox(width: AppSizes.spacingS),
+              Expanded(
+                child: Text(
+                  tr('profile_photo_upload_placeholder'),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radius),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
   }

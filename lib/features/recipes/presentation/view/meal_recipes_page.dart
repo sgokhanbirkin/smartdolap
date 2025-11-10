@@ -2,23 +2,25 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/utils/responsive_extensions.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
+import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipes_page_data_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/utils/meal_time_order_helper.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
-import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
-import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
-import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/compact_recipe_card_widget.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
-import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
-import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
 
 /// Meal recipes page - Shows all recipes for a specific meal with pagination
 class MealRecipesPage extends StatefulWidget {
@@ -129,10 +131,9 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
             recipe: recipe,
             onTap: _isSelectionMode
                 ? () => _toggleRecipeSelection(recipe.title)
-                : () => Navigator.of(context).pushNamed(
-                      AppRouter.recipeDetail,
-                      arguments: recipe,
-                    ),
+                : () => Navigator.of(
+                    context,
+                  ).pushNamed(AppRouter.recipeDetail, arguments: recipe),
           ),
           if (_isSelectionMode)
             Positioned(
@@ -215,8 +216,8 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
       // Cache'den sil
       if (_recipesCubit != null) {
         await _recipesCubit!.deleteRecipesFromCache(
-        widget.userId,
-        widget.meal,
+          widget.userId,
+          widget.meal,
           titlesToDelete,
         );
       }
@@ -238,8 +239,18 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
                   'count': titlesToDelete.length.toString(),
                 },
               ),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.1,
+              left: AppSizes.padding,
+              right: AppSizes.padding,
+            ),
           ),
         );
       }
@@ -247,8 +258,20 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${tr('error')}: $e'),
+            content: Text(
+              '${tr('error')}: $e',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.1,
+              left: AppSizes.padding,
+              right: AppSizes.padding,
+            ),
           ),
         );
       }
@@ -280,7 +303,7 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
         );
         if (ok == true && dialogContext.mounted) {
           // Öneriler yüklendi, sayfayı yenile
-          _loadInitialRecipes();
+          await _loadInitialRecipes();
         }
       },
     );
@@ -290,8 +313,13 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
     appBar: AppBar(
+      backgroundColor: MealTimeOrderHelper.getMealAppBarColor(widget.meal),
+      foregroundColor: Colors.white,
       title: Text(
         '${tr('you_can_make')} - ${MealTimeOrderHelper.getMealName(widget.meal)}',
+        style: TextStyle(fontSize: AppSizes.textM, fontWeight: FontWeight.w600),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
       actions: <Widget>[
         if (_isSelectionMode) ...[
@@ -328,38 +356,35 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
             ),
           )
         : _recipes.isEmpty
-        ? EmptyState(messageKey: 'no_recipes_yet')
+        ? const EmptyState(messageKey: 'no_recipes_yet')
         : GridView.builder(
             controller: _scrollController,
             padding: EdgeInsets.all(AppSizes.padding),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+              crossAxisCount: ResponsiveGrid.getCrossAxisCount(context),
               crossAxisSpacing: AppSizes.spacingS,
               mainAxisSpacing: AppSizes.verticalSpacingS,
-              childAspectRatio: 0.75,
+              childAspectRatio: ResponsiveGrid.getChildAspectRatio(context),
             ),
             itemCount: _recipes.length,
-            itemBuilder: (BuildContext context, int index) {
-              return _buildRecipeCard(_recipes[index]);
-            },
+            itemBuilder: (BuildContext context, int index) =>
+                _buildRecipeCard(_recipes[index]),
           ),
     floatingActionButton: _isSelectionMode
         ? null
         : BlocBuilder<AuthCubit, AuthState>(
-      builder: (BuildContext context, AuthState state) {
-        return state.when(
-          initial: () => const SizedBox.shrink(),
-          loading: () => const SizedBox.shrink(),
-          error: (_) => const SizedBox.shrink(),
-          unauthenticated: () => const SizedBox.shrink(),
-                authenticated: (domain.User user) =>
-                    FloatingActionButton.extended(
-            onPressed: () => _showGetSuggestionsDialog(context),
-            icon: const Icon(Icons.lightbulb),
-            label: Text(tr('get_suggestions')),
+            builder: (BuildContext context, AuthState state) => state.when(
+              initial: () => const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+              error: (_) => const SizedBox.shrink(),
+              unauthenticated: () => const SizedBox.shrink(),
+              authenticated: (domain.User user) =>
+                  FloatingActionButton.extended(
+                    onPressed: () => _showGetSuggestionsDialog(context),
+                    icon: const Icon(Icons.lightbulb),
+                    label: Text(tr('get_suggestions')),
+                  ),
+            ),
           ),
-        );
-      },
-    ),
   );
 }

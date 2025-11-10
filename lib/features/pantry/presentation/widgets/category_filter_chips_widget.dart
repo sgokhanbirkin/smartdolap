@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/category_colors.dart';
+import 'package:smartdolap/core/utils/pantry_categories.dart';
 
 /// Widget for category filter chips
 class CategoryFilterChipsWidget extends StatelessWidget {
@@ -52,7 +53,7 @@ class CategoryFilterChipsWidget extends StatelessWidget {
           (String cat) => Padding(
             padding: EdgeInsets.only(right: AppSizes.spacingS),
             child: FilterChip(
-              label: Text(cat),
+              label: Text(PantryCategoryHelper.getLocalizedCategoryName(cat)),
               selected: selectedCategory == cat,
               onSelected: (bool selected) {
                 onCategorySelected(selected ? cat : null);
@@ -77,4 +78,3 @@ class CategoryFilterChipsWidget extends StatelessWidget {
     ),
   );
 }
-

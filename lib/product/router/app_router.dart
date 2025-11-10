@@ -10,6 +10,7 @@ import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/view/add_pantry_item_page.dart';
 import 'package:smartdolap/features/pantry/presentation/view/pantry_item_detail_page.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/profile/presentation/view/badges_page.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/view/favorites_page.dart';
 import 'package:smartdolap/features/recipes/presentation/view/get_suggestions_page.dart';
@@ -17,12 +18,16 @@ import 'package:smartdolap/features/recipes/presentation/view/meal_recipes_page.
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/features/recipes/presentation/view/recipe_detail_page.dart';
 import 'package:smartdolap/core/widgets/splash_page.dart';
+import 'package:smartdolap/features/onboarding/presentation/view/onboarding_page.dart';
 import 'package:smartdolap/product/widgets/app_shell.dart';
 
 /// App router configuration
 class AppRouter {
   /// Splash route path
   static const String splash = '/splash';
+
+  /// Onboarding route path
+  static const String onboarding = '/onboarding';
 
   /// Login route path
   static const String login = '/login';
@@ -51,9 +56,17 @@ class AppRouter {
   /// Get suggestions route path
   static const String getSuggestions = '/recipes/get-suggestions';
 
+  /// Badges route path
+  static const String badges = '/profile/badges';
+
   /// Generate route based on route settings
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case onboarding:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const OnboardingPage(),
+          settings: settings,
+        );
       case splash:
         return MaterialPageRoute<dynamic>(
           builder: (BuildContext context) => const SplashPage(),
@@ -189,6 +202,10 @@ class AppRouter {
               userId: args['userId'] as String,
             ),
           ),
+        );
+      case badges:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const BadgesPage(),
         );
       case home:
       default:

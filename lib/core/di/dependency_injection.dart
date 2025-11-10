@@ -6,6 +6,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:smartdolap/core/services/onboarding_service.dart';
+import 'package:smartdolap/core/services/sync_service.dart';
 import 'package:smartdolap/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:smartdolap/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
@@ -13,6 +15,7 @@ import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/register_usecase.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/pantry/data/repositories/pantry_repository_impl.dart';
+import 'package:smartdolap/features/pantry/data/services/pantry_notification_coordinator.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
@@ -32,6 +35,7 @@ import 'package:smartdolap/features/recipes/domain/use_cases/get_recipe_detail.d
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
+import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_service.dart';
@@ -52,6 +56,7 @@ Future<void> setupLocator() async {
   await Hive.openBox<dynamic>('pantry_box');
   await Hive.openBox<dynamic>('profile_box');
   await Hive.openBox<dynamic>('profile_stats_box');
+  await Hive.openBox<dynamic>('app_settings');
   if (!sl.isRegistered<Box<dynamic>>(instanceName: 'pantryBox')) {
     sl.registerLazySingleton<Box<dynamic>>(
       () => Hive.box<dynamic>('pantry_box'),
@@ -63,9 +68,10 @@ Future<void> setupLocator() async {
       () => PromptPreferenceService(Hive.box<dynamic>('profile_box')),
     );
   }
-  if (!sl.isRegistered<ProfileStatsService>()) {
-    sl.registerLazySingleton<ProfileStatsService>(
-      () => ProfileStatsService(Hive.box<dynamic>('profile_stats_box')),
+  // Onboarding service
+  if (!sl.isRegistered<OnboardingService>()) {
+    sl.registerLazySingleton<OnboardingService>(
+      () => OnboardingService(Hive.box<dynamic>('app_settings')),
     );
   }
   if (!sl.isRegistered<UserRecipeService>()) {
@@ -96,6 +102,7 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
 
   // Auth — DIP: arayüz → implementasyon
+  // TODO(SOLID-DIP): All services should be registered via interfaces
   sl.registerLazySingleton<IAuthRepository>(
     () => AuthRepositoryImpl(sl<fb.FirebaseAuth>()),
   );
@@ -128,7 +135,7 @@ Future<void> setupLocator() async {
       addPantryItem: sl(),
       updatePantryItem: sl(),
       deletePantryItem: sl(),
-      expiryNotificationService: sl(),
+      notificationCoordinator: sl(),
     ),
   );
 
@@ -146,18 +153,44 @@ Future<void> setupLocator() async {
     () => StorageService(sl<FirebaseStorage>()),
   );
 
-  // Notifications
+  // Notifications - DIP: Register via interface
   sl.registerLazySingleton<FlutterLocalNotificationsPlugin>(
     FlutterLocalNotificationsPlugin.new,
   );
-  sl.registerLazySingleton<ExpiryNotificationService>(
+  sl.registerLazySingleton<IExpiryNotificationService>(
     () => ExpiryNotificationService(sl<FlutterLocalNotificationsPlugin>()),
   );
+  // Register concrete implementation for backward compatibility if needed
+  sl.registerLazySingleton<ExpiryNotificationService>(
+    () => sl<IExpiryNotificationService>() as ExpiryNotificationService,
+  );
+  // Pantry notification coordinator
+  sl.registerLazySingleton<PantryNotificationCoordinator>(
+    () => PantryNotificationCoordinator(sl<IExpiryNotificationService>()),
+  );
 
-  // Profile
+  // Profile services - must be registered before SyncService
+  if (!sl.isRegistered<ProfileStatsService>()) {
+    sl.registerLazySingleton<ProfileStatsService>(
+      () => ProfileStatsService(Hive.box<dynamic>('profile_stats_box')),
+    );
+  }
   sl.registerLazySingleton<IBadgeRepository>(
     () => BadgeRepositoryImpl(sl<FirebaseFirestore>()),
   );
+
+  // Sync service
+  if (!sl.isRegistered<SyncService>()) {
+    sl.registerLazySingleton<SyncService>(
+      () => SyncService(
+        firestore: sl<FirebaseFirestore>(),
+        pantryRepository: sl<IPantryRepository>(),
+        recipesRepository: sl<IRecipesRepository>(),
+        pantryBox: sl<Box<dynamic>>(instanceName: 'pantryBox'),
+        recipeCacheService: sl<RecipeCacheService>(),
+      ),
+    );
+  }
 
   // Recipes
   sl.registerLazySingleton<IRecipesRepository>(
@@ -167,6 +200,7 @@ Future<void> setupLocator() async {
       sl(),
       sl<PromptPreferenceService>(),
       sl<RecipeImageService>(),
+      sl<RecipeCacheService>(),
     ),
   );
   sl.registerFactory(() => SuggestRecipesFromPantry(sl()));

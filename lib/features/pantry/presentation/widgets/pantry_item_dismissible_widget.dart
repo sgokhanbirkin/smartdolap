@@ -60,7 +60,13 @@ class PantryItemDismissibleWidget extends StatelessWidget {
       context.read<PantryCubit>().remove(userId, item.id);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(tr('item_deleted')),
+          content: Text(
+            tr('item_deleted'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           action: SnackBarAction(
             label: tr('undo'),
             textColor: Theme.of(context).colorScheme.onErrorContainer,
@@ -68,6 +74,11 @@ class PantryItemDismissibleWidget extends StatelessWidget {
           ),
           duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
         ),
       );
     },

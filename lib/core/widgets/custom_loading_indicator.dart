@@ -3,26 +3,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:lottie/lottie.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 
-/// Custom loading indicator with SpinKit animations
+/// Custom loading indicator with SpinKit animations and Lottie support
+/// All loading indicators are controlled from this single widget
 class CustomLoadingIndicator extends StatelessWidget {
   const CustomLoadingIndicator({
     this.size,
     this.color,
     this.type = LoadingType.fadingCircle,
+    this.lottieAsset,
     super.key,
   });
 
   final double? size;
   final Color? color;
   final LoadingType type;
+  
+  /// Lottie animation asset path (e.g., 'assets/animations/loading.json')
+  /// If provided, this will be used instead of SpinKit animations
+  final String? lottieAsset;
 
   double get _effectiveSize => size ?? AppSizes.iconXL;
 
   @override
   Widget build(BuildContext context) {
+    // If Lottie asset is provided, use it
+    if (lottieAsset != null && lottieAsset!.isNotEmpty) {
+      return SizedBox(
+        width: _effectiveSize,
+        height: _effectiveSize,
+        child: Lottie.asset(
+          lottieAsset!,
+          width: _effectiveSize,
+          height: _effectiveSize,
+          fit: BoxFit.contain,
+          repeat: true,
+        ),
+      );
+    }
+
+    // Otherwise use SpinKit animations
     final Color effectiveColor = color ?? Theme.of(context).colorScheme.primary;
 
     switch (type) {

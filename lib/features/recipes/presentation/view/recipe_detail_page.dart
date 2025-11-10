@@ -178,9 +178,20 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(tr('recipe_made_error')),
+              content: Text(
+                tr('recipe_made_error'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
               behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.height * 0.1,
+                left: AppSizes.padding,
+                right: AppSizes.padding,
+              ),
             ),
           );
           return;
@@ -201,9 +212,20 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(tr('recipe_made_error')),
+              content: Text(
+                tr('recipe_made_error'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
               behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.height * 0.1,
+                left: AppSizes.padding,
+                right: AppSizes.padding,
+              ),
             ),
           );
           setState(() => _isSaving = false);
@@ -226,18 +248,40 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(tr('recipes.marked_as_made')),
+          content: Text(
+            tr('recipes.marked_as_made'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
         ),
       );
       Navigator.of(context).pop(true); // true döndür - yaptıklarım güncellensin
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(tr('common.unexpected_error')),
+          content: Text(
+            tr('common.unexpected_error'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onErrorContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
           behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
         ),
       );
     }

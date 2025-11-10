@@ -5,6 +5,8 @@ import 'package:smartdolap/features/auth/domain/repositories/i_auth_repository.d
 import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/register_usecase.dart';
+import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/services/sync_service.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 
 /// Auth cubit - Presentation layer view model
@@ -57,6 +59,14 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final User user = await loginUseCase(email: email, password: password);
       emit(AuthState.authenticated(user));
+      
+      // Sync Firestore data to Hive after successful login
+      try {
+        await sl<SyncService>().syncUserData(userId: user.id);
+      } catch (e) {
+        // Sync errors shouldn't block login
+        // Logger will handle error logging
+      }
     } on AuthFailure catch (failure) {
       emit(AuthState.error(failure));
     } on Exception catch (e) {
@@ -78,6 +88,14 @@ class AuthCubit extends Cubit<AuthState> {
         displayName: displayName,
       );
       emit(AuthState.authenticated(user));
+      
+      // Sync Firestore data to Hive after successful registration
+      try {
+        await sl<SyncService>().syncUserData(userId: user.id);
+      } catch (e) {
+        // Sync errors shouldn't block registration
+        // Logger will handle error logging
+      }
     } on AuthFailure catch (failure) {
       emit(AuthState.error(failure));
     } on Exception catch (e) {

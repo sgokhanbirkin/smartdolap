@@ -24,19 +24,25 @@ class CollectionCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
+    elevation: 1,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppSizes.radiusL),
+    ),
     child: Padding(
-      padding: EdgeInsets.all(AppSizes.cardPadding),
+      padding: EdgeInsets.all(AppSizes.cardPadding * 1.25),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
             tr('profile_collection_title'),
             style: TextStyle(
-              fontSize: AppSizes.textM,
-              fontWeight: FontWeight.bold,
+              fontSize: AppSizes.textL,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              height: 1.2,
             ),
           ),
-          SizedBox(height: AppSizes.verticalSpacingM),
+          SizedBox(height: AppSizes.verticalSpacingL),
           Wrap(
             spacing: AppSizes.spacingM,
             runSpacing: AppSizes.verticalSpacingS,
@@ -67,7 +73,14 @@ class CollectionCardWidget extends StatelessWidget {
           ),
           if (userRecipes.isNotEmpty) ...<Widget>[
             SizedBox(height: AppSizes.verticalSpacingM),
-            Text(tr('profile_recent_recipes')),
+            Text(
+              tr('profile_recent_recipes'),
+              style: TextStyle(
+                fontSize: AppSizes.textM,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
             ...userRecipes
                 .take(3)
                 .map(
@@ -78,11 +91,23 @@ class CollectionCardWidget extends StatelessWidget {
                           ? Icons.auto_awesome
                           : Icons.restaurant,
                     ),
-                    title: Text(recipe.title),
+                    title: Text(
+                      recipe.title,
+                      style: TextStyle(
+                        fontSize: AppSizes.textM,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
                     subtitle: Text(
                       recipe.description.isEmpty
                           ? tr('profile_recipe_advice')
                           : recipe.description,
+                      style: TextStyle(
+                        fontSize: AppSizes.textS,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -120,8 +145,24 @@ class UsageChipWidget extends StatelessWidget {
       children: <Widget>[
         Icon(icon, color: Theme.of(context).colorScheme.primary),
         SizedBox(height: AppSizes.verticalSpacingS),
-        Text(value, style: TextStyle(fontSize: AppSizes.textL)),
-        Text(label, textAlign: TextAlign.center),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: AppSizes.textL,
+            fontWeight: FontWeight.w700,
+            color: Theme.of(context).colorScheme.onSurface,
+            height: 1.2,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: AppSizes.textS,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+          textAlign: TextAlign.center,
+        ),
       ],
     ),
   );

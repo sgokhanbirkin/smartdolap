@@ -57,5 +57,5 @@ flutter:
 
   assets:
     - assets/translations/
+    - assets/animations/
     - .env
-    # - assets/animations/   # optional, if you add local lottie files later

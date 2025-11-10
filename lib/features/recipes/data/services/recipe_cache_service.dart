@@ -13,7 +13,7 @@ class RecipeCacheService {
   String getMealCacheKey(String userId, String meal) =>
       'recipes_cache_${meal}_$userId';
 
-  /// Get recipes from cache
+  /// Get recipes from cache as Map list
   List<Map<String, Object?>>? getRecipes(String cacheKey) {
     final List<dynamic>? cachedRecipes =
         _cacheBox.get(cacheKey) as List<dynamic>?;
@@ -38,11 +38,25 @@ class RecipeCacheService {
     }).toList();
   }
 
+  /// Get recipes from cache as Recipe list
+  List<Recipe>? getRecipesAsRecipeList(String cacheKey) {
+    final List<Map<String, Object?>>? cached = getRecipes(cacheKey);
+    if (cached == null || cached.isEmpty) {
+      return null;
+    }
+
+    return cached.map((Map<String, Object?> map) {
+      return Recipe.fromMap(map as Map<dynamic, dynamic>);
+    }).toList();
+  }
+
+  /// Save recipes to cache (replaces existing) - alias for saveRecipes
+  Future<void> putRecipes(String cacheKey, List<Recipe> recipes) async {
+    return saveRecipes(cacheKey, recipes);
+  }
+
   /// Save recipes to cache (replaces existing)
-  Future<void> saveRecipes(
-    String cacheKey,
-    List<Recipe> recipes,
-  ) async {
+  Future<void> saveRecipes(String cacheKey, List<Recipe> recipes) async {
     final List<Map<String, Object?>> cacheData = recipes
         .map(
           (Recipe e) => <String, Object?>{
@@ -144,4 +158,3 @@ class RecipeCacheService {
     );
   }
 }
-

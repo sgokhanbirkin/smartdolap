@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/chip_group_widget.dart';
+import 'package:smartdolap/features/profile/presentation/view/recipe_advanced_settings_page.dart';
 
 /// Preference controls widget
 class PreferenceControlsWidget extends StatefulWidget {
@@ -112,19 +113,24 @@ class _PreferenceControlsWidgetState extends State<PreferenceControlsWidget> {
 
   @override
   Widget build(BuildContext context) => Card(
+    elevation: 1,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppSizes.radiusL),
+    ),
     child: Padding(
-      padding: EdgeInsets.all(AppSizes.cardPadding),
+      padding: EdgeInsets.all(AppSizes.cardPadding * 1.25),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
             tr('profile_customize_title'),
             style: TextStyle(
-              fontSize: AppSizes.textM,
-              fontWeight: FontWeight.bold,
+              fontSize: AppSizes.textL,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
             ),
           ),
-          SizedBox(height: AppSizes.verticalSpacingM),
+          SizedBox(height: AppSizes.verticalSpacingL),
           ChipGroupWidget(
             fieldKey: 'diet',
             title: tr('profile_diet_title'),
@@ -191,7 +197,39 @@ class _PreferenceControlsWidgetState extends State<PreferenceControlsWidget> {
                 _handleCustomRemove('goal', value),
           ),
           SizedBox(height: AppSizes.verticalSpacingM),
-          Text(tr('profile_servings')),
+          // Advanced settings button
+          OutlinedButton.icon(
+            onPressed: () async {
+              await Navigator.push<PromptPreferences>(
+                context,
+                MaterialPageRoute<PromptPreferences>(
+                  builder: (BuildContext ctx) => RecipeAdvancedSettingsPage(
+                    initialPrefs: widget.prefs,
+                    onSave: (PromptPreferences newPrefs) {
+                      widget.onPrefsChanged(newPrefs);
+                    },
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.tune),
+            label: Text(tr('profile_advanced_settings')),
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSizes.padding,
+                vertical: AppSizes.spacingM,
+              ),
+            ),
+          ),
+          SizedBox(height: AppSizes.verticalSpacingM),
+          Text(
+            tr('profile_servings'),
+            style: TextStyle(
+              fontSize: AppSizes.textM,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           SegmentedButton<int>(
             segments: <ButtonSegment<int>>[
               for (final int s in <int>[1, 2, 4, 6])
@@ -223,7 +261,11 @@ class _PreferenceControlsWidgetState extends State<PreferenceControlsWidget> {
             controller: _noteController,
             minLines: 3,
             maxLines: 5,
-            style: TextStyle(fontSize: AppSizes.textM),
+            style: TextStyle(
+              fontSize: AppSizes.textM,
+              height: 1.5,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.edit_note_outlined),
               hintText: tr('profile_custom_note_hint'),

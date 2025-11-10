@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/category_colors.dart';
 import 'package:smartdolap/core/utils/quantity_formatter.dart';
@@ -138,24 +139,37 @@ class _PantryItemCardState extends State<PantryItemCard>
         },
         child: ScaleTransition(
           scale: _scaleAnimation,
-          child: Card(
-            elevation: _isPressed ? 2 : 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.cardRadius * 1.1),
-              side: BorderSide(
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.item.category != null
+                  ? CategoryColors.getCategoryColor(widget.item.category!)
+                  : AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
                 color: _isPressed
-                    ? Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.3)
-                    : Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: 0.1),
-                width: _isPressed ? 2 : 1,
+                    ? (widget.item.category != null
+                        ? CategoryColors.getCategoryIconColor(
+                            widget.item.category!,
+                          )
+                        : AppColors.primaryBlue)
+                        .withValues(alpha: 0.5)
+                    : Colors.transparent,
+                width: _isPressed ? 2 : 0,
               ),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: (widget.item.category != null
+                          ? CategoryColors.getCategoryColor(
+                              widget.item.category!,
+                            )
+                          : AppColors.surfaceLight)
+                      .withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                  spreadRadius: 0,
+                ),
+              ],
             ),
-            color: widget.item.category != null
-                ? CategoryColors.getCategoryColor(widget.item.category!)
-                : Theme.of(context).colorScheme.surface,
             child: Stack(
               clipBehavior: Clip.none,
               children: <Widget>[
@@ -196,13 +210,31 @@ class _PantryItemCardState extends State<PantryItemCard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
-                            Text(
-                              widget.item.name,
-                              style: TextStyle(
-                                fontSize: AppSizes.text,
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context).colorScheme.onSurface,
-                                letterSpacing: -0.3,
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSizes.spacingS,
+                                vertical: AppSizes.spacingXS * 0.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: widget.item.category != null
+                                    ? CategoryColors.getCategoryIconColor(
+                                        widget.item.category!,
+                                      ).withValues(alpha: 0.15)
+                                    : AppColors.primaryBlue.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(AppSizes.radius * 0.75),
+                              ),
+                              child: Text(
+                                widget.item.name,
+                                style: TextStyle(
+                                  fontSize: AppSizes.text,
+                                  fontWeight: FontWeight.w600,
+                                  color: widget.item.category != null
+                                      ? CategoryColors.getCategoryIconColor(
+                                          widget.item.category!,
+                                        )
+                                      : AppColors.primaryBlue,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
                             ),
                             SizedBox(height: AppSizes.spacingXS),
@@ -220,9 +252,11 @@ class _PantryItemCardState extends State<PantryItemCard>
                                     onPressed: () {
                                       _handleQuantityChange(-1);
                                     },
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+                                    color: widget.item.category != null
+                                        ? CategoryColors.getCategoryIconColor(
+                                            widget.item.category!,
+                                          )
+                                        : AppColors.primaryBlue,
                                   ),
                                   SizedBox(width: AppSizes.spacingXS),
                                 ],
@@ -234,9 +268,11 @@ class _PantryItemCardState extends State<PantryItemCard>
                                   style: TextStyle(
                                     fontSize: AppSizes.textS,
                                     fontWeight: FontWeight.w500,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                    color: widget.item.category != null
+                                        ? CategoryColors.getCategoryIconColor(
+                                            widget.item.category!,
+                                          ).withValues(alpha: 0.8)
+                                        : AppColors.textMedium,
                                   ),
                                 ),
                                 if (hasQuickActions) ...<Widget>[
@@ -247,9 +283,11 @@ class _PantryItemCardState extends State<PantryItemCard>
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     onPressed: () => _handleQuantityChange(1),
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+                                    color: widget.item.category != null
+                                        ? CategoryColors.getCategoryIconColor(
+                                            widget.item.category!,
+                                          )
+                                        : AppColors.primaryBlue,
                                   ),
                                 ],
                               ],
@@ -257,15 +295,22 @@ class _PantryItemCardState extends State<PantryItemCard>
                           ],
                         ),
                       ),
-                      // Expiry date - Color coded
+                      // Expiry date - Color coded with contrast
                       if (widget.item.expiryDate != null)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: <Widget>[
-                            Icon(
-                              Icons.calendar_today,
-                              size: AppSizes.iconS,
-                              color: expiryColor,
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: expiryColor.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Icon(
+                                Icons.calendar_today,
+                                size: AppSizes.iconS * 0.8,
+                                color: AppColors.textLight,
+                              ),
                             ),
                             SizedBox(height: AppSizes.spacingXS * 0.5),
                             Text(
@@ -273,7 +318,11 @@ class _PantryItemCardState extends State<PantryItemCard>
                               style: TextStyle(
                                 fontSize: AppSizes.textXS,
                                 fontWeight: FontWeight.w600,
-                                color: expiryColor,
+                                color: widget.item.category != null
+                                    ? CategoryColors.getCategoryIconColor(
+                                        widget.item.category!,
+                                      )
+                                    : expiryColor,
                               ),
                             ),
                           ],

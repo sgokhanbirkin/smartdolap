@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Stores personalization knobs used across profile and AI prompts.
+  /// Stores personalization knobs used across profile and AI prompts.
 class PromptPreferences {
   /// Creates preference bundle with helpful defaults.
   const PromptPreferences({
@@ -18,6 +18,16 @@ class PromptPreferences {
     this.customCuisines = const <String>[],
     this.customTones = const <String>[],
     this.customGoals = const <String>[],
+    // Advanced settings
+    this.cookingTime = 'orta', // 'hızlı', 'orta', 'uzun'
+    this.difficulty = 'orta', // 'kolay', 'orta', 'zor'
+    this.calorieRangeMin = 0, // 0 = no limit
+    this.calorieRangeMax = 0, // 0 = no limit
+    this.proteinMin = 0, // grams, 0 = no limit
+    this.fiberMin = 0, // grams, 0 = no limit
+    this.specialDiets = const <String>[], // gluten-free, laktoz-free, vb.
+    this.seasonalPreference = '', // 'kış', 'yaz', 'ilkbahar', 'sonbahar', ''
+    this.preferredMealTypes = const <String>[], // breakfast, lunch, dinner, snack
   });
 
   /// Restores preferences from a stored map.
@@ -47,6 +57,20 @@ class PromptPreferences {
           const <String>[],
       customGoals:
           (map['customGoals'] as List<dynamic>?)?.cast<String>() ??
+          const <String>[],
+      // Advanced settings
+      cookingTime: (map['cookingTime'] as String?) ?? 'orta',
+      difficulty: (map['difficulty'] as String?) ?? 'orta',
+      calorieRangeMin: (map['calorieRangeMin'] as num?)?.toInt() ?? 0,
+      calorieRangeMax: (map['calorieRangeMax'] as num?)?.toInt() ?? 0,
+      proteinMin: (map['proteinMin'] as num?)?.toInt() ?? 0,
+      fiberMin: (map['fiberMin'] as num?)?.toInt() ?? 0,
+      specialDiets:
+          (map['specialDiets'] as List<dynamic>?)?.cast<String>() ??
+          const <String>[],
+      seasonalPreference: (map['seasonalPreference'] as String?) ?? '',
+      preferredMealTypes:
+          (map['preferredMealTypes'] as List<dynamic>?)?.cast<String>() ??
           const <String>[],
     );
   }
@@ -79,6 +103,26 @@ class PromptPreferences {
   final List<String> customTones;
   /// Custom goals chips added by the user.
   final List<String> customGoals;
+  
+  // Advanced settings
+  /// Preferred cooking time: 'hızlı', 'orta', 'uzun'
+  final String cookingTime;
+  /// Preferred difficulty level: 'kolay', 'orta', 'zor'
+  final String difficulty;
+  /// Minimum calorie range (0 = no limit)
+  final int calorieRangeMin;
+  /// Maximum calorie range (0 = no limit)
+  final int calorieRangeMax;
+  /// Minimum protein content in grams (0 = no limit)
+  final int proteinMin;
+  /// Minimum fiber content in grams (0 = no limit)
+  final int fiberMin;
+  /// Special diet restrictions (gluten-free, laktoz-free, etc.)
+  final List<String> specialDiets;
+  /// Seasonal preference: 'kış', 'yaz', 'ilkbahar', 'sonbahar', or ''
+  final String seasonalPreference;
+  /// Preferred meal types: 'breakfast', 'lunch', 'dinner', 'snack'
+  final List<String> preferredMealTypes;
 
   /// Creates a modified copy with new values.
   PromptPreferences copyWith({
@@ -96,6 +140,15 @@ class PromptPreferences {
     List<String>? customCuisines,
     List<String>? customTones,
     List<String>? customGoals,
+    String? cookingTime,
+    String? difficulty,
+    int? calorieRangeMin,
+    int? calorieRangeMax,
+    int? proteinMin,
+    int? fiberMin,
+    List<String>? specialDiets,
+    String? seasonalPreference,
+    List<String>? preferredMealTypes,
   }) => PromptPreferences(
     nickname: nickname ?? this.nickname,
     dietStyle: dietStyle ?? this.dietStyle,
@@ -111,6 +164,15 @@ class PromptPreferences {
     customCuisines: customCuisines ?? this.customCuisines,
     customTones: customTones ?? this.customTones,
     customGoals: customGoals ?? this.customGoals,
+    cookingTime: cookingTime ?? this.cookingTime,
+    difficulty: difficulty ?? this.difficulty,
+    calorieRangeMin: calorieRangeMin ?? this.calorieRangeMin,
+    calorieRangeMax: calorieRangeMax ?? this.calorieRangeMax,
+    proteinMin: proteinMin ?? this.proteinMin,
+    fiberMin: fiberMin ?? this.fiberMin,
+    specialDiets: specialDiets ?? this.specialDiets,
+    seasonalPreference: seasonalPreference ?? this.seasonalPreference,
+    preferredMealTypes: preferredMealTypes ?? this.preferredMealTypes,
   );
 
   /// Serializes the preferences for Hive/JSON storage.
@@ -129,6 +191,15 @@ class PromptPreferences {
     'customCuisines': customCuisines,
     'customTones': customTones,
     'customGoals': customGoals,
+    'cookingTime': cookingTime,
+    'difficulty': difficulty,
+    'calorieRangeMin': calorieRangeMin,
+    'calorieRangeMax': calorieRangeMax,
+    'proteinMin': proteinMin,
+    'fiberMin': fiberMin,
+    'specialDiets': specialDiets,
+    'seasonalPreference': seasonalPreference,
+    'preferredMealTypes': preferredMealTypes,
   };
 
   /// Short text used inside OpenAI prompts.
@@ -147,6 +218,23 @@ class PromptPreferences {
         'Ekstra hedefler: ${customGoals.join(', ')}.',
       'Baharat isteği ${(spiceLevel * 10).round()}/10, tatlı isteği ${(sweetTooth * 10).round()}/10.',
       'Porsiyon: $servings kişi.',
+      // Advanced settings
+      if (cookingTime != 'orta')
+        'Pişirme süresi tercihi: $cookingTime.',
+      if (difficulty != 'orta')
+        'Zorluk seviyesi tercihi: $difficulty.',
+      if (calorieRangeMin > 0 || calorieRangeMax > 0)
+        'Kalori aralığı: ${calorieRangeMin > 0 ? '$calorieRangeMin-' : ''}${calorieRangeMax > 0 ? '$calorieRangeMax' : ''} kcal.',
+      if (proteinMin > 0)
+        'Minimum protein içeriği: $proteinMin gram.',
+      if (fiberMin > 0)
+        'Minimum lif içeriği: $fiberMin gram.',
+      if (specialDiets.isNotEmpty)
+        'Özel diyet kısıtlamaları: ${specialDiets.join(', ')}.',
+      if (seasonalPreference.isNotEmpty)
+        'Mevsimsel tercih: $seasonalPreference.',
+      if (preferredMealTypes.isNotEmpty)
+        'Tercih edilen öğün tipleri: ${preferredMealTypes.join(', ')}.',
     ];
     if (customNote.trim().isNotEmpty) {
       lines.add('Ek not: $customNote');
