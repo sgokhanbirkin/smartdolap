@@ -1,4 +1,3 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart';
 
@@ -7,7 +6,7 @@ import 'package:smartdolap/product/services/image_lookup_service.dart';
 class RecipeImageService {
   RecipeImageService(this._imageLookup);
 
-  final ImageLookupService _imageLookup;
+  final IImageLookupService _imageLookup;
 
   /// Fix image URL if it's invalid or missing
   Future<String?> fixImageUrl(String? imageUrl, String title) async {
@@ -19,9 +18,10 @@ class RecipeImageService {
         imageUrl.startsWith('http://example.com') ||
         imageUrl.startsWith('https://example.com')) {
       try {
-        final String? searchedImageUrl = await _imageLookup.search(
-          '$title ${tr('recipe_search_suffix')}',
-        );
+        // Optimize query for better food images (avoid restaurant/shop results)
+        // Add food-related keywords to get better results
+        final String optimizedQuery = _optimizeImageQuery(title);
+        final String? searchedImageUrl = await _imageLookup.search(optimizedQuery);
         debugPrint(
           '[RecipeImageService] Görsel arama sonucu: ${searchedImageUrl ?? "NULL"}',
         );
@@ -34,7 +34,31 @@ class RecipeImageService {
     return imageUrl;
   }
 
-  /// Fix image URLs for multiple recipes
+  /// Optimize image search query to get better food images
+  /// Adds food-related keywords and removes restaurant/shop related terms
+  String _optimizeImageQuery(String title) {
+    // Add food-related keywords to improve search results
+    // This helps Google Images return actual food photos instead of restaurant photos
+    final String foodKeywords = 'yemek tarifi food recipe';
+    
+    // Remove common restaurant-related words if present
+    String optimized = title;
+    final List<String> restaurantWords = <String>[
+      'restoran',
+      'restaurant',
+      'cafe',
+      'kafe',
+      'menü',
+      'menu',
+    ];
+    
+    for (final String word in restaurantWords) {
+      optimized = optimized.replaceAll(RegExp(word, caseSensitive: false), '');
+    }
+    
+    // Combine title with food keywords
+    return '$optimized $foodKeywords'.trim();
+  }
   Future<List<T>> fixImageUrls<T extends Object>(
     List<T> recipes,
     String Function(T) getTitle,

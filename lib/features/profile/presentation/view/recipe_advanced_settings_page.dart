@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/chip_group_widget.dart';
 
@@ -78,14 +79,22 @@ class _RecipeAdvancedSettingsPageState
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(tr('profile_advanced_settings_title')),
+      backgroundColor: AppColors.primaryRed, // Kırmızı renk
+      foregroundColor: Colors.white,
+      title: Text(
+        tr('profile_advanced_settings_title'),
+        style: TextStyle(
+          fontSize: AppSizes.textM,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       actions: <Widget>[
         TextButton(
           onPressed: _saveAndPop,
           child: Text(
             tr('save'),
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
+            style: const TextStyle(
+              color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -144,6 +153,7 @@ class _RecipeAdvancedSettingsPageState
                       ));
                     },
                   ),
+                  SizedBox(height: AppSizes.verticalSpacingL),
                   ChipGroupWidget(
                     fieldKey: 'cuisine',
                     title: tr('profile_cuisine_title'),
@@ -213,15 +223,30 @@ class _RecipeAdvancedSettingsPageState
                     segments: <ButtonSegment<String>>[
                       ButtonSegment<String>(
                         value: 'hızlı',
-                        label: Text(tr('profile_cooking_time_fast')),
+                        label: Text(
+                          tr('profile_cooking_time_fast'),
+                          style: TextStyle(fontSize: AppSizes.textS),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       ButtonSegment<String>(
                         value: 'orta',
-                        label: Text(tr('profile_cooking_time_medium')),
+                        label: Text(
+                          tr('profile_cooking_time_medium'),
+                          style: TextStyle(fontSize: AppSizes.textS),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       ButtonSegment<String>(
                         value: 'uzun',
-                        label: Text(tr('profile_cooking_time_long')),
+                        label: Text(
+                          tr('profile_cooking_time_long'),
+                          style: TextStyle(fontSize: AppSizes.textS),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                     selected: <String>{_prefs.cookingTime},
@@ -245,15 +270,30 @@ class _RecipeAdvancedSettingsPageState
                     segments: <ButtonSegment<String>>[
                       ButtonSegment<String>(
                         value: 'kolay',
-                        label: Text(tr('profile_difficulty_easy')),
+                        label: Text(
+                          tr('profile_difficulty_easy'),
+                          style: TextStyle(fontSize: AppSizes.textS),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       ButtonSegment<String>(
                         value: 'orta',
-                        label: Text(tr('profile_difficulty_medium')),
+                        label: Text(
+                          tr('profile_difficulty_medium'),
+                          style: TextStyle(fontSize: AppSizes.textS),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       ButtonSegment<String>(
                         value: 'zor',
-                        label: Text(tr('profile_difficulty_hard')),
+                        label: Text(
+                          tr('profile_difficulty_hard'),
+                          style: TextStyle(fontSize: AppSizes.textS),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                     selected: <String>{_prefs.difficulty},
@@ -435,34 +475,56 @@ class _RecipeAdvancedSettingsPageState
                     ),
                   ),
                   SizedBox(height: AppSizes.verticalSpacingM),
-                  SegmentedButton<String>(
-                    segments: <ButtonSegment<String>>[
-                      ButtonSegment<String>(
-                        value: '',
+                  Wrap(
+                    spacing: AppSizes.spacingS,
+                    runSpacing: AppSizes.spacingS,
+                    children: <Widget>[
+                      FilterChip(
                         label: Text(tr('profile_season_none')),
+                        selected: _prefs.seasonalPreference.isEmpty,
+                        onSelected: (bool selected) {
+                          if (selected) {
+                            _updatePrefs(_prefs.copyWith(seasonalPreference: ''));
+                          }
+                        },
                       ),
-                      ButtonSegment<String>(
-                        value: 'kış',
+                      FilterChip(
                         label: Text(tr('profile_season_winter')),
+                        selected: _prefs.seasonalPreference == 'kış',
+                        onSelected: (bool selected) {
+                          _updatePrefs(_prefs.copyWith(
+                            seasonalPreference: selected ? 'kış' : '',
+                          ));
+                        },
                       ),
-                      ButtonSegment<String>(
-                        value: 'yaz',
+                      FilterChip(
                         label: Text(tr('profile_season_summer')),
+                        selected: _prefs.seasonalPreference == 'yaz',
+                        onSelected: (bool selected) {
+                          _updatePrefs(_prefs.copyWith(
+                            seasonalPreference: selected ? 'yaz' : '',
+                          ));
+                        },
                       ),
-                      ButtonSegment<String>(
-                        value: 'ilkbahar',
+                      FilterChip(
                         label: Text(tr('profile_season_spring')),
+                        selected: _prefs.seasonalPreference == 'ilkbahar',
+                        onSelected: (bool selected) {
+                          _updatePrefs(_prefs.copyWith(
+                            seasonalPreference: selected ? 'ilkbahar' : '',
+                          ));
+                        },
                       ),
-                      ButtonSegment<String>(
-                        value: 'sonbahar',
+                      FilterChip(
                         label: Text(tr('profile_season_fall')),
+                        selected: _prefs.seasonalPreference == 'sonbahar',
+                        onSelected: (bool selected) {
+                          _updatePrefs(_prefs.copyWith(
+                            seasonalPreference: selected ? 'sonbahar' : '',
+                          ));
+                        },
                       ),
                     ],
-                    selected: <String>{_prefs.seasonalPreference},
-                    onSelectionChanged: (Set<String> selection) =>
-                        _updatePrefs(_prefs.copyWith(
-                          seasonalPreference: selection.first,
-                        )),
                   ),
                 ],
               ),

@@ -36,7 +36,14 @@ import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_fro
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
 import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
-import 'package:smartdolap/product/services/image_lookup_service.dart';
+import 'package:smartdolap/product/services/image_lookup_service.dart'
+    show
+        DuckDuckGoImageSearchService,
+        GoogleImagesHtmlScrapingService,
+        IImageLookupService,
+        MultiImageSearchService,
+        PexelsImageSearchService,
+        UnsplashImageSearchService;
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_service.dart';
 import 'package:smartdolap/product/services/storage/i_storage_service.dart';
@@ -93,7 +100,7 @@ Future<void> setupLocator() async {
   }
   if (!sl.isRegistered<RecipeImageService>()) {
     sl.registerLazySingleton<RecipeImageService>(
-      () => RecipeImageService(sl<ImageLookupService>()),
+      () => RecipeImageService(sl<IImageLookupService>()),
     );
   }
   // Firebase
@@ -143,7 +150,45 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<Dio>(
     () => Dio(BaseOptions(baseUrl: 'https://api.openai.com/v1')),
   );
-  sl.registerLazySingleton<ImageLookupService>(() => ImageLookupService(Dio()));
+
+  // Image lookup services - Multi-service with fallback chain
+  // Priority: Google HTML Scraping > Pexels > Unsplash > DuckDuckGo (fallback)
+  // Google scraping is first because:
+  // - Free and unlimited (user's phone makes the request)
+  // - No API key needed
+  // - Each user has their own IP (no rate limiting issues)
+  // - Google bot detection is less suspicious from user devices
+  sl.registerLazySingleton<IImageLookupService>(() {
+    final List<IImageLookupService> services = <IImageLookupService>[];
+
+    // Try Google Images HTML scraping FIRST (free, unlimited, user's phone)
+    services.add(GoogleImagesHtmlScrapingService(Dio()));
+
+    // Try Pexels API second (free, 200 requests/hour, requires API key)
+    final String? pexelsApiKey = dotenv.env['PEXELS_API_KEY'];
+    if (pexelsApiKey != null && pexelsApiKey.isNotEmpty) {
+      services.add(PexelsImageSearchService(dio: Dio(), apiKey: pexelsApiKey));
+    }
+
+    // Try Unsplash API third (free, 50 requests/hour, requires API key)
+    final String? unsplashAccessKey = dotenv.env['UNSPLASH_ACCESS_KEY'];
+    if (unsplashAccessKey != null && unsplashAccessKey.isNotEmpty) {
+      services.add(
+        UnsplashImageSearchService(dio: Dio(), accessKey: unsplashAccessKey),
+      );
+    }
+
+    // Fallback to DuckDuckGo (always available, but unreliable)
+    services.add(DuckDuckGoImageSearchService(Dio()));
+
+    return MultiImageSearchService(services: services);
+  });
+
+  // Backward compatibility - register DuckDuckGo as ImageLookupService (old name)
+  // Note: This is deprecated, use IImageLookupService instead
+  sl.registerLazySingleton<DuckDuckGoImageSearchService>(
+    () => DuckDuckGoImageSearchService(Dio()),
+  );
 
   // OpenAI
   sl.registerLazySingleton<IOpenAIService>(() => OpenAIService(dio: sl()));
@@ -210,7 +255,7 @@ Future<void> setupLocator() async {
       suggest: sl(),
       openAI: sl(),
       promptPreferences: sl(),
-      imageLookup: sl<ImageLookupService>(),
+      imageLookup: sl<IImageLookupService>(),
       cacheService: sl(),
       imageService: sl(),
       userRecipeRepository: sl(),

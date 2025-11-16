@@ -21,6 +21,7 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 import 'package:smartdolap/product/widgets/custom_button.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
+import 'package:smartdolap/product/widgets/error_state.dart';
 
 /// Recipes page - Shows available recipes
 class RecipesPage extends StatefulWidget {
@@ -254,38 +255,12 @@ class _RecipesPageState extends State<RecipesPage> {
         // Error state
         if (recipesState is RecipesFailure)
           SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(AppSizes.padding),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  SizedBox(height: AppSizes.verticalSpacingXXL * 2),
-                  Icon(
-                    Icons.error_outline,
-                    size: AppSizes.iconXXL * 2,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  SizedBox(height: AppSizes.verticalSpacingL),
-                  Text(
-                    tr(recipesState.message),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: AppSizes.textL,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  SizedBox(height: AppSizes.verticalSpacingXXL),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSizes.padding),
-                    child: CustomButton(
-                      text: tr('recipes.try_again'),
-                      onPressed: () {
-                        _controller?.recipesCubit.load(_controller!.userId);
-                      },
-                    ),
-                  ),
-                ],
-              ),
+            child: ErrorState(
+              messageKey: recipesState.message,
+              onRetry: () {
+                _controller?.recipesCubit.load(_controller!.userId);
+              },
+              lottieAsset: 'assets/animations/Cooking.json',
             ),
           ),
       ],

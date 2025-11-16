@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
+import 'package:smartdolap/core/guards/auth_guard.dart';
 import 'package:smartdolap/features/pantry/presentation/view/pantry_page.dart';
 import 'package:smartdolap/features/profile/presentation/view/profile_page.dart';
 import 'package:smartdolap/features/recipes/presentation/view/recipes_page.dart';
@@ -48,7 +49,9 @@ class _AppShellState extends State<AppShell> {
         }
       },
       child: Scaffold(
-        body: _pages[_idx],
+        body: AuthGuardWidget(
+          child: _pages[_idx],
+        ),
         // Responsive navigation: Drawer for tablet/desktop, bottom nav for phone
         drawer: isTablet ? _buildDrawer(context) : null,
         bottomNavigationBar: isTablet

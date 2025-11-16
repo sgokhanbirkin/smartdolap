@@ -20,7 +20,8 @@ import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
-import 'package:smartdolap/product/services/image_lookup_service.dart';
+import 'package:smartdolap/product/services/image_lookup_service.dart'
+    show IImageLookupService;
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
 import 'package:uuid/uuid.dart';
@@ -49,7 +50,7 @@ class RecipesCubit extends Cubit<RecipesState> {
   final SuggestRecipesFromPantry suggest;
   final IOpenAIService openAI;
   final PromptPreferenceService promptPreferences;
-  final ImageLookupService imageLookup;
+  final IImageLookupService imageLookup;
   final RecipeCacheService cacheService;
   final RecipeImageService imageService;
   final IUserRecipeRepository userRecipeRepository;

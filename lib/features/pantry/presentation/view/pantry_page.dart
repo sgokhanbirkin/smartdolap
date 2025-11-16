@@ -20,6 +20,7 @@ import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_dism
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_group_widget.dart';
 import 'package:smartdolap/features/pantry/data/services/pantry_notification_coordinator.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
+import 'package:smartdolap/product/widgets/error_state.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/product/router/app_router.dart';
@@ -173,13 +174,17 @@ class _PantryPageState extends State<PantryPage> {
                           if (s is PantryLoading || s is PantryInitial) {
                             return EmptyState(
                               messageKey: 'pantry_empty_message',
-                              lottieUrl:
-                                  'https://assets2.lottiefiles.com/packages/lf20_Stt1R2.json',
+                              lottieAsset:
+                                  'assets/animations/Food_Carousel.json',
                             );
                           }
                           if (s is PantryFailure) {
-                            return EmptyState(
+                            return ErrorState(
                               messageKey: 'pantry_empty_message',
+                              onRetry: () =>
+                                  context.read<PantryCubit>().watch(user.id),
+                              lottieAsset:
+                                  'assets/animations/Food_Carousel.json',
                             );
                           }
                           final PantryLoaded loaded = s as PantryLoaded;
@@ -188,8 +193,8 @@ class _PantryPageState extends State<PantryPage> {
                               messageKey: 'pantry_empty_message',
                               actionLabelKey: 'pantry_empty_cta',
                               onAction: () => _addItem(context, user.id),
-                              lottieUrl:
-                                  'https://assets9.lottiefiles.com/packages/lf20_totrpclr.json',
+                              lottieAsset:
+                                  'assets/animations/Food_Carousel.json',
                             );
                           }
 

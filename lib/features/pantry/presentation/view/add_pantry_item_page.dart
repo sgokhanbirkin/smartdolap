@@ -56,7 +56,7 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
   bool _isCategorizing = false;
   String? _suggestedCategory;
   Timer? _categoryDebounce;
-  final ImageLookupService _imageLookup = sl<ImageLookupService>();
+  final IImageLookupService _imageLookup = sl<IImageLookupService>();
   String? _imageUrl;
   bool _isImageLoading = false;
   Timer? _imageDebounce;

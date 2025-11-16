@@ -96,6 +96,24 @@ class _ChipGroupWidgetState extends State<ChipGroupWidget> {
     widget.onAddCustom(value);
   }
 
+  /// Localize option value based on field key
+  String _localizeOption(String option) {
+    // Try to find translation key for this option
+    final String translationKey = 'profile_${widget.fieldKey}_$option';
+    try {
+      final String translated = tr(translationKey);
+      // If translation exists and is different from the key, use it
+      if (translated != translationKey) {
+        return translated;
+      }
+    } catch (e) {
+      // Translation not found, use original option
+    }
+    // Capitalize first letter if no translation found
+    if (option.isEmpty) return option;
+    return option[0].toUpperCase() + option.substring(1);
+  }
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,14 +150,14 @@ class _ChipGroupWidgetState extends State<ChipGroupWidget> {
         children: <Widget>[
           ...widget.options.map(
             (String option) => ChoiceChip(
-              label: Text(option),
+              label: Text(_localizeOption(option)),
               selected: option == widget.selected,
               onSelected: (_) => widget.onSelected(option),
             ),
           ),
           ...widget.customValues.map(
             (String option) => InputChip(
-              label: Text(option),
+              label: Text(_localizeOption(option)),
               selected: option == widget.selected,
               onSelected: (_) => widget.onSelected(option),
               onDeleted: () => widget.onRemoveCustom(option),

@@ -7,7 +7,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
-import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
@@ -21,6 +20,7 @@ import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit
 import 'package:smartdolap/features/recipes/presentation/widgets/compact_recipe_card_widget.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
+import 'package:smartdolap/product/widgets/recipe_card_skeleton.dart';
 
 /// Meal recipes page - Shows all recipes for a specific meal with pagination
 class MealRecipesPage extends StatefulWidget {
@@ -349,14 +349,23 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
       ],
     ),
     body: _isLoading
-        ? const Center(
-            child: CustomLoadingIndicator(
-              type: LoadingType.pulsingGrid,
-              size: 50,
+        ? GridView.builder(
+            padding: EdgeInsets.all(AppSizes.padding),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveGrid.getCrossAxisCount(context),
+              crossAxisSpacing: AppSizes.spacingS,
+              mainAxisSpacing: AppSizes.verticalSpacingS,
+              childAspectRatio: ResponsiveGrid.getChildAspectRatio(context),
             ),
+            itemCount: 6, // Show 6 skeleton cards
+            itemBuilder: (BuildContext context, int index) =>
+                const RecipeCardSkeleton(),
           )
         : _recipes.isEmpty
-        ? const EmptyState(messageKey: 'no_recipes_yet')
+        ? EmptyState(
+            messageKey: 'no_recipes_yet',
+            lottieAsset: 'assets/animations/Recipe_Book.json',
+          )
         : GridView.builder(
             controller: _scrollController,
             padding: EdgeInsets.all(AppSizes.padding),
