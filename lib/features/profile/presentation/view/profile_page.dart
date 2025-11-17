@@ -1,14 +1,13 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
-
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/constants/mvp_flags.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
@@ -16,9 +15,9 @@ import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
+import 'package:smartdolap/features/household/presentation/widgets/qr_code_generator_widget.dart';
 import 'package:smartdolap/features/profile/data/badge_service.dart';
-import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
-import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/profile/domain/entities/badge.dart'
@@ -26,10 +25,12 @@ import 'package:smartdolap/features/profile/domain/entities/badge.dart'
 import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/presentation/utils/badge_progress_helper.dart';
 import 'package:smartdolap/features/profile/presentation/view/user_recipe_form_page.dart';
-import 'package:smartdolap/features/profile/presentation/widgets/badge_preview_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/badge_grid_widget.dart';
+import 'package:smartdolap/features/profile/presentation/widgets/badge_preview_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/collection_card_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/hero_card_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/preference_controls_widget.dart';
@@ -55,8 +56,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage>
     with TickerProviderStateMixin {
-  final PromptPreferenceService _prefService = sl<PromptPreferenceService>();
-  final ProfileStatsService _statsService = sl<ProfileStatsService>();
+  final IPromptPreferenceService _prefService = sl<IPromptPreferenceService>();
+  final IProfileStatsService _statsService = sl<IProfileStatsService>();
   final UserRecipeService _userRecipeService = sl<UserRecipeService>();
 
   late PromptPreferences _prefs;
@@ -152,147 +153,382 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.white,
-    body: _isLoading
-        ? const Center(
-            child: CustomLoadingIndicator(
-              type: LoadingType.pulsingGrid,
-              size: 50,
-            ),
-          ).animate().fadeIn(duration: 300.ms)
-        : CustomScrollView(
-            slivers: <Widget>[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: AppSizes.padding * 2,
-                    left: AppSizes.padding,
-                    right: AppSizes.padding,
-                    bottom: AppSizes.padding,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      HeroCardWidget(
-                            prefs: _prefs,
-                            stats: _stats,
-                            favoritesCount: _favoritesCount,
-                            pulseController: _pulseController,
-                            onEditNickname: _editNickname,
-                            onSettingsTap: () =>
-                                SettingsMenuWidget.show(context),
-                          )
-                          .animate()
-                          .fadeIn(
-                            duration: 500.ms,
-                            delay: 100.ms,
-                            curve: Curves.easeOut,
-                          )
-                          .slideY(
-                            begin: 0.1,
-                            end: 0,
-                            duration: 500.ms,
-                            delay: 100.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-                      SizedBox(height: AppSizes.verticalSpacingXL),
-                      PromptPreviewCardWidget(prefs: _prefs)
-                          .animate()
-                          .fadeIn(
-                            duration: 400.ms,
-                            delay: 200.ms,
-                            curve: Curves.easeOut,
-                          )
-                          .slideY(
-                            begin: 0.08,
-                            end: 0,
-                            duration: 400.ms,
-                            delay: 200.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-                      SizedBox(height: AppSizes.verticalSpacingXL),
-                      StatsTablesWidget(prefs: _prefs)
-                          .animate()
-                          .fadeIn(
-                            duration: 400.ms,
-                            delay: 300.ms,
-                            curve: Curves.easeOut,
-                          )
-                          .slideY(
-                            begin: 0.08,
-                            end: 0,
-                            duration: 400.ms,
-                            delay: 300.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-                      SizedBox(height: AppSizes.verticalSpacingXL),
-                      PreferenceControlsWidget(
-                            prefs: _prefs,
-                            onPrefsChanged: _savePrefs,
-                          )
-                          .animate()
-                          .fadeIn(
-                            duration: 400.ms,
-                            delay: 400.ms,
-                            curve: Curves.easeOut,
-                          )
-                          .slideY(
-                            begin: 0.08,
-                            end: 0,
-                            duration: 400.ms,
-                            delay: 400.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-                      SizedBox(height: AppSizes.verticalSpacingXL),
-                      // Badges preview section
-                      BadgePreviewWidget(
-                            badges: BadgeProgressHelper.getPreviewBadges(
-                              _badges,
-                              _stats,
+  Widget build(BuildContext context) => BlocProvider<HouseholdCubit>(
+    create: (_) => sl<HouseholdCubit>(),
+    child: Scaffold(
+      backgroundColor: Colors.white,
+      body: _isLoading
+          ? const Center(
+              child: CustomLoadingIndicator(
+                type: LoadingType.pulsingGrid,
+                size: 50,
+              ),
+            ).animate().fadeIn(duration: 300.ms)
+          : CustomScrollView(
+              slivers: <Widget>[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: AppSizes.padding * 2,
+                      left: AppSizes.padding,
+                      right: AppSizes.padding,
+                      bottom: AppSizes.padding,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        HeroCardWidget(
+                              prefs: _prefs,
+                              stats: _stats,
+                              favoritesCount: _favoritesCount,
+                              pulseController: _pulseController,
+                              onEditNickname: _editNickname,
+                              onSettingsTap: () =>
+                                  SettingsMenuWidget.show(context),
+                            )
+                            .animate()
+                            .fadeIn(
+                              duration: 500.ms,
+                              delay: 100.ms,
+                              curve: Curves.easeOut,
+                            )
+                            .slideY(
+                              begin: 0.1,
+                              end: 0,
+                              duration: 500.ms,
+                              delay: 100.ms,
+                              curve: Curves.easeOutCubic,
                             ),
-                            onViewAll: () {
-                              Navigator.of(context).pushNamed(AppRouter.badges);
-                            },
-                            onBadgeTap: (domain.Badge badge) {
-                              showDialog<void>(
-                                context: context,
-                                builder: (_) =>
-                                    BadgeDetailDialogWidget(badge: badge),
-                              );
-                            },
-                          )
-                          .animate()
-                          .fadeIn(
-                            duration: 400.ms,
-                            delay: 500.ms,
-                            curve: Curves.easeOut,
-                          )
-                          .slideY(
-                            begin: 0.08,
-                            end: 0,
-                            duration: 400.ms,
-                            delay: 500.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
-                      // Advanced sections (optional - can be hidden)
-                      if (kEnableAdvancedProfileSections) ...[
-                        SizedBox(height: AppSizes.verticalSpacingL),
-                        CollectionCardWidget(
-                          stats: _stats,
-                          userRecipes: _userRecipes,
-                          onSimulateAiRecipe: _simulateAiRecipe,
-                          onCreateManualRecipe: _createManualRecipe,
-                          onUploadDishPhoto: _uploadDishPhoto,
+                        SizedBox(height: AppSizes.verticalSpacingXL),
+                        // Household management section - Always shown
+                        BlocBuilder<AuthCubit, AuthState>(
+                          builder: (BuildContext context, AuthState authState) {
+                            return authState.maybeWhen(
+                              authenticated: (domain.User user) {
+                                return Column(
+                                  children: <Widget>[
+                                    Container(
+                                      padding: EdgeInsets.all(AppSizes.padding),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radius,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: <Widget>[
+                                          Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                Icons.home_outlined,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                              ),
+                                              SizedBox(width: 12.w),
+                                              Expanded(
+                                                child: Text(
+                                                  user.householdId == null
+                                                      ? tr(
+                                                          'household_setup_title',
+                                                        )
+                                                      : tr(
+                                                          'household_management',
+                                                        ),
+                                                  style: TextStyle(
+                                                    fontSize: AppSizes.textL,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: 12.h),
+                                          Text(
+                                            user.householdId == null
+                                                ? tr(
+                                                    'household_setup_description',
+                                                  )
+                                                : tr(
+                                                    'household_management_description',
+                                                  ),
+                                            style: TextStyle(
+                                              fontSize: AppSizes.textM,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          SizedBox(height: 16.h),
+                                          if (user.householdId == null)
+                                            Row(
+                                              children: <Widget>[
+                                                Expanded(
+                                                  child: OutlinedButton.icon(
+                                                    onPressed: () {
+                                                      Navigator.of(
+                                                        context,
+                                                      ).pushNamed(
+                                                        AppRouter
+                                                            .householdSetup,
+                                                      );
+                                                    },
+                                                    icon: const Icon(
+                                                      Icons.add_home,
+                                                    ),
+                                                    label: Text(
+                                                      tr('create_household'),
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8.w),
+                                                Expanded(
+                                                  child: OutlinedButton.icon(
+                                                    onPressed: () {
+                                                      Navigator.of(
+                                                        context,
+                                                      ).pushNamed(
+                                                        AppRouter
+                                                            .householdSetup,
+                                                      );
+                                                    },
+                                                    icon: const Icon(
+                                                      Icons.group_add,
+                                                    ),
+                                                    label: Text(
+                                                      tr('join_household'),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          else
+                                            ElevatedButton.icon(
+                                              onPressed: () {
+                                                Navigator.of(
+                                                  context,
+                                                ).pushNamed(AppRouter.share);
+                                              },
+                                              icon: const Icon(Icons.home),
+                                              label: Text(
+                                                tr('go_to_household'),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: 16.h,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: AppSizes.verticalSpacingXL,
+                                    ),
+                                  ],
+                                );
+                              },
+                              orElse: () => const SizedBox.shrink(),
+                            );
+                          },
                         ),
+                        PromptPreviewCardWidget(prefs: _prefs)
+                            .animate()
+                            .fadeIn(
+                              duration: 400.ms,
+                              delay: 200.ms,
+                              curve: Curves.easeOut,
+                            )
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 400.ms,
+                              delay: 200.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        SizedBox(height: AppSizes.verticalSpacingXL),
+                        StatsTablesWidget(prefs: _prefs)
+                            .animate()
+                            .fadeIn(
+                              duration: 400.ms,
+                              delay: 300.ms,
+                              curve: Curves.easeOut,
+                            )
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 400.ms,
+                              delay: 300.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        SizedBox(height: AppSizes.verticalSpacingXL),
+                        PreferenceControlsWidget(
+                              prefs: _prefs,
+                              onPrefsChanged: _savePrefs,
+                            )
+                            .animate()
+                            .fadeIn(
+                              duration: 400.ms,
+                              delay: 400.ms,
+                              curve: Curves.easeOut,
+                            )
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 400.ms,
+                              delay: 400.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        SizedBox(height: AppSizes.verticalSpacingXL),
+                        // Analytics section
+                        ListTile(
+                          leading: Icon(
+                            Icons.analytics_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: Text(tr('analytics.title')),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                          onTap: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRouter.analytics);
+                          },
+                        ),
+                        SizedBox(height: AppSizes.verticalSpacingM),
+                        // Badges preview section
+                        BadgePreviewWidget(
+                              badges: BadgeProgressHelper.getPreviewBadges(
+                                _badges,
+                                _stats,
+                              ),
+                              onViewAll: () {
+                                Navigator.of(
+                                  context,
+                                ).pushNamed(AppRouter.badges);
+                              },
+                              onBadgeTap: (domain.Badge badge) {
+                                showDialog<void>(
+                                  context: context,
+                                  builder: (_) =>
+                                      BadgeDetailDialogWidget(badge: badge),
+                                );
+                              },
+                            )
+                            .animate()
+                            .fadeIn(
+                              duration: 400.ms,
+                              delay: 500.ms,
+                              curve: Curves.easeOut,
+                            )
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: 400.ms,
+                              delay: 500.ms,
+                              curve: Curves.easeOutCubic,
+                            ),
+                        // Advanced sections (optional - can be hidden)
+                        if (kEnableAdvancedProfileSections) ...[
+                          SizedBox(height: AppSizes.verticalSpacingL),
+                          CollectionCardWidget(
+                            stats: _stats,
+                            userRecipes: _userRecipes,
+                            onSimulateAiRecipe: _simulateAiRecipe,
+                            onCreateManualRecipe: _createManualRecipe,
+                            onUploadDishPhoto: _uploadDishPhoto,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
+              ],
+            ),
+    ),
+  );
+
+  Future<void> _showInviteDialog(
+    BuildContext context,
+    String householdId,
+  ) async {
+    final HouseholdCubit householdCubit = context.read<HouseholdCubit>();
+
+    // Generate invite code
+    final String? inviteCode = await householdCubit.generateInviteCode(
+      householdId,
+    );
+
+    if (!context.mounted || inviteCode == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('error_generating_invite_code'))),
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(tr('invite_member')),
+        contentPadding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 24.h),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                tr('invite_code_description'),
+                style: TextStyle(fontSize: AppSizes.textM),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16.h),
+              Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Text(
+                  inviteCode,
+                  style: TextStyle(
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              QrCodeGeneratorWidget(inviteCode: inviteCode, size: 200.w),
+              SizedBox(height: 16.h),
+              Text(
+                tr('invite_code_instructions'),
+                style: TextStyle(
+                  fontSize: AppSizes.textS,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
-  );
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('cancel')),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _editNickname() async {
     final TextEditingController controller = TextEditingController(

@@ -304,6 +304,22 @@ class ExpiryNotificationService implements IExpiryNotificationService {
     );
   }
 
+  @override
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    final tz.TZDateTime tzDate = _convertToTZDateTime(scheduledDate);
+    await _scheduleNotification(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tzDate,
+    );
+  }
+
   tz.TZDateTime _convertToTZDateTime(DateTime dateTime) =>
       tz.TZDateTime.from(dateTime, tz.local);
 

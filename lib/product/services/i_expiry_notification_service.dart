@@ -12,10 +12,17 @@ abstract class IExpiryNotificationService {
   /// Cancel all notifications for a specific item
   Future<void> cancelItemNotifications(String itemId);
 
+  /// Schedule a custom notification (for smart notifications)
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  });
+
   /// Get permission status
   bool? get permissionGranted;
 
   /// Initialize notification service
   Future<void> initialize();
 }
-

@@ -9,6 +9,6 @@ class ListPantryItems {
 
   final IPantryRepository repository;
 
-  Stream<List<PantryItem>> call({required String userId}) =>
-      repository.watchItems(userId: userId);
+  Stream<List<PantryItem>> call({required String householdId}) =>
+      repository.watchItems(householdId: householdId);
 }

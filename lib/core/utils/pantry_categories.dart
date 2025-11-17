@@ -2,62 +2,82 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// Centralizes pantry category metadata and keyword heuristics.
-/// TODO(LOCALIZATION): Category names are now localization-ready via tr() calls
+/// Categories are stored as internal keys and displayed using localization.
 class PantryCategoryHelper {
   PantryCategoryHelper._();
 
-  /// Canonical category list shown in selectors.
-  /// TODO(LOCALIZATION): These keys should be mapped to localization keys
+  /// Internal category keys (used for storage and internal logic).
+  /// These keys are language-independent and mapped to localized names via getLocalizedCategoryName().
   static const List<String> categories = <String>[
-    'Süt Ürünleri',
-    'Sebze',
-    'Meyve',
-    'Et / Tavuk / Balık',
-    'Bakliyat',
-    'Tahıl & Fırın',
-    'Baklagil & Tohum',
-    'Baharat & Sos',
-    'Atıştırmalık',
-    'İçecek',
-    'Dondurulmuş',
-    'Diğer',
+    'dairy',
+    'vegetables',
+    'fruits',
+    'meat',
+    'legumes',
+    'grains',
+    'nuts',
+    'spices',
+    'snacks',
+    'drinks',
+    'frozen',
+    'other',
   ];
 
-  /// Get localized category name
-  /// TODO(LOCALIZATION): Implement full localization mapping
+  /// Mapping from old Turkish category names to new internal keys (for backward compatibility).
+  static const Map<String, String> _legacyCategoryMap = <String, String>{
+    'Süt Ürünleri': 'dairy',
+    'Sebze': 'vegetables',
+    'Meyve': 'fruits',
+    'Et / Tavuk / Balık': 'meat',
+    'Bakliyat': 'legumes',
+    'Tahıl & Fırın': 'grains',
+    'Baklagil & Tohum': 'nuts',
+    'Baharat & Sos': 'spices',
+    'Atıştırmalık': 'snacks',
+    'İçecek': 'drinks',
+    'Dondurulmuş': 'frozen',
+    'Diğer': 'other',
+  };
+
+  /// Get localized category name for display.
+  /// Accepts both internal keys (e.g., 'dairy') and legacy Turkish names (e.g., 'Süt Ürünleri').
   static String getLocalizedCategoryName(String category) {
-    // Map internal category names to localization keys
-    switch (category) {
-      case 'Süt Ürünleri':
+    // Normalize to internal key first
+    final String normalized = normalize(category);
+
+    // Map internal keys to localization keys
+    switch (normalized) {
+      case 'dairy':
         return tr('categories.dairy');
-      case 'Sebze':
+      case 'vegetables':
         return tr('categories.vegetables');
-      case 'Meyve':
+      case 'fruits':
         return tr('categories.fruits');
-      case 'Et / Tavuk / Balık':
+      case 'meat':
         return tr('categories.meat');
-      case 'Bakliyat':
+      case 'legumes':
         return tr('categories.legumes');
-      case 'Tahıl & Fırın':
+      case 'grains':
         return tr('categories.grains');
-      case 'Baklagil & Tohum':
+      case 'nuts':
         return tr('categories.nuts');
-      case 'Baharat & Sos':
+      case 'spices':
         return tr('categories.spices');
-      case 'Atıştırmalık':
+      case 'snacks':
         return tr('categories.snacks');
-      case 'İçecek':
+      case 'drinks':
         return tr('categories.drinks');
-      case 'Dondurulmuş':
+      case 'frozen':
         return tr('categories.frozen');
-      case 'Diğer':
+      case 'other':
       default:
         return tr('categories.other');
     }
   }
 
+  /// Keywords for category guessing (mapped to internal keys).
   static const Map<String, List<String>> _keywords = <String, List<String>>{
-    'Süt Ürünleri': <String>[
+    'dairy': <String>[
       'süt',
       'yoğurt',
       'peynir',
@@ -66,7 +86,7 @@ class PantryCategoryHelper {
       'krema',
       'kefir',
     ],
-    'Sebze': <String>[
+    'vegetables': <String>[
       'domates',
       'biber',
       'salatalık',
@@ -78,7 +98,7 @@ class PantryCategoryHelper {
       'havuç',
       'brokoli',
     ],
-    'Meyve': <String>[
+    'fruits': <String>[
       'elma',
       'muz',
       'portakal',
@@ -90,7 +110,7 @@ class PantryCategoryHelper {
       'nar',
       'üzüm',
     ],
-    'Et / Tavuk / Balık': <String>[
+    'meat': <String>[
       'et',
       'tavuk',
       'balık',
@@ -101,7 +121,7 @@ class PantryCategoryHelper {
       'somon',
       'ton',
     ],
-    'Bakliyat': <String>[
+    'legumes': <String>[
       'mercimek',
       'nohut',
       'fasulye',
@@ -109,7 +129,7 @@ class PantryCategoryHelper {
       'bakla',
       'bezelye',
     ],
-    'Tahıl & Fırın': <String>[
+    'grains': <String>[
       'ekmek',
       'makarna',
       'pirinç',
@@ -119,15 +139,8 @@ class PantryCategoryHelper {
       'un',
       'lavaş',
     ],
-    'Baklagil & Tohum': <String>[
-      'ceviz',
-      'fındık',
-      'badem',
-      'chia',
-      'keten',
-      'susam',
-    ],
-    'Baharat & Sos': <String>[
+    'nuts': <String>['ceviz', 'fındık', 'badem', 'chia', 'keten', 'susam'],
+    'spices': <String>[
       'tuz',
       'karabiber',
       'kimyon',
@@ -138,8 +151,8 @@ class PantryCategoryHelper {
       'sos',
       'baharat',
     ],
-    'Atıştırmalık': <String>['bisküvi', 'kraker', 'çikolata', 'cips', 'gofret'],
-    'İçecek': <String>[
+    'snacks': <String>['bisküvi', 'kraker', 'çikolata', 'cips', 'gofret'],
+    'drinks': <String>[
       'su',
       'çay',
       'kahve',
@@ -148,7 +161,7 @@ class PantryCategoryHelper {
       'gazoz',
       'soda',
     ],
-    'Dondurulmuş': <String>[
+    'frozen': <String>[
       'dondurulmuş',
       'dondurma',
       'mısır',
@@ -158,12 +171,15 @@ class PantryCategoryHelper {
     ],
   };
 
-  /// Returns a normalized, display friendly category.
+  /// Returns a normalized internal category key.
+  /// Supports both new internal keys and legacy Turkish category names for backward compatibility.
   static String normalize(String? raw) {
     if (raw == null || raw.trim().isEmpty) {
-      return 'Diğer';
+      return 'other';
     }
     final String value = raw.trim();
+
+    // Check if it's already an internal key
     final String direct = categories.firstWhere(
       (String c) => c.toLowerCase() == value.toLowerCase(),
       orElse: () => '',
@@ -171,10 +187,26 @@ class PantryCategoryHelper {
     if (direct.isNotEmpty) {
       return direct;
     }
+
+    // Check if it's a legacy Turkish category name
+    final String? legacyKey = _legacyCategoryMap[value];
+    if (legacyKey != null) {
+      return legacyKey;
+    }
+
+    // Try case-insensitive legacy mapping
+    for (final MapEntry<String, String> entry in _legacyCategoryMap.entries) {
+      if (entry.key.toLowerCase() == value.toLowerCase()) {
+        return entry.value;
+      }
+    }
+
+    // Fall back to guessing
     return guess(value);
   }
 
   /// Quick keyword based guess for given product name.
+  /// Returns an internal category key.
   static String guess(String name) {
     final String lower = name.toLowerCase();
     for (final MapEntry<String, List<String>> entry in _keywords.entries) {
@@ -183,34 +215,36 @@ class PantryCategoryHelper {
         return entry.key;
       }
     }
-    return 'Diğer';
+    return 'other';
   }
 
   /// Icon helper for quick visual hints.
+  /// Accepts both internal keys and legacy category names.
   static IconData iconFor(String category) {
     final String normalized = normalize(category);
     switch (normalized) {
-      case 'Süt Ürünleri':
+      case 'dairy':
         return Icons.icecream;
-      case 'Sebze':
+      case 'vegetables':
         return Icons.grass;
-      case 'Meyve':
+      case 'fruits':
         return Icons.eco;
-      case 'Et / Tavuk / Balık':
+      case 'meat':
         return Icons.set_meal;
-      case 'Bakliyat':
-      case 'Baklagil & Tohum':
+      case 'legumes':
+      case 'nuts':
         return Icons.spa;
-      case 'Tahıl & Fırın':
+      case 'grains':
         return Icons.bakery_dining;
-      case 'Baharat & Sos':
+      case 'spices':
         return Icons.auto_awesome;
-      case 'Atıştırmalık':
+      case 'snacks':
         return Icons.cookie;
-      case 'İçecek':
+      case 'drinks':
         return Icons.local_cafe;
-      case 'Dondurulmuş':
+      case 'frozen':
         return Icons.ac_unit;
+      case 'other':
       default:
         return Icons.inventory_2_outlined;
     }

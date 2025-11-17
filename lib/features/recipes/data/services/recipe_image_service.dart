@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_image_service.dart';
 
 /// Service responsible for fixing recipe image URLs
 /// Follows Single Responsibility Principle - only handles image URL fixing
-class RecipeImageService {
+class RecipeImageService implements IRecipeImageService {
   RecipeImageService(this._imageLookup);
 
   final IImageLookupService _imageLookup;
@@ -21,7 +22,9 @@ class RecipeImageService {
         // Optimize query for better food images (avoid restaurant/shop results)
         // Add food-related keywords to get better results
         final String optimizedQuery = _optimizeImageQuery(title);
-        final String? searchedImageUrl = await _imageLookup.search(optimizedQuery);
+        final String? searchedImageUrl = await _imageLookup.search(
+          optimizedQuery,
+        );
         debugPrint(
           '[RecipeImageService] Görsel arama sonucu: ${searchedImageUrl ?? "NULL"}',
         );
@@ -40,7 +43,7 @@ class RecipeImageService {
     // Add food-related keywords to improve search results
     // This helps Google Images return actual food photos instead of restaurant photos
     final String foodKeywords = 'yemek tarifi food recipe';
-    
+
     // Remove common restaurant-related words if present
     String optimized = title;
     final List<String> restaurantWords = <String>[
@@ -51,14 +54,15 @@ class RecipeImageService {
       'menü',
       'menu',
     ];
-    
+
     for (final String word in restaurantWords) {
       optimized = optimized.replaceAll(RegExp(word, caseSensitive: false), '');
     }
-    
+
     // Combine title with food keywords
     return '$optimized $foodKeywords'.trim();
   }
+
   Future<List<T>> fixImageUrls<T extends Object>(
     List<T> recipes,
     String Function(T) getTitle,
@@ -82,4 +86,3 @@ class RecipeImageService {
     );
   }
 }
-

@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_service.dart';
 
 /// Service responsible for caching recipes in Hive
 /// Follows Single Responsibility Principle - only handles cache operations
-class RecipeCacheService {
+class RecipeCacheService implements IRecipeCacheService {
   RecipeCacheService(this._cacheBox);
 
   final Box<dynamic> _cacheBox;

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 class OnboardingSlide {
   /// Creates an onboarding slide
   const OnboardingSlide({
-    this.lottieUrl,
     required this.titleKey,
     required this.descriptionKey,
     required this.fallbackIcon,
+    this.lottieUrl,
   });
 
   /// Lottie animation URL

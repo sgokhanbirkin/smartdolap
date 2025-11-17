@@ -18,39 +18,39 @@ void main() {
 
     test('should delete pantry item successfully', () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
       const String testItemId = 'item-123';
 
       when(
-        () => mockRepository.deleteItem(userId: testUserId, itemId: testItemId),
+        () => mockRepository.deleteItem(householdId: testHouseholdId, itemId: testItemId),
       ).thenAnswer((_) async => Future<void>.value());
 
       // Act
-      await deletePantryItem(userId: testUserId, itemId: testItemId);
+      await deletePantryItem(householdId: testHouseholdId, itemId: testItemId);
 
       // Assert
       verify(
-        () => mockRepository.deleteItem(userId: testUserId, itemId: testItemId),
+        () => mockRepository.deleteItem(householdId: testHouseholdId, itemId: testItemId),
       ).called(1);
     });
 
     test('should propagate errors from repository', () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
       const String testItemId = 'item-123';
       final Exception testError = Exception('Repository error');
 
       when(
-        () => mockRepository.deleteItem(userId: testUserId, itemId: testItemId),
+        () => mockRepository.deleteItem(householdId: testHouseholdId, itemId: testItemId),
       ).thenThrow(testError);
 
       // Act & Assert
       expect(
-        () => deletePantryItem(userId: testUserId, itemId: testItemId),
+        () => deletePantryItem(householdId: testHouseholdId, itemId: testItemId),
         throwsA(testError),
       );
       verify(
-        () => mockRepository.deleteItem(userId: testUserId, itemId: testItemId),
+        () => mockRepository.deleteItem(householdId: testHouseholdId, itemId: testItemId),
       ).called(1);
     });
   });

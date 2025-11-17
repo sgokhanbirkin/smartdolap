@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/utils/pantry_categories.dart';
 
 /// Widget that displays the category detection status
 /// (loading, suggested, or empty)
@@ -54,7 +55,11 @@ class CategoryStatusChipWidget extends StatelessWidget {
           Text(
             tr(
               'pantry_category_suggested',
-              namedArgs: <String, String>{'category': suggestedCategory!},
+              namedArgs: <String, String>{
+                'category': PantryCategoryHelper.getLocalizedCategoryName(
+                  suggestedCategory!,
+                ),
+              },
             ),
             style: TextStyle(
               fontSize: AppSizes.textXS,

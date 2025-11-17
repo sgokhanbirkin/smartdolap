@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_notification_coordinator.dart';
 import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
 
 /// Service for coordinating pantry item notifications
 /// Follows Single Responsibility Principle - handles notification coordination logic
 /// This service acts as a coordinator between PantryCubit and ExpiryNotificationService
-class PantryNotificationCoordinator {
+class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
   PantryNotificationCoordinator(this._notificationService);
 
   final IExpiryNotificationService _notificationService;
@@ -17,7 +18,9 @@ class PantryNotificationCoordinator {
         await _notificationService.schedulePerItem(item);
       } catch (e) {
         // Log error but don't fail the operation
-        debugPrint('[PantryNotificationCoordinator] Error scheduling notification for new item: $e');
+        debugPrint(
+          '[PantryNotificationCoordinator] Error scheduling notification for new item: $e',
+        );
       }
     }
   }
@@ -35,7 +38,9 @@ class PantryNotificationCoordinator {
           await _notificationService.schedulePerItem(newItem);
         }
       } catch (e) {
-        debugPrint('[PantryNotificationCoordinator] Error updating notifications: $e');
+        debugPrint(
+          '[PantryNotificationCoordinator] Error updating notifications: $e',
+        );
       }
     }
   }
@@ -45,7 +50,9 @@ class PantryNotificationCoordinator {
     try {
       await _notificationService.cancelItemNotifications(itemId);
     } catch (e) {
-      debugPrint('[PantryNotificationCoordinator] Error cancelling notifications: $e');
+      debugPrint(
+        '[PantryNotificationCoordinator] Error cancelling notifications: $e',
+      );
     }
   }
 
@@ -54,8 +61,9 @@ class PantryNotificationCoordinator {
     try {
       await _notificationService.scheduleNotifications(items);
     } catch (e) {
-      debugPrint('[PantryNotificationCoordinator] Error scheduling notifications: $e');
+      debugPrint(
+        '[PantryNotificationCoordinator] Error scheduling notifications: $e',
+      );
     }
   }
 }
-

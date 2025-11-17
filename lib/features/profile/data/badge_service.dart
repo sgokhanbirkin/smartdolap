@@ -1,5 +1,5 @@
 import 'package:smartdolap/features/profile/data/badge_definitions.dart';
-import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/domain/entities/badge.dart';
 import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
@@ -14,7 +14,7 @@ class BadgeService {
   });
 
   /// Profile stats service for checking badge conditions
-  final ProfileStatsService statsService;
+  final IProfileStatsService statsService;
 
   /// Badge repository for saving/loading badges
   final IBadgeRepository badgeRepository;

@@ -7,7 +7,7 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
-import 'package:smartdolap/core/services/onboarding_service.dart';
+import 'package:smartdolap/core/services/i_onboarding_service.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
@@ -61,7 +61,7 @@ class _SplashPageState extends State<SplashPage>
   void _checkAuthState() {
     final AuthCubit authCubit = context.read<AuthCubit>();
     final AuthState currentState = authCubit.state;
-    final OnboardingService onboardingService = sl<OnboardingService>();
+    final IOnboardingService onboardingService = sl<IOnboardingService>();
 
     debugPrint('[SplashPage] Checking auth state: $currentState');
 
@@ -83,8 +83,16 @@ class _SplashPageState extends State<SplashPage>
         debugPrint('[SplashPage] Loading state - waiting');
       },
       authenticated: (user) {
-        debugPrint('[SplashPage] Authenticated - redirecting to home');
-        Navigator.of(context).pushReplacementNamed(AppRouter.home);
+        debugPrint('[SplashPage] Authenticated - checking household');
+        if (user.householdId == null) {
+          debugPrint(
+            '[SplashPage] No household - redirecting to household setup (required)',
+          );
+          Navigator.of(context).pushReplacementNamed(AppRouter.householdSetup);
+        } else {
+          debugPrint('[SplashPage] Has household - redirecting to home');
+          Navigator.of(context).pushReplacementNamed(AppRouter.home);
+        }
       },
       unauthenticated: () {
         debugPrint('[SplashPage] Unauthenticated - redirecting to login');
@@ -101,7 +109,7 @@ class _SplashPageState extends State<SplashPage>
   Widget build(BuildContext context) => BlocListener<AuthCubit, AuthState>(
     listener: (BuildContext context, AuthState state) {
       debugPrint('[SplashPage] AuthState changed: $state');
-      final OnboardingService onboardingService = sl<OnboardingService>();
+      final IOnboardingService onboardingService = sl<IOnboardingService>();
 
       // Check onboarding first
       if (!onboardingService.isOnboardingCompleted()) {
@@ -115,12 +123,22 @@ class _SplashPageState extends State<SplashPage>
       state.when(
         initial: () {},
         loading: () {},
-        authenticated: (user) {
+      authenticated: (user) {
+        debugPrint(
+          '[SplashPage] Authenticated during splash - checking household',
+        );
+        if (user.householdId == null) {
           debugPrint(
-            '[SplashPage] Authenticated during splash - redirecting to home',
+            '[SplashPage] No household - redirecting to household setup (required)',
           );
+          Navigator.of(
+            context,
+          ).pushReplacementNamed(AppRouter.householdSetup);
+        } else {
+          debugPrint('[SplashPage] Has household - redirecting to home');
           Navigator.of(context).pushReplacementNamed(AppRouter.home);
-        },
+        }
+      },
         unauthenticated: () {
           debugPrint(
             '[SplashPage] Unauthenticated during splash - redirecting to login',

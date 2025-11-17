@@ -7,13 +7,13 @@ import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
-import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_repository.dart';
 import 'package:smartdolap/features/recipes/data/services/meal_name_mapper.dart';
-import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
-import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_service.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_filter_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_mapper.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
@@ -49,10 +49,10 @@ class RecipesCubit extends Cubit<RecipesState> {
 
   final SuggestRecipesFromPantry suggest;
   final IOpenAIService openAI;
-  final PromptPreferenceService promptPreferences;
+  final IPromptPreferenceService promptPreferences;
   final IImageLookupService imageLookup;
-  final RecipeCacheService cacheService;
-  final RecipeImageService imageService;
+  final IRecipeCacheService cacheService;
+  final IRecipeImageService imageService;
   final IUserRecipeRepository userRecipeRepository;
   final IRecipesRepository recipesRepository;
   final RecipeFilterService filterService;
@@ -97,7 +97,9 @@ class RecipesCubit extends Cubit<RecipesState> {
       // ✅ Hive cache'e kaydediliyor: HAYIR (sadece repository içinde Firestore'a kaydediliyor)
       // ✅ UserRecipeService'e kaydediliyor: HAYIR
       // suggest() zaten görselleri düzeltiyor (RecipesRepository içinde)
-      final List<Recipe> recipes = await suggest(userId: userId);
+      final List<Recipe> recipes = await suggest(
+        householdId: userId,
+      ); // userId is actually householdId
 
       if (isClosed) {
         return;
@@ -429,7 +431,7 @@ class RecipesCubit extends Cubit<RecipesState> {
 
       // Pantry items'ı al
       final List<dynamic> pantryItemsRaw = await sl<IPantryRepository>()
-          .getItems(userId: userId);
+          .getItems(householdId: userId); // userId is actually householdId
       final List<PantryItem> pantryItems = pantryItemsRaw.cast<PantryItem>();
       final List<Ingredient> ingredients = pantryItems
           .map<Ingredient>(
@@ -536,7 +538,7 @@ class RecipesCubit extends Cubit<RecipesState> {
 
       // Pantry items'ı al
       final List<dynamic> pantryItemsRaw = await sl<IPantryRepository>()
-          .getItems(userId: userId);
+          .getItems(householdId: userId); // userId is actually householdId
       final List<PantryItem> pantryItems = pantryItemsRaw.cast<PantryItem>();
       final List<Ingredient> ingredients = pantryItems
           .map<Ingredient>(

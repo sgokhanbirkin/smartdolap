@@ -9,6 +9,9 @@ class UpdatePantryItem {
 
   final IPantryRepository repository;
 
-  Future<PantryItem> call({required String userId, required PantryItem item}) =>
-      repository.updateItem(userId: userId, item: item);
+  Future<PantryItem> call({
+    required String householdId,
+    required PantryItem item,
+  }) =>
+      repository.updateItem(householdId: householdId, item: item);
 }

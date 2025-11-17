@@ -6,17 +6,58 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:smartdolap/core/services/household_setup_service.dart';
+import 'package:smartdolap/core/services/i_household_setup_service.dart';
+import 'package:smartdolap/core/services/i_onboarding_service.dart';
+import 'package:smartdolap/core/services/i_sync_service.dart';
 import 'package:smartdolap/core/services/onboarding_service.dart';
 import 'package:smartdolap/core/services/sync_service.dart';
+import 'package:smartdolap/features/analytics/domain/use_cases/get_user_analytics_usecase.dart';
+import 'package:smartdolap/features/analytics/presentation/viewmodel/analytics_cubit.dart';
 import 'package:smartdolap/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:smartdolap/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/register_usecase.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/household/data/repositories/household_repository_impl.dart';
+import 'package:smartdolap/features/household/data/repositories/message_repository_impl.dart';
+import 'package:smartdolap/features/household/data/repositories/shared_recipe_repository_impl.dart';
+import 'package:smartdolap/features/household/domain/repositories/i_household_repository.dart';
+import 'package:smartdolap/features/household/domain/repositories/i_message_repository.dart';
+import 'package:smartdolap/features/household/domain/repositories/i_shared_recipe_repository.dart';
+import 'package:smartdolap/features/household/domain/use_cases/create_household_usecase.dart';
+import 'package:smartdolap/features/household/domain/use_cases/generate_invite_code_usecase.dart';
+import 'package:smartdolap/features/household/domain/use_cases/get_household_from_invite_usecase.dart';
+import 'package:smartdolap/features/household/domain/use_cases/get_household_usecase.dart';
+import 'package:smartdolap/features/household/domain/use_cases/join_household_usecase.dart';
+import 'package:smartdolap/features/household/domain/use_cases/send_message_usecase.dart';
+import 'package:smartdolap/features/household/domain/use_cases/share_recipe_usecase.dart';
+import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
+import 'package:smartdolap/features/household/presentation/viewmodel/share_cubit.dart';
+import 'package:smartdolap/features/analytics/data/repositories/analytics_repository_impl.dart';
+import 'package:smartdolap/features/analytics/data/repositories/meal_consumption_repository_impl.dart';
+import 'package:smartdolap/features/analytics/data/services/analytics_service_impl.dart';
+import 'package:smartdolap/features/analytics/data/services/smart_notification_service_impl.dart';
+import 'package:smartdolap/features/analytics/domain/repositories/i_analytics_repository.dart';
+import 'package:smartdolap/features/analytics/domain/repositories/i_meal_consumption_repository.dart';
+import 'package:smartdolap/features/analytics/domain/services/i_analytics_service.dart';
+import 'package:smartdolap/features/analytics/domain/services/i_smart_notification_service.dart';
 import 'package:smartdolap/features/pantry/data/repositories/pantry_repository_impl.dart';
 import 'package:smartdolap/features/pantry/data/services/pantry_notification_coordinator.dart';
+import 'package:smartdolap/features/pantry/data/services/pantry_notification_scheduler.dart';
+import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_notification_coordinator.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
+import 'package:smartdolap/features/pantry/domain/services/i_pantry_notification_scheduler.dart';
+import 'package:smartdolap/features/shopping/data/repositories/shopping_list_repository_impl.dart';
+import 'package:smartdolap/features/shopping/data/services/shopping_list_service_impl.dart';
+import 'package:smartdolap/features/shopping/domain/repositories/i_shopping_list_repository.dart';
+import 'package:smartdolap/features/shopping/domain/services/i_shopping_list_service.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/add_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/complete_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/delete_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/update_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/presentation/viewmodel/shopping_list_cubit.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
@@ -26,10 +67,14 @@ import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_repository.dart';
 import 'package:smartdolap/features/recipes/data/repositories/recipes_repository_impl.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_service.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/get_recipe_detail.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
@@ -70,15 +115,34 @@ Future<void> setupLocator() async {
       instanceName: 'pantryBox',
     );
   }
-  if (!sl.isRegistered<PromptPreferenceService>()) {
-    sl.registerLazySingleton<PromptPreferenceService>(
+  // Prompt preference service - DIP: Register via interface
+  if (!sl.isRegistered<IPromptPreferenceService>()) {
+    sl.registerLazySingleton<IPromptPreferenceService>(
       () => PromptPreferenceService(Hive.box<dynamic>('profile_box')),
     );
   }
-  // Onboarding service
+  // Register concrete implementation for backward compatibility if needed
+  if (!sl.isRegistered<PromptPreferenceService>()) {
+    sl.registerLazySingleton<PromptPreferenceService>(
+      () => sl<IPromptPreferenceService>() as PromptPreferenceService,
+    );
+  }
+  // Onboarding service - DIP: Register via interface
+  if (!sl.isRegistered<IOnboardingService>()) {
+    sl.registerLazySingleton<IOnboardingService>(
+      () => OnboardingService(Hive.box<dynamic>('app_settings')),
+    );
+  }
+  // Register concrete implementation for backward compatibility if needed
   if (!sl.isRegistered<OnboardingService>()) {
     sl.registerLazySingleton<OnboardingService>(
-      () => OnboardingService(Hive.box<dynamic>('app_settings')),
+      () => sl<IOnboardingService>() as OnboardingService,
+    );
+  }
+  // Household setup service - DIP: Register via interface
+  if (!sl.isRegistered<IHouseholdSetupService>()) {
+    sl.registerLazySingleton<IHouseholdSetupService>(
+      () => HouseholdSetupService(Hive.box<dynamic>('app_settings')),
     );
   }
   if (!sl.isRegistered<UserRecipeService>()) {
@@ -92,15 +156,27 @@ Future<void> setupLocator() async {
       () => sl<UserRecipeService>(),
     );
   }
-  // Recipe services
-  if (!sl.isRegistered<RecipeCacheService>()) {
-    sl.registerLazySingleton<RecipeCacheService>(
+  // Recipe services - DIP: Register via interfaces
+  if (!sl.isRegistered<IRecipeCacheService>()) {
+    sl.registerLazySingleton<IRecipeCacheService>(
       () => RecipeCacheService(Hive.box<dynamic>('recipes_cache')),
     );
   }
+  // Register concrete implementation for backward compatibility if needed
+  if (!sl.isRegistered<RecipeCacheService>()) {
+    sl.registerLazySingleton<RecipeCacheService>(
+      () => sl<IRecipeCacheService>() as RecipeCacheService,
+    );
+  }
+  if (!sl.isRegistered<IRecipeImageService>()) {
+    sl.registerLazySingleton<IRecipeImageService>(
+      () => RecipeImageService(sl<IImageLookupService>()),
+    );
+  }
+  // Register concrete implementation for backward compatibility if needed
   if (!sl.isRegistered<RecipeImageService>()) {
     sl.registerLazySingleton<RecipeImageService>(
-      () => RecipeImageService(sl<IImageLookupService>()),
+      () => sl<IRecipeImageService>() as RecipeImageService,
     );
   }
   // Firebase
@@ -109,9 +185,8 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
 
   // Auth — DIP: arayüz → implementasyon
-  // TODO(SOLID-DIP): All services should be registered via interfaces
   sl.registerLazySingleton<IAuthRepository>(
-    () => AuthRepositoryImpl(sl<fb.FirebaseAuth>()),
+    () => AuthRepositoryImpl(sl<fb.FirebaseAuth>(), sl<FirebaseFirestore>()),
   );
   sl.registerFactory(() => LoginUseCase(sl()));
   sl.registerFactory(() => LogoutUseCase(sl()));
@@ -142,7 +217,7 @@ Future<void> setupLocator() async {
       addPantryItem: sl(),
       updatePantryItem: sl(),
       deletePantryItem: sl(),
-      notificationCoordinator: sl(),
+      notificationCoordinator: sl<IPantryNotificationCoordinator>(),
     ),
   );
 
@@ -209,31 +284,118 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<ExpiryNotificationService>(
     () => sl<IExpiryNotificationService>() as ExpiryNotificationService,
   );
-  // Pantry notification coordinator
-  sl.registerLazySingleton<PantryNotificationCoordinator>(
+  // Pantry notification coordinator - DIP: Register via interface
+  sl.registerLazySingleton<IPantryNotificationCoordinator>(
     () => PantryNotificationCoordinator(sl<IExpiryNotificationService>()),
   );
+  // Register concrete implementation for backward compatibility if needed
+  sl.registerLazySingleton<PantryNotificationCoordinator>(
+    () => sl<IPantryNotificationCoordinator>() as PantryNotificationCoordinator,
+  );
 
-  // Profile services - must be registered before SyncService
+  // Pantry notification scheduler - DIP: Register via interface
+  sl.registerFactory<IPantryNotificationScheduler>(
+    () => PantryNotificationScheduler(sl<IPantryNotificationCoordinator>()),
+  );
+
+  // Analytics repositories - DIP: Register via interfaces
+  sl.registerLazySingleton<IMealConsumptionRepository>(
+    () => MealConsumptionRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+  sl.registerLazySingleton<IAnalyticsRepository>(
+    () => AnalyticsRepositoryImpl(
+      sl<FirebaseFirestore>(),
+      sl<IMealConsumptionRepository>(),
+      sl<IPantryRepository>(),
+    ),
+  );
+
+  // Analytics services - DIP: Register via interfaces
+  sl.registerLazySingleton<IAnalyticsService>(
+    () => AnalyticsServiceImpl(
+      sl<IAnalyticsRepository>(),
+      sl<IMealConsumptionRepository>(),
+    ),
+  );
+
+  // Analytics use cases
+  sl.registerFactory(() => GetUserAnalyticsUseCase(sl()));
+
+  // Analytics cubit
+  sl.registerFactory(() => AnalyticsCubit(getUserAnalytics: sl()));
+
+  // Smart notification service - DIP: Register via interface
+  sl.registerLazySingleton<ISmartNotificationService>(
+    () => SmartNotificationServiceImpl(
+      sl<IMealConsumptionRepository>(),
+      sl<IPantryRepository>(),
+      sl<IShoppingListRepository>(),
+      sl<IExpiryNotificationService>(),
+    ),
+  );
+
+  // Shopping list repository - DIP: Register via interface
+  sl.registerLazySingleton<IShoppingListRepository>(
+    () => ShoppingListRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+
+  // Shopping list service - DIP: Register via interface
+  sl.registerLazySingleton<IShoppingListService>(
+    () => ShoppingListServiceImpl(
+      sl<IShoppingListRepository>(),
+      sl<IPantryRepository>(),
+    ),
+  );
+
+  // Shopping list use cases
+  sl.registerFactory(() => AddShoppingListItemUseCase(sl()));
+  sl.registerFactory(() => UpdateShoppingListItemUseCase(sl()));
+  sl.registerFactory(() => DeleteShoppingListItemUseCase(sl()));
+  sl.registerFactory(() => CompleteShoppingListItemUseCase(sl()));
+
+  // Shopping list cubit
+  sl.registerFactory(
+    () => ShoppingListCubit(
+      shoppingListRepository: sl(),
+      addShoppingListItem: sl(),
+      updateShoppingListItem: sl(),
+      deleteShoppingListItem: sl(),
+      completeShoppingListItem: sl(),
+    ),
+  );
+
+  // Profile services - must be registered before SyncService - DIP: Register via interface
+  if (!sl.isRegistered<IProfileStatsService>()) {
+    sl.registerLazySingleton<IProfileStatsService>(
+      () => ProfileStatsService(Hive.box<dynamic>('profile_stats_box')),
+    );
+  }
+  // Register concrete implementation for backward compatibility if needed
   if (!sl.isRegistered<ProfileStatsService>()) {
     sl.registerLazySingleton<ProfileStatsService>(
-      () => ProfileStatsService(Hive.box<dynamic>('profile_stats_box')),
+      () => sl<IProfileStatsService>() as ProfileStatsService,
     );
   }
   sl.registerLazySingleton<IBadgeRepository>(
     () => BadgeRepositoryImpl(sl<FirebaseFirestore>()),
   );
 
-  // Sync service
-  if (!sl.isRegistered<SyncService>()) {
-    sl.registerLazySingleton<SyncService>(
+  // Sync service - DIP: Register via interface
+  if (!sl.isRegistered<ISyncService>()) {
+    sl.registerLazySingleton<ISyncService>(
       () => SyncService(
         firestore: sl<FirebaseFirestore>(),
         pantryRepository: sl<IPantryRepository>(),
         recipesRepository: sl<IRecipesRepository>(),
         pantryBox: sl<Box<dynamic>>(instanceName: 'pantryBox'),
-        recipeCacheService: sl<RecipeCacheService>(),
+        recipeCacheService: sl<IRecipeCacheService>(),
       ),
+    );
+  }
+  // Register concrete implementation for backward compatibility if needed
+  if (!sl.isRegistered<SyncService>()) {
+    sl.registerLazySingleton<SyncService>(
+      () => sl<ISyncService>() as SyncService,
     );
   }
 
@@ -243,9 +405,9 @@ Future<void> setupLocator() async {
       sl<FirebaseFirestore>(),
       sl(),
       sl(),
-      sl<PromptPreferenceService>(),
-      sl<RecipeImageService>(),
-      sl<RecipeCacheService>(),
+      sl<IPromptPreferenceService>(),
+      sl<IRecipeImageService>(),
+      sl<IRecipeCacheService>(),
     ),
   );
   sl.registerFactory(() => SuggestRecipesFromPantry(sl()));
@@ -254,12 +416,54 @@ Future<void> setupLocator() async {
     () => RecipesCubit(
       suggest: sl(),
       openAI: sl(),
-      promptPreferences: sl(),
+      promptPreferences: sl<IPromptPreferenceService>(),
       imageLookup: sl<IImageLookupService>(),
-      cacheService: sl(),
-      imageService: sl(),
+      cacheService: sl<IRecipeCacheService>(),
+      imageService: sl<IRecipeImageService>(),
       userRecipeRepository: sl(),
       recipesRepository: sl(),
+    ),
+  );
+
+  // Household - DIP: Register via interfaces
+  sl.registerLazySingleton<IHouseholdRepository>(
+    () => HouseholdRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+  sl.registerLazySingleton<IMessageRepository>(
+    () => MessageRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+  sl.registerLazySingleton<ISharedRecipeRepository>(
+    () => SharedRecipeRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+
+  // Household use cases
+  sl.registerFactory(() => CreateHouseholdUseCase(sl()));
+  sl.registerFactory(() => GetHouseholdUseCase(sl()));
+  sl.registerFactory(() => JoinHouseholdUseCase(sl()));
+  sl.registerFactory(() => GenerateInviteCodeUseCase(sl()));
+  sl.registerFactory(() => GetHouseholdFromInviteUseCase(sl()));
+  sl.registerFactory(() => ShareRecipeUseCase(sl()));
+  sl.registerFactory(() => SendMessageUseCase(sl()));
+
+  // Household cubits
+  sl.registerFactory<HouseholdCubit>(
+    () => HouseholdCubit(
+      createHouseholdUseCase: sl(),
+      getHouseholdUseCase: sl(),
+      joinHouseholdUseCase: sl(),
+      generateInviteCodeUseCase: sl(),
+      getHouseholdFromInviteUseCase: sl(),
+      repository: sl(),
+    ),
+  );
+
+  // Share cubit
+  sl.registerFactory<ShareCubit>(
+    () => ShareCubit(
+      messageRepository: sl(),
+      sharedRecipeRepository: sl(),
+      sendMessageUseCase: sl(),
+      shareRecipeUseCase: sl(),
     ),
   );
 }

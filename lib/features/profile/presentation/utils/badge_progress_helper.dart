@@ -93,6 +93,9 @@ class BadgeProgressHelper {
       if (result.length >= 3) {
         break;
       }
+      if (allBadges.isEmpty) {
+        break;
+      }
       final Badge? badge = allBadges.firstWhere(
         (Badge b) => b.id == id,
         orElse: () => allBadges.first,

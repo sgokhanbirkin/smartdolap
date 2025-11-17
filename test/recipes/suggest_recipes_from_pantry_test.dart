@@ -44,19 +44,19 @@ void main() {
       ];
 
       when(
-        () => mockRepository.suggestFromPantry(userId: testUserId),
+        () => mockRepository.suggestFromPantry(householdId: testUserId),
       ).thenAnswer((_) async => testRecipes);
 
       // Act
       final List<Recipe> result =
-          await suggestRecipesFromPantry(userId: testUserId);
+          await suggestRecipesFromPantry(householdId: testUserId);
 
       // Assert
       expect(result.length, equals(2));
       expect(result.first.title, equals('Yumurta Salatası'));
       expect(result.last.title, equals('Mantarlı Omlet'));
       expect(result.first.category, equals('kahvaltı'));
-      verify(() => mockRepository.suggestFromPantry(userId: testUserId))
+      verify(() => mockRepository.suggestFromPantry(householdId: testUserId))
           .called(1);
     });
 
@@ -65,16 +65,16 @@ void main() {
       const String testUserId = 'test-user-123';
 
       when(
-        () => mockRepository.suggestFromPantry(userId: testUserId),
+        () => mockRepository.suggestFromPantry(householdId: testUserId),
       ).thenAnswer((_) async => <Recipe>[]);
 
       // Act
       final List<Recipe> result =
-          await suggestRecipesFromPantry(userId: testUserId);
+          await suggestRecipesFromPantry(householdId: testUserId);
 
       // Assert
       expect(result, isEmpty);
-      verify(() => mockRepository.suggestFromPantry(userId: testUserId))
+      verify(() => mockRepository.suggestFromPantry(householdId: testUserId))
           .called(1);
     });
 
@@ -92,16 +92,16 @@ void main() {
       ];
 
       when(
-        () => mockRepository.suggestFromPantry(userId: testUserId),
+        () => mockRepository.suggestFromPantry(householdId: testUserId),
       ).thenAnswer((_) async => testRecipes);
 
       // Act
       final List<Recipe> result =
-          await suggestRecipesFromPantry(userId: testUserId);
+          await suggestRecipesFromPantry(householdId: testUserId);
 
       // Assert
       expect(result.first.missingCount, equals(1));
-      verify(() => mockRepository.suggestFromPantry(userId: testUserId))
+      verify(() => mockRepository.suggestFromPantry(householdId: testUserId))
           .called(1);
     });
 
@@ -111,15 +111,15 @@ void main() {
       final Exception testError = Exception('Repository error');
 
       when(
-        () => mockRepository.suggestFromPantry(userId: testUserId),
+        () => mockRepository.suggestFromPantry(householdId: testUserId),
       ).thenThrow(testError);
 
       // Act & Assert
       expect(
-        () => suggestRecipesFromPantry(userId: testUserId),
+        () => suggestRecipesFromPantry(householdId: testUserId),
         throwsA(testError),
       );
-      verify(() => mockRepository.suggestFromPantry(userId: testUserId))
+      verify(() => mockRepository.suggestFromPantry(householdId: testUserId))
           .called(1);
     });
   });

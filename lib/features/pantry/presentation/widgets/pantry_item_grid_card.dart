@@ -6,6 +6,7 @@ import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/category_colors.dart';
 import 'package:smartdolap/core/utils/quantity_formatter.dart';
+import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 
 /// Compact grid card for pantry items
@@ -247,13 +248,23 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                   ),
-                // Expiry date if exists - more compact
-                if (widget.item.expiryDate != null) ...[
-                  SizedBox(height: AppSizes.spacingXS * 0.2),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
+                // Avatar and expiry date row
+                SizedBox(height: AppSizes.spacingXS * 0.2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // Avatar
+                    if (widget.item.addedByAvatarId != null)
+                      Padding(
+                        padding: EdgeInsets.only(right: 4.w),
+                        child: AvatarWidget(
+                          avatarId: widget.item.addedByAvatarId,
+                          size: 12.w,
+                        ),
+                      ),
+                    // Expiry date if exists
+                    if (widget.item.expiryDate != null) ...[
                       Icon(
                         Icons.calendar_today,
                         size: AppSizes.iconXS * 0.6,
@@ -273,8 +284,8 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
                         ),
                       ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ],
             ),
           ),

@@ -19,7 +19,7 @@ void main() {
 
     test('should add pantry item and return it with id', () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
       const PantryItem inputItem = PantryItem(
         id: '',
         name: 'Yumurta',
@@ -35,14 +35,14 @@ void main() {
 
       when(
         () => mockRepository.addItem(
-          userId: testUserId,
+          householdId: testHouseholdId,
           item: inputItem,
         ),
       ).thenAnswer((_) async => expectedItem);
 
       // Act
       final PantryItem result = await addPantryItem(
-        userId: testUserId,
+        householdId: testHouseholdId,
         item: inputItem,
       );
 
@@ -52,7 +52,7 @@ void main() {
       expect(result.name, equals('Yumurta'));
       verify(
         () => mockRepository.addItem(
-          userId: testUserId,
+          householdId: testHouseholdId,
           item: inputItem,
         ),
       ).called(1);
@@ -60,7 +60,7 @@ void main() {
 
     test('should add pantry item with category', () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
       const PantryItem inputItem = PantryItem(
         id: '',
         name: 'Süt',
@@ -76,14 +76,14 @@ void main() {
 
       when(
         () => mockRepository.addItem(
-          userId: testUserId,
+          householdId: testHouseholdId,
           item: inputItem,
         ),
       ).thenAnswer((_) async => expectedItem);
 
       // Act
       final PantryItem result = await addPantryItem(
-        userId: testUserId,
+        householdId: testHouseholdId,
         item: inputItem,
       );
 
@@ -91,7 +91,7 @@ void main() {
       expect(result.category, equals('Süt Ürünleri'));
       verify(
         () => mockRepository.addItem(
-          userId: testUserId,
+          householdId: testHouseholdId,
           item: inputItem,
         ),
       ).called(1);
@@ -99,7 +99,7 @@ void main() {
 
     test('should propagate errors from repository', () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
       const PantryItem inputItem = PantryItem(
         id: '',
         name: 'Test Item',
@@ -108,19 +108,19 @@ void main() {
 
       when(
         () => mockRepository.addItem(
-          userId: testUserId,
+          householdId: testHouseholdId,
           item: inputItem,
         ),
       ).thenThrow(testError);
 
       // Act & Assert
       expect(
-        () => addPantryItem(userId: testUserId, item: inputItem),
+        () => addPantryItem(householdId: testHouseholdId, item: inputItem),
         throwsA(testError),
       );
       verify(
         () => mockRepository.addItem(
-          userId: testUserId,
+          householdId: testHouseholdId,
           item: inputItem,
         ),
       ).called(1);

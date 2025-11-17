@@ -19,6 +19,11 @@ import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit
 import 'package:smartdolap/features/recipes/presentation/view/recipe_detail_page.dart';
 import 'package:smartdolap/core/widgets/splash_page.dart';
 import 'package:smartdolap/features/onboarding/presentation/view/onboarding_page.dart';
+import 'package:smartdolap/features/analytics/presentation/view/analytics_page.dart';
+import 'package:smartdolap/features/household/presentation/view/household_setup_page.dart';
+import 'package:smartdolap/features/household/presentation/view/share_page.dart';
+import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
+import 'package:smartdolap/features/shopping/presentation/view/shopping_list_page.dart';
 import 'package:smartdolap/product/widgets/app_shell.dart';
 
 /// App router configuration
@@ -59,6 +64,18 @@ class AppRouter {
   /// Badges route path
   static const String badges = '/profile/badges';
 
+  /// Household setup route path
+  static const String householdSetup = '/household/setup';
+
+  /// Share route path
+  static const String share = '/share';
+
+  /// Analytics route path
+  static const String analytics = '/analytics';
+
+  /// Shopping list route path
+  static const String shoppingList = '/shopping-list';
+
   /// Generate route based on route settings
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -82,10 +99,13 @@ class AppRouter {
           builder: (BuildContext context) => const RegisterPage(),
         );
       case pantryAdd:
-        final String? userId = settings.arguments as String?;
+        final Map<String, dynamic>? args =
+            settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute<bool>(
           builder: (BuildContext context) {
-            if (userId == null || userId.isEmpty) {
+            if (args == null ||
+                args['householdId'] == null ||
+                args['userId'] == null) {
               return Scaffold(
                 body: Center(
                   child: Padding(
@@ -100,15 +120,22 @@ class AppRouter {
               );
             }
             return BlocProvider<PantryCubit>(
-              create: (_) => sl<PantryCubit>()..watch(userId),
-              child: AddPantryItemPage(userId: userId),
+              create: (_) =>
+                  sl<PantryCubit>()..watch(args['householdId'] as String),
+              child: AddPantryItemPage(
+                householdId: args['householdId'] as String,
+                userId: args['userId'] as String,
+                avatarId: args['avatarId'] as String?,
+              ),
             );
           },
         );
       case pantryDetail:
         final Map<String, dynamic>? args =
             settings.arguments as Map<String, dynamic>?;
-        if (args == null || args['item'] == null || args['userId'] == null) {
+        if (args == null ||
+            args['item'] == null ||
+            args['householdId'] == null) {
           return MaterialPageRoute<dynamic>(
             builder: (BuildContext context) => Scaffold(
               body: Center(
@@ -126,10 +153,11 @@ class AppRouter {
         }
         return MaterialPageRoute<bool>(
           builder: (BuildContext context) => BlocProvider<PantryCubit>(
-            create: (_) => sl<PantryCubit>()..watch(args['userId'] as String),
+            create: (_) =>
+                sl<PantryCubit>()..watch(args['householdId'] as String),
             child: PantryItemDetailPage(
               item: args['item'] as PantryItem,
-              userId: args['userId'] as String,
+              userId: args['householdId'] as String,
             ),
           ),
         );
@@ -170,7 +198,9 @@ class AppRouter {
       case getSuggestions:
         final Map<String, dynamic>? args =
             settings.arguments as Map<String, dynamic>?;
-        if (args == null || args['items'] == null || args['userId'] == null) {
+        if (args == null ||
+            args['items'] == null ||
+            args['householdId'] == null) {
           return MaterialPageRoute<dynamic>(
             builder: (BuildContext context) => Scaffold(
               body: Center(
@@ -189,23 +219,43 @@ class AppRouter {
         return MaterialPageRoute<bool>(
           builder: (BuildContext context) => MultiBlocProvider(
             providers: <BlocProvider<dynamic>>[
-              BlocProvider<RecipesCubit>(
-            create: (_) => sl<RecipesCubit>(),
-              ),
+              BlocProvider<RecipesCubit>(create: (_) => sl<RecipesCubit>()),
               BlocProvider<PantryCubit>(
-                create: (_) => sl<PantryCubit>()..watch(args['userId'] as String),
+                create: (_) =>
+                    sl<PantryCubit>()..watch(args['householdId'] as String),
               ),
             ],
             child: GetSuggestionsPage(
               items: args['items'] as List<PantryItem>,
               meal: args['meal'] as String?,
-              userId: args['userId'] as String,
+              userId: args['householdId'] as String,
             ),
           ),
         );
       case badges:
         return MaterialPageRoute<dynamic>(
           builder: (BuildContext context) => const BadgesPage(),
+        );
+      case householdSetup:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => BlocProvider<HouseholdCubit>(
+            create: (BuildContext _) => sl<HouseholdCubit>(),
+            child: const HouseholdSetupPage(),
+          ),
+        );
+      case share:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const SharePage(),
+        );
+      case analytics:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const AnalyticsPage(),
+          settings: settings,
+        );
+      case shoppingList:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const ShoppingListPage(),
+          settings: settings,
         );
       case home:
       default:

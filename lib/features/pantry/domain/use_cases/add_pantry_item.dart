@@ -9,6 +9,9 @@ class AddPantryItem {
 
   final IPantryRepository repository;
 
-  Future<PantryItem> call({required String userId, required PantryItem item}) =>
-      repository.addItem(userId: userId, item: item);
+  Future<PantryItem> call({
+    required String householdId,
+    required PantryItem item,
+  }) =>
+      repository.addItem(householdId: householdId, item: item);
 }

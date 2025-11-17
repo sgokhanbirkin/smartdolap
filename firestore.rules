@@ -1,0 +1,173 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to get current user ID
+    function currentUserId() {
+      return request.auth.uid;
+    }
+    
+    // Users collection - users can read/update their own data
+    match /users/{userId} {
+      allow read: if isAuthenticated() && currentUserId() == userId;
+      allow write: if isAuthenticated() && currentUserId() == userId;
+    }
+    
+    // Households collection
+    match /households/{householdId} {
+      // Anyone authenticated can read household data
+      allow read: if isAuthenticated();
+      
+      // Only authenticated users can create households
+      // Owner must be the current user
+      allow create: if isAuthenticated() 
+        && request.resource.data.ownerId == currentUserId();
+      
+      // Only owner can update household
+      allow update: if isAuthenticated() 
+        && resource.data.ownerId == currentUserId();
+      
+      // Only owner can delete household
+      allow delete: if isAuthenticated() 
+        && resource.data.ownerId == currentUserId();
+      
+      // Members subcollection
+      match /members/{memberId} {
+        // Household members can read members list
+        allow read: if isAuthenticated();
+        
+        // Users can add themselves as members
+        // Owner can add any member
+        allow create: if isAuthenticated() 
+          && (request.resource.data.userId == currentUserId() 
+            || get(/databases/$(database)/documents/households/$(householdId)).data.ownerId == currentUserId());
+        
+        // Users can update their own member data
+        // Owner can update any member
+        allow update: if isAuthenticated() 
+          && (resource.data.userId == currentUserId() 
+            || get(/databases/$(database)/documents/households/$(householdId)).data.ownerId == currentUserId());
+        
+        // Users can remove themselves
+        // Owner can remove any member
+        allow delete: if isAuthenticated() 
+          && (resource.data.userId == currentUserId() 
+            || get(/databases/$(database)/documents/households/$(householdId)).data.ownerId == currentUserId());
+      }
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Household members can read messages
+        allow read: if isAuthenticated();
+        
+        // Household members can create messages
+        allow create: if isAuthenticated() 
+          && request.resource.data.userId == currentUserId();
+        
+        // Only message author can update/delete their message
+        allow update, delete: if isAuthenticated() 
+          && resource.data.userId == currentUserId();
+      }
+      
+      // Shared recipes subcollection
+      match /sharedRecipes/{recipeId} {
+        // Household members can read shared recipes
+        allow read: if isAuthenticated();
+        
+        // Household members can share recipes
+        allow create: if isAuthenticated();
+        
+        // Only recipe sharer can delete their shared recipe
+        allow delete: if isAuthenticated() 
+          && resource.data.sharedByUserId == currentUserId();
+      }
+      
+      // Pantry subcollection
+      match /pantry/{itemId} {
+        // Household members can read pantry items
+        allow read: if isAuthenticated();
+        
+        // Household members can add pantry items
+        allow create: if isAuthenticated();
+        
+        // Household members can update pantry items
+        allow update: if isAuthenticated();
+        
+        // Household members can delete pantry items
+        allow delete: if isAuthenticated();
+      }
+      
+      // Shopping list subcollection
+      match /shoppingList/{itemId} {
+        // Household members can read shopping list
+        allow read: if isAuthenticated();
+        
+        // Household members can add items to shopping list
+        allow create: if isAuthenticated();
+        
+        // Household members can update shopping list items
+        allow update: if isAuthenticated();
+        
+        // Household members can delete shopping list items
+        allow delete: if isAuthenticated();
+      }
+      
+      // Meal consumptions subcollection
+      match /mealConsumptions/{consumptionId} {
+        // Users can read their own meal consumptions
+        allow read: if isAuthenticated() 
+          && resource.data.userId == currentUserId();
+        
+        // Users can create their own meal consumptions
+        allow create: if isAuthenticated() 
+          && request.resource.data.userId == currentUserId();
+        
+        // Users can update their own meal consumptions
+        allow update: if isAuthenticated() 
+          && resource.data.userId == currentUserId();
+        
+        // Users can delete their own meal consumptions
+        allow delete: if isAuthenticated() 
+          && resource.data.userId == currentUserId();
+      }
+    }
+    
+    // Invite codes collection
+    match /inviteCodes/{inviteCode} {
+      // Anyone authenticated can read invite codes
+      allow read: if isAuthenticated();
+      
+      // Only authenticated users can create invite codes
+      // Must be owner of the household
+      allow create: if isAuthenticated() 
+        && get(/databases/$(database)/documents/households/$(request.resource.data.householdId)).data.ownerId == currentUserId();
+      
+      // Only owner can delete invite codes
+      allow delete: if isAuthenticated() 
+        && get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.ownerId == currentUserId();
+    }
+    
+    // User analytics collection - users/{userId}/analytics
+    match /users/{userId}/analytics/{analyticsId} {
+      // Users can only read their own analytics
+      allow read: if isAuthenticated() && currentUserId() == userId;
+      
+      // Users can create/update their own analytics
+      allow write: if isAuthenticated() && currentUserId() == userId;
+    }
+    
+    // User recipes collection - users/{userId}/recipes
+    match /users/{userId}/recipes/{recipeId} {
+      // Users can read their own recipes
+      allow read: if isAuthenticated() && currentUserId() == userId;
+      
+      // Users can create/update/delete their own recipes
+      allow write: if isAuthenticated() && currentUserId() == userId;
+    }
+  }
+}
+

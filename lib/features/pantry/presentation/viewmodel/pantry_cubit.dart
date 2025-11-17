@@ -8,7 +8,7 @@ import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart
 import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
-import 'package:smartdolap/features/pantry/data/services/pantry_notification_coordinator.dart';
+import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_notification_coordinator.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.dart';
 
 /// Pantry Cubit - Manages pantry state and operations
@@ -27,26 +27,26 @@ class PantryCubit extends Cubit<PantryState> {
   final AddPantryItem addPantryItem;
   final UpdatePantryItem updatePantryItem;
   final DeletePantryItem deletePantryItem;
-  final PantryNotificationCoordinator notificationCoordinator;
+  final IPantryNotificationCoordinator notificationCoordinator;
 
   StreamSubscription<List<PantryItem>>? _sub;
 
-  Future<void> watch(String userId) async {
+  Future<void> watch(String householdId) async {
     emit(const PantryLoading());
     await _sub?.cancel();
-    _sub = listPantryItems(userId: userId).listen(
+    _sub = listPantryItems(householdId: householdId).listen(
       (List<PantryItem> items) => emit(PantryLoaded(items)),
       onError: (Object e) => emit(PantryFailure(e.toString())),
     );
   }
 
-  Future<void> refresh(String userId) async {
-    await watch(userId);
+  Future<void> refresh(String householdId) async {
+    await watch(householdId);
   }
 
-  Future<void> add(String userId, PantryItem item) async {
+  Future<void> add(String householdId, PantryItem item) async {
     try {
-      await addPantryItem(userId: userId, item: item);
+      await addPantryItem(householdId: householdId, item: item);
       // Delegate notification scheduling to coordinator
       await notificationCoordinator.handleItemAdded(item);
     } catch (e) {
@@ -54,7 +54,7 @@ class PantryCubit extends Cubit<PantryState> {
     }
   }
 
-  Future<void> update(String userId, PantryItem item) async {
+  Future<void> update(String householdId, PantryItem item) async {
     try {
       // Get old item to check if expiry date changed
       final PantryState currentState = state;
@@ -66,7 +66,7 @@ class PantryCubit extends Cubit<PantryState> {
         );
       }
 
-      await updatePantryItem(userId: userId, item: item);
+      await updatePantryItem(householdId: householdId, item: item);
 
       // Delegate notification updates to coordinator
       if (oldItem != null) {
@@ -77,9 +77,9 @@ class PantryCubit extends Cubit<PantryState> {
     }
   }
 
-  Future<void> remove(String userId, String itemId) async {
+  Future<void> remove(String householdId, String itemId) async {
     try {
-      await deletePantryItem(userId: userId, itemId: itemId);
+      await deletePantryItem(householdId: householdId, itemId: itemId);
       // Delegate notification cancellation to coordinator
       await notificationCoordinator.handleItemDeleted(itemId);
     } catch (e) {

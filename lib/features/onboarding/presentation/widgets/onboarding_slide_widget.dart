@@ -5,9 +5,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lottie/lottie.dart';
 import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/utils/responsive_extensions.dart';
 import 'package:smartdolap/features/onboarding/domain/entities/onboarding_slide.dart';
 
 /// Onboarding slide widget - displays a single onboarding slide
+/// Responsive: Adapts layout for tablet/desktop screens
 class OnboardingSlideWidget extends StatefulWidget {
   /// Creates an onboarding slide widget
   const OnboardingSlideWidget({
@@ -30,42 +32,62 @@ class _OnboardingSlideWidgetState extends State<OnboardingSlideWidget> {
   bool _lottieError = false;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.symmetric(
-      horizontal: AppSizes.padding * 2,
-      vertical: AppSizes.padding,
-    ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        // Animation widget
-        _buildAnimationWidget(),
-        SizedBox(height: AppSizes.verticalSpacingXL),
-        // Title
-        _buildTitle(),
-        SizedBox(height: AppSizes.verticalSpacingM),
-        // Description
-        _buildDescription(),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    // Responsive: Adapt padding and sizes for tablet/desktop
+    final bool isTablet = context.isTablet;
+    final double horizontalPadding = isTablet
+        ? AppSizes.padding * 3
+        : AppSizes.padding * 2;
+    final double verticalPadding = isTablet
+        ? AppSizes.padding * 2
+        : AppSizes.padding;
+    final double animationSize = isTablet ? 320.w : 240.w;
 
-  Widget _buildAnimationWidget() {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          // Animation widget - Responsive size
+          _buildAnimationWidget(animationSize),
+          SizedBox(
+            height: isTablet
+                ? AppSizes.verticalSpacingXXL
+                : AppSizes.verticalSpacingXL,
+          ),
+          // Title - Responsive font size
+          _buildTitle(isTablet),
+          SizedBox(
+            height: isTablet
+                ? AppSizes.verticalSpacingL
+                : AppSizes.verticalSpacingM,
+          ),
+          // Description - Responsive font size
+          _buildDescription(isTablet),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimationWidget(double size) {
     final String? lottieUrl = widget.slide.lottieUrl;
 
     if (lottieUrl != null && !_lottieError) {
       return SizedBox(
-        width: 240.w,
-        height: 240.w,
-        child: _buildLottieAnimation(lottieUrl),
+        width: size,
+        height: size,
+        child: _buildLottieAnimation(lottieUrl, size),
       );
     }
 
-    return SizedBox(width: 240.w, height: 240.w, child: _buildFallbackIcon());
+    return SizedBox(width: size, height: size, child: _buildFallbackIcon(size));
   }
 
-  Widget _buildLottieAnimation(String path) {
+  Widget _buildLottieAnimation(String path, double size) {
     // Check if it's an asset path (starts with 'assets/') or a network URL
     final bool isAsset = path.startsWith('assets/');
 
@@ -81,7 +103,7 @@ class _OnboardingSlideWidgetState extends State<OnboardingSlideWidget> {
                   });
                 }
               });
-              return _buildFallbackIcon();
+              return _buildFallbackIcon(size);
             },
           )
         : Lottie.network(
@@ -95,7 +117,7 @@ class _OnboardingSlideWidgetState extends State<OnboardingSlideWidget> {
                   });
                 }
               });
-              return _buildFallbackIcon();
+              return _buildFallbackIcon(size);
             },
           );
 
@@ -115,10 +137,10 @@ class _OnboardingSlideWidgetState extends State<OnboardingSlideWidget> {
         );
   }
 
-  Widget _buildFallbackIcon() =>
+  Widget _buildFallbackIcon(double size) =>
       Container(
-            width: 240.w,
-            height: 240.w,
+            width: size,
+            height: size,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -144,7 +166,7 @@ class _OnboardingSlideWidgetState extends State<OnboardingSlideWidget> {
             ),
             child: Icon(
               widget.slide.fallbackIcon,
-              size: 100.w,
+              size: size * 0.4,
               color: AppColors.textLight,
             ),
           )
@@ -186,11 +208,13 @@ class _OnboardingSlideWidgetState extends State<OnboardingSlideWidget> {
             curve: Curves.easeInOut,
           );
 
-  Widget _buildTitle() =>
+  Widget _buildTitle(bool isTablet) =>
       Text(
             tr(widget.slide.titleKey),
             style: TextStyle(
-              fontSize: AppSizes.textHeading,
+              fontSize: isTablet
+                  ? AppSizes.textHeading * 1.2
+                  : AppSizes.textHeading,
               fontWeight: FontWeight.bold,
               color: AppColors.textLight,
               shadows: <Shadow>[
@@ -217,13 +241,15 @@ class _OnboardingSlideWidgetState extends State<OnboardingSlideWidget> {
             curve: Curves.easeOutCubic,
           );
 
-  Widget _buildDescription() => Padding(
-    padding: EdgeInsets.symmetric(horizontal: AppSizes.padding),
+  Widget _buildDescription(bool isTablet) => Padding(
+    padding: EdgeInsets.symmetric(
+      horizontal: isTablet ? AppSizes.padding * 2 : AppSizes.padding,
+    ),
     child:
         Text(
               tr(widget.slide.descriptionKey),
               style: TextStyle(
-                fontSize: AppSizes.textL,
+                fontSize: isTablet ? AppSizes.textL * 1.1 : AppSizes.textL,
                 color: AppColors.textLight.withValues(alpha: 0.9),
                 height: 1.6,
               ),

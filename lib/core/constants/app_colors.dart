@@ -5,15 +5,15 @@ class AppColors {
   AppColors._();
 
   // Primary colors
-  /// Primary red color (#E53935)
-  static const Color primaryRed = Color(0xFFE53935);
+  /// Primary red color (#EF5350) - Lighter for better contrast
+  static const Color primaryRed = Color(0xFFEF5350);
 
   /// Primary blue color (#2196F3)
   static const Color primaryBlue = Color(0xFF2196F3);
 
   // Dark mode variants
-  /// Dark mode primary red (#B71C1C)
-  static const Color primaryRedDark = Color(0xFFB71C1C);
+  /// Dark mode primary red (#D32F2F) - Lighter for better contrast
+  static const Color primaryRedDark = Color(0xFFD32F2F);
 
   /// Dark mode primary blue (#1565C0)
   static const Color primaryBlueDark = Color(0xFF1565C0);

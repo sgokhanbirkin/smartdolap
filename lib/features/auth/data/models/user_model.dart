@@ -9,6 +9,8 @@ class UserModel extends User {
     required super.email,
     super.displayName,
     super.photoUrl,
+    super.householdId,
+    super.avatarId,
   });
 
   /// Create from JSON
@@ -17,6 +19,8 @@ class UserModel extends User {
     email: json['email'] as String,
     displayName: json['displayName'] as String?,
     photoUrl: json['photoUrl'] as String?,
+    householdId: json['householdId'] as String?,
+    avatarId: json['avatarId'] as String?,
   );
 
   /// Create UserModel from Firebase User
@@ -28,8 +32,14 @@ class UserModel extends User {
   );
 
   /// Convert to domain entity
-  User toEntity() =>
-      User(id: id, email: email, displayName: displayName, photoUrl: photoUrl);
+  User toEntity() => User(
+        id: id,
+        email: email,
+        displayName: displayName,
+        photoUrl: photoUrl,
+        householdId: householdId,
+        avatarId: avatarId,
+      );
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -37,5 +47,7 @@ class UserModel extends User {
     'email': email,
     'displayName': displayName,
     'photoUrl': photoUrl,
+    'householdId': householdId,
+    'avatarId': avatarId,
   };
 }

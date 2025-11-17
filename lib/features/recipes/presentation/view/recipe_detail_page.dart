@@ -10,6 +10,11 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/features/analytics/domain/services/i_analytics_service.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_detail_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/hero_image_widget.dart';
@@ -19,6 +24,7 @@ import 'package:smartdolap/features/recipes/presentation/widgets/progress_card_w
 import 'package:smartdolap/features/recipes/presentation/widgets/recipe_chips_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/steps_list_widget.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Recipe detail screen
 class RecipeDetailPage extends StatefulWidget {
@@ -35,11 +41,27 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   final Set<int> _completedSteps = <int>{};
   final Set<int> _collectedIngredients = <int>{};
   late final RecipeDetailService _recipeDetailService;
+  late final IAnalyticsService _analyticsService;
 
   @override
   void initState() {
     super.initState();
     _recipeDetailService = RecipeDetailService();
+    _analyticsService = sl<IAnalyticsService>();
+  }
+
+  /// Determine meal type based on current time
+  String _getMealType() {
+    final int hour = DateTime.now().hour;
+    if (hour >= 6 && hour < 11) {
+      return 'breakfast';
+    } else if (hour >= 11 && hour < 15) {
+      return 'lunch';
+    } else if (hour >= 15 && hour < 21) {
+      return 'dinner';
+    } else {
+      return 'snack';
+    }
   }
 
   double get _stepProgress {
@@ -246,6 +268,29 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     }
 
     if (result.success) {
+      // Record meal consumption for analytics
+      final AuthState authState = context.read<AuthCubit>().state;
+      await authState.maybeWhen(
+        authenticated: (domain.User user) async {
+          if (user.householdId != null) {
+            try {
+              await _analyticsService.recordRecipeConsumption(
+                userId: user.id,
+                householdId: user.householdId!,
+                recipeId: widget.recipe!.id,
+                recipeTitle: widget.recipe!.title,
+                ingredients: widget.recipe!.ingredients,
+                meal: _getMealType(),
+              );
+            } on Exception catch (e) {
+              // Silently fail - analytics is not critical
+              debugPrint('[RecipeDetailPage] Error recording consumption: $e');
+            }
+          }
+        },
+        orElse: () async {},
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

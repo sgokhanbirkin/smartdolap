@@ -104,17 +104,19 @@ class CategorySelectorWidget extends StatelessWidget {
                               PantryCategoryHelper.iconFor(cat),
                               size: AppSizes.iconXS,
                               color: selected
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .onPrimaryContainer
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                             ),
                             SizedBox(width: AppSizes.spacingXS),
                             Flexible(
                               child: Text(
-                                cat,
+                                PantryCategoryHelper.getLocalizedCategoryName(
+                                  cat,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -123,8 +125,9 @@ class CategorySelectorWidget extends StatelessWidget {
                         selected: selected,
                         onSelected: (bool value) =>
                             onCategorySelected(value ? cat : null),
-                        selectedColor:
-                            Theme.of(context).colorScheme.primaryContainer,
+                        selectedColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
                         labelStyle: TextStyle(
                           fontSize: AppSizes.textXS,
                           fontWeight: selected
@@ -134,9 +137,9 @@ class CategorySelectorWidget extends StatelessWidget {
                               ? Theme.of(context).colorScheme.onPrimaryContainer
                               : Theme.of(context).colorScheme.onSurface,
                         ),
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         side: BorderSide(
                           color: selected
                               ? Theme.of(context).colorScheme.primary
@@ -157,4 +160,3 @@ class CategorySelectorWidget extends StatelessWidget {
     ),
   );
 }
-

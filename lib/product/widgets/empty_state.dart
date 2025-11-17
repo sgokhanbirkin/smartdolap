@@ -27,12 +27,13 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: EdgeInsets.all(AppSizes.padding * 1.5),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
+    child: SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(AppSizes.padding * 1.5),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
           // Lottie animation or icon
           if (lottieAsset != null) ...<Widget>[
             SizedBox(
@@ -104,6 +105,7 @@ class EmptyState extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     ),
   );

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
@@ -17,9 +16,7 @@ import 'package:smartdolap/features/recipes/presentation/widgets/recipes_advance
 import 'package:smartdolap/features/recipes/presentation/widgets/recipes_search_bar_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/recipes_search_results_widget.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
-import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/product/router/app_router.dart';
-import 'package:smartdolap/product/widgets/custom_button.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
 import 'package:smartdolap/product/widgets/error_state.dart';
 

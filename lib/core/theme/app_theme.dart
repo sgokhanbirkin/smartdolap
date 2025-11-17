@@ -8,8 +8,9 @@ class AppTheme {
   // Color definitions
   static const Color _primaryBlue = Color(0xFF2196F3);
   static const Color _primaryBlueDark = Color(0xFF1565C0);
-  static const Color _accentRed = Color(0xFFE53935);
-  static const Color _accentRedDark = Color(0xFFB71C1C);
+  // Lighter red for better contrast and readability
+  static const Color _accentRed = Color(0xFFEF5350); // Lighter red (#E53935 -> #EF5350)
+  static const Color _accentRedDark = Color(0xFFD32F2F); // Lighter dark red (#B71C1C -> #D32F2F)
 
   /// Light theme
   static ThemeData light() {
@@ -35,6 +36,24 @@ class AppTheme {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+        indicatorColor: Colors.white,
+        labelStyle: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: _accentRed,
@@ -85,6 +104,24 @@ class AppTheme {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+        indicatorColor: Colors.white,
+        labelStyle: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: _accentRedDark,

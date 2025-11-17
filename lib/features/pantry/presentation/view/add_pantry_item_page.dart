@@ -1,5 +1,6 @@
 // ignore_for_file: lines_longer_than_80_chars, public_member_api_docs, use_build_context_synchronously, always_put_control_body_on_new_line
 import 'dart:async';
+import 'dart:math';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -26,9 +27,16 @@ import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/storage/i_storage_service.dart';
 
 class AddPantryItemPage extends StatefulWidget {
-  const AddPantryItemPage({required this.userId, super.key});
+  const AddPantryItemPage({
+    required this.householdId,
+    required this.userId,
+    this.avatarId,
+    super.key,
+  });
 
+  final String householdId;
   final String userId;
+  final String? avatarId;
 
   @override
   State<AddPantryItemPage> createState() => _AddPantryItemPageState();
@@ -221,7 +229,18 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
     _imageDebounce?.cancel();
     _imageDebounce = Timer(const Duration(milliseconds: 700), () async {
       setState(() => _isImageLoading = true);
-      final String? url = await _imageLookup.search('$name food photo');
+      // Create more varied search queries for better image diversity
+      final List<String> searchQueries = <String>[
+        '$name food photo',
+        '$name yemek fotoğraf',
+        '$name ürün fotoğraf',
+        '$name fresh',
+        '$name taze',
+      ];
+      // Use a random query from the list for variety
+      final Random random = Random();
+      final String searchQuery = searchQueries[random.nextInt(searchQueries.length)];
+      final String? url = await _imageLookup.search(searchQuery);
       if (!mounted || _name.text.trim() != name) {
         return;
       }
@@ -309,8 +328,10 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
                     expiryDate: _expiry,
                     category: normalizedCategory,
                     imageUrl: _imageUrl,
+                    addedByUserId: widget.userId,
+                    addedByAvatarId: widget.avatarId,
                   );
-                  await context.read<PantryCubit>().add(widget.userId, item);
+                  await context.read<PantryCubit>().add(widget.householdId, item);
                   if (mounted) Navigator.of(context).pop(true);
                 },
                 style: ElevatedButton.styleFrom(

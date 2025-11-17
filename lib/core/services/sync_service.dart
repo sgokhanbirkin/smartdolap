@@ -1,15 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
+import 'package:smartdolap/core/services/i_sync_service.dart';
 import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
 import 'package:smartdolap/features/recipes/data/services/firestore_recipe_mapper.dart';
-import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 
 /// Service for syncing Firestore data to Hive cache
 /// Follows Single Responsibility Principle - only handles sync logic
-class SyncService {
+class SyncService implements ISyncService {
   /// Creates a sync service
   SyncService({
     required this.firestore,
@@ -23,7 +24,7 @@ class SyncService {
   final IPantryRepository pantryRepository;
   final IRecipesRepository recipesRepository;
   final Box<dynamic> pantryBox;
-  final RecipeCacheService recipeCacheService;
+  final IRecipeCacheService recipeCacheService;
 
   /// Syncs all user data from Firestore to Hive
   /// Called after login/register to ensure local cache is up-to-date
@@ -50,7 +51,8 @@ class SyncService {
       Logger.info('[SyncService] Syncing pantry items for user: $userId');
 
       // Get items from Firestore (this already writes to cache)
-      await pantryRepository.getItems(userId: userId);
+      // Note: userId parameter is actually householdId for pantry sync
+      await pantryRepository.getItems(householdId: userId);
 
       Logger.info('[SyncService] Pantry items synced to Hive');
     } catch (e, s) {

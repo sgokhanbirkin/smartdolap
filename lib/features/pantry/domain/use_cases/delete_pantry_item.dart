@@ -8,6 +8,9 @@ class DeletePantryItem {
 
   final IPantryRepository repository;
 
-  Future<void> call({required String userId, required String itemId}) =>
-      repository.deleteItem(userId: userId, itemId: itemId);
+  Future<void> call({
+    required String householdId,
+    required String itemId,
+  }) =>
+      repository.deleteItem(householdId: householdId, itemId: itemId);
 }

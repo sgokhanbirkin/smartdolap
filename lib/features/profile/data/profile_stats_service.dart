@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:hive/hive.dart';
 import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 
 /// Handles gamification XP/level calculations.
 /// Follows Single Responsibility Principle - only handles stats management
-class ProfileStatsService {
+class ProfileStatsService implements IProfileStatsService {
   /// Creates a service backed by the provided Hive box.
   ProfileStatsService(this._box, {this.onStatsChanged})
-      : _controller = StreamController<ProfileStats>.broadcast();
+    : _controller = StreamController<ProfileStats>.broadcast();
 
   final Box<dynamic> _box;
   static const String _statsKey = 'profile_stats';
@@ -50,8 +51,9 @@ class ProfileStatsService {
   /// Adds one AI-generated recipe to the counters.
   Future<ProfileStats> incrementAiRecipes() async {
     final ProfileStats current = load();
-    final ProfileStats updated =
-        current.copyWith(aiRecipes: current.aiRecipes + 1);
+    final ProfileStats updated = current.copyWith(
+      aiRecipes: current.aiRecipes + 1,
+    );
     await save(updated);
     return updated;
   }
@@ -61,9 +63,7 @@ class ProfileStatsService {
     final ProfileStats current = load();
     final ProfileStats updated = current.copyWith(
       userRecipes: current.userRecipes + 1,
-      photoUploads: withPhoto
-          ? current.photoUploads + 1
-          : current.photoUploads,
+      photoUploads: withPhoto ? current.photoUploads + 1 : current.photoUploads,
     );
     await save(updated);
     return updated;

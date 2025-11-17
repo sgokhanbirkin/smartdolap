@@ -27,8 +27,8 @@ class GetSuggestionsPage extends StatefulWidget {
   /// List of pantry items
   final List<PantryItem> items;
 
-  /// User ID
-  final String userId;
+  /// Household ID (for pantry access)
+  final String userId; // Actually householdId
 
   /// Optional meal key
   final String? meal;

@@ -8,6 +8,6 @@ class SuggestRecipesFromPantry {
 
   final IRecipesRepository repository;
 
-  Future<List<Recipe>> call({required String userId}) =>
-      repository.suggestFromPantry(userId: userId);
+  Future<List<Recipe>> call({required String householdId}) =>
+      repository.suggestFromPantry(householdId: householdId);
 }

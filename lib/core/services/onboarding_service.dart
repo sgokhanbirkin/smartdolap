@@ -1,7 +1,8 @@
 import 'package:hive/hive.dart';
+import 'package:smartdolap/core/services/i_onboarding_service.dart';
 
 /// Service to manage onboarding state
-class OnboardingService {
+class OnboardingService implements IOnboardingService {
   /// Creates an onboarding service
   OnboardingService(this._box);
 

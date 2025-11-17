@@ -10,35 +10,36 @@ import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_reposito
 import 'package:uuid/uuid.dart';
 
 /// Firestore-based implementation for Pantry repository
+/// Now uses households/{householdId}/pantry instead of users/{userId}/pantry
 class PantryRepositoryImpl implements IPantryRepository {
   PantryRepositoryImpl(this._firestore, this._cache);
 
   final FirebaseFirestore _firestore;
   final Box<dynamic> _cache;
-  static const String _users = 'users';
+  static const String _households = 'households';
   static const String _pantry = 'pantry';
   static const Uuid _uuid = Uuid();
 
-  CollectionReference<Map<String, dynamic>> _col(String userId) =>
-      _firestore.collection(_users).doc(userId).collection(_pantry);
+  CollectionReference<Map<String, dynamic>> _col(String householdId) =>
+      _firestore.collection(_households).doc(householdId).collection(_pantry);
 
   @override
-  Stream<List<PantryItem>> watchItems({required String userId}) {
+  Stream<List<PantryItem>> watchItems({required String householdId}) {
     final StreamController<List<PantryItem>> controller =
         StreamController<List<PantryItem>>();
-    final List<PantryItem> cached = _readCache(userId);
+    final List<PantryItem> cached = _readCache(householdId);
     if (cached.isNotEmpty) {
       controller.add(cached);
     }
 
     final StreamSubscription<QuerySnapshot<Map<String, dynamic>>> sub =
-        _col(userId).orderBy('createdAt', descending: true).snapshots().listen((
+        _col(householdId).orderBy('createdAt', descending: true).snapshots().listen((
           QuerySnapshot<Map<String, dynamic>> snap,
         ) {
           final List<PantryItem> items = snap.docs
               .map(_fromDoc)
               .toList(growable: false);
-          _writeCache(userId, items);
+          _writeCache(householdId, items);
           controller.add(items);
         }, onError: controller.addError);
 
@@ -50,28 +51,28 @@ class PantryRepositoryImpl implements IPantryRepository {
   }
 
   @override
-  Future<List<PantryItem>> getItems({required String userId}) async {
+  Future<List<PantryItem>> getItems({required String householdId}) async {
     // 1. Önce Hive cache'den kontrol et
-    final List<PantryItem> cached = _readCache(userId);
+    final List<PantryItem> cached = _readCache(householdId);
     if (cached.isNotEmpty) {
       // Cache'de veri varsa önce onu döndür, sonra arka planda Firestore'dan güncelle
-      _syncFromFirestoreInBackground(userId);
+      _syncFromFirestoreInBackground(householdId);
       return cached;
     }
 
     // 2. Cache boşsa Firestore'dan çek
     try {
       final QuerySnapshot<Map<String, dynamic>> q = await _col(
-        userId,
+        householdId,
       ).orderBy('createdAt', descending: true).get();
       final List<PantryItem> items = q.docs
           .map(_fromDoc)
           .toList(growable: false);
-      _writeCache(userId, items);
+      _writeCache(householdId, items);
       return items;
     } catch (e) {
       // Firestore hatası durumunda cache'i kontrol et (fallback)
-      final List<PantryItem> cached = _readCache(userId);
+      final List<PantryItem> cached = _readCache(householdId);
       if (cached.isNotEmpty) {
         return cached;
       }
@@ -80,14 +81,14 @@ class PantryRepositoryImpl implements IPantryRepository {
   }
 
   /// Syncs from Firestore in background without blocking
-  void _syncFromFirestoreInBackground(String userId) {
-    _col(userId).orderBy('createdAt', descending: true).get().then((
+  void _syncFromFirestoreInBackground(String householdId) {
+    _col(householdId).orderBy('createdAt', descending: true).get().then((
       QuerySnapshot<Map<String, dynamic>> q,
     ) {
       final List<PantryItem> items = q.docs
           .map(_fromDoc)
           .toList(growable: false);
-      _writeCache(userId, items);
+      _writeCache(householdId, items);
     }).catchError((dynamic e) {
       // Silently fail - cache is already available
     });
@@ -95,7 +96,7 @@ class PantryRepositoryImpl implements IPantryRepository {
 
   @override
   Future<PantryItem> addItem({
-    required String userId,
+    required String householdId,
     required PantryItem item,
   }) async {
     final String id = item.id.isEmpty ? _uuid.v4() : item.id;
@@ -106,37 +107,37 @@ class PantryRepositoryImpl implements IPantryRepository {
     data['id'] = id;
     data['createdAt'] = now.toIso8601String();
     data['updatedAt'] = now.toIso8601String();
-    await _col(userId).doc(id).set(data);
+    await _col(householdId).doc(id).set(data);
     final PantryItem created = item.copyWith(
       id: id,
       createdAt: now,
       updatedAt: now,
     );
-    _cacheInsert(userId, created);
+    _cacheInsert(householdId, created);
     return created;
   }
 
   @override
   Future<PantryItem> updateItem({
-    required String userId,
+    required String householdId,
     required PantryItem item,
   }) async {
     final DateTime now = DateTime.now();
     final Map<String, dynamic> data = _toMap(item);
     data['updatedAt'] = now.toIso8601String();
-    await _col(userId).doc(item.id).update(data);
+    await _col(householdId).doc(item.id).update(data);
     final PantryItem updated = item.copyWith(updatedAt: now);
-    _cacheUpsert(userId, updated);
+    _cacheUpsert(householdId, updated);
     return updated;
   }
 
   @override
   Future<void> deleteItem({
-    required String userId,
+    required String householdId,
     required String itemId,
   }) async {
-    await _col(userId).doc(itemId).delete();
-    _cacheRemove(userId, itemId);
+    await _col(householdId).doc(itemId).delete();
+    _cacheRemove(householdId, itemId);
   }
 
   PantryItem _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) =>
@@ -145,16 +146,16 @@ class PantryRepositoryImpl implements IPantryRepository {
   PantryItem _fromMap(Map<String, dynamic> m, {String? fallbackId}) => PantryItem(
     id: m['id'] as String? ?? fallbackId ?? '',
     name: m['name'] as String? ?? '',
-      quantity: (m['quantity'] as num?)?.toDouble() ?? 1.0,
-      unit: m['unit'] as String? ?? '',
-      expiryDate: m['expiryDate'] != null
-          ? DateTime.tryParse(m['expiryDate'] as String)
-          : null,
-      imageUrl: m['imageUrl'] as String?,
-      ingredients:
-          (m['ingredients'] as List<dynamic>?)
-              ?.map(
-                (dynamic e) => Ingredient(
+    quantity: (m['quantity'] as num?)?.toDouble() ?? 1.0,
+    unit: m['unit'] as String? ?? '',
+    expiryDate: m['expiryDate'] != null
+        ? DateTime.tryParse(m['expiryDate'] as String)
+        : null,
+    imageUrl: m['imageUrl'] as String?,
+    ingredients:
+        (m['ingredients'] as List<dynamic>?)
+            ?.map(
+              (dynamic e) => Ingredient(
                 name: (e as Map<String, dynamic>)['name'] as String? ?? '',
                 unit: (e)['unit'] as String? ?? '',
                 quantity: ((e)['quantity'] as num?)?.toDouble() ?? 1.0,
@@ -169,6 +170,8 @@ class PantryRepositoryImpl implements IPantryRepository {
     updatedAt: m['updatedAt'] != null
         ? DateTime.tryParse(m['updatedAt'] as String)
         : null,
+    addedByUserId: m['addedByUserId'] as String?,
+    addedByAvatarId: m['addedByAvatarId'] as String?,
   );
 
   Map<String, dynamic> _toMap(PantryItem item) => <String, dynamic>{
@@ -190,10 +193,12 @@ class PantryRepositoryImpl implements IPantryRepository {
     'category': item.category,
     'createdAt': item.createdAt?.toIso8601String(),
     'updatedAt': item.updatedAt?.toIso8601String(),
+    'addedByUserId': item.addedByUserId,
+    'addedByAvatarId': item.addedByAvatarId,
   };
 
-  List<PantryItem> _readCache(String userId) {
-    final List<dynamic>? raw = _cache.get(userId) as List<dynamic>?;
+  List<PantryItem> _readCache(String householdId) {
+    final List<dynamic>? raw = _cache.get(householdId) as List<dynamic>?;
     if (raw == null) {
       return <PantryItem>[];
     }
@@ -206,31 +211,31 @@ class PantryRepositoryImpl implements IPantryRepository {
         .toList(growable: true);
   }
 
-  void _writeCache(String userId, List<PantryItem> items) {
-    _cache.put(userId, items.map(_toMap).toList(growable: false));
+  void _writeCache(String householdId, List<PantryItem> items) {
+    _cache.put(householdId, items.map(_toMap).toList(growable: false));
   }
 
-  void _cacheInsert(String userId, PantryItem item) {
-    final List<PantryItem> current = _readCache(userId);
+  void _cacheInsert(String householdId, PantryItem item) {
+    final List<PantryItem> current = _readCache(householdId);
     current.removeWhere((PantryItem e) => e.id == item.id);
     current.insert(0, item);
-    _writeCache(userId, current);
+    _writeCache(householdId, current);
   }
 
-  void _cacheUpsert(String userId, PantryItem item) {
-    final List<PantryItem> current = _readCache(userId);
+  void _cacheUpsert(String householdId, PantryItem item) {
+    final List<PantryItem> current = _readCache(householdId);
     final int idx = current.indexWhere((PantryItem e) => e.id == item.id);
     if (idx >= 0) {
       current[idx] = item;
     } else {
       current.insert(0, item);
     }
-    _writeCache(userId, current);
+    _writeCache(householdId, current);
   }
 
-  void _cacheRemove(String userId, String itemId) {
-    final List<PantryItem> current = _readCache(userId);
+  void _cacheRemove(String householdId, String itemId) {
+    final List<PantryItem> current = _readCache(householdId);
     current.removeWhere((PantryItem e) => e.id == itemId);
-    _writeCache(userId, current);
+    _writeCache(householdId, current);
   }
 }

@@ -42,22 +42,31 @@ class PantryHeaderWidget extends StatelessWidget {
           BlocBuilder<AuthCubit, AuthState>(
             builder: (BuildContext context, AuthState authState) {
               return authState.whenOrNull(
-                authenticated: (domain.User user) => TextButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(
-                      AppRouter.pantryAdd,
-                      arguments: user.id,
-                    );
-                  },
-                  icon: Icon(Icons.add, size: AppSizes.iconS),
-                  label: Text(tr('add_item')),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.spacingS,
-                      vertical: AppSizes.spacingXS,
+                authenticated: (domain.User user) {
+                  if (user.householdId == null) {
+                    return const SizedBox.shrink();
+                  }
+                  return TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(
+                        AppRouter.pantryAdd,
+                        arguments: <String, dynamic>{
+                          'householdId': user.householdId!,
+                          'userId': user.id,
+                          'avatarId': user.avatarId,
+                        },
+                      );
+                    },
+                    icon: Icon(Icons.add, size: AppSizes.iconS),
+                    label: Text(tr('add_item')),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSizes.spacingS,
+                        vertical: AppSizes.spacingXS,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ) ?? const SizedBox.shrink();
             },
           ),

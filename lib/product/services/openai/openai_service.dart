@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:smartdolap/core/utils/logger.dart';
+import 'package:smartdolap/core/utils/tonl_encoder.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
@@ -89,39 +90,49 @@ class OpenAIService implements IOpenAIService {
     String? query,
     List<String>? excludeTitles,
   }) async {
-    print('[OpenAIService] suggestRecipes başladı');
-    print('[OpenAIService] Pantry: ${pantry.length} malzeme');
-    print('[OpenAIService] Servings: $servings, Count: $count');
-    final String pantryText = pantry
-        .map(
-          (Ingredient e) =>
-              '${e.name}'
-              '${e.quantity > 0 ? ' x${e.quantity}' : ''}'
-              '${e.unit.isNotEmpty ? ' ${e.unit}' : ''}',
-        )
-        .join(', ');
+    // Convert pantry to TONL format for token optimization
+    final List<Map<String, dynamic>> pantryList = pantry.map((Ingredient e) {
+      return <String, dynamic>{
+        'name': e.name,
+        'quantity': e.quantity,
+        'unit': e.unit,
+      };
+    }).toList();
+    final String pantryTONL = TONLEncoder.encode(<String, dynamic>{
+      'pantry': pantryList,
+    });
 
-    print('[OpenAIService] API isteği gönderiliyor...');
     final DateTime startTime = DateTime.now();
     final Response<dynamic> res = await _dio.post(
       '/chat/completions',
       options: Options(headers: _headers),
       data: <String, dynamic>{
         'model': 'gpt-4o-mini',
-        'response_format': <String, String>{'type': 'json_object'},
         'messages': <Map<String, String>>[
           <String, String>{
             'role': 'system',
             'content':
-                'Yanıt dili Türkçe olsun. Şu şemada JSON ver: '
-                '{"recipes":[{"title":"","ingredients":[],"steps":[],'
-                '"calories":0,"durationMinutes":0,"difficulty":"kolay",'
-                '"category":"kahvaltı","fiber":0}]}. Yalnızca JSON ver.',
+                'Yanıt dili Türkçe olsun. Aşağıdaki veri TONL formatında. '
+                'TONL formatını şöyle parse et:\n'
+                '• Lines with [count]{fields}: are array headers, data rows follow\n'
+                '• Lines with {fields}: are object headers, field: value pairs follow\n'
+                '• Indentation (2 spaces) indicates nesting levels\n'
+                '• Default delimiter is comma\n'
+                '• Value types: unquoted numbers/booleans, quoted strings, null\n\n'
+                'Yanıtını TONL formatında ver. Şema:\n'
+                'recipes[count]{title,ingredients,steps,calories,durationMinutes,difficulty,category,imageUrl,fiber}:\n'
+                '  title1, [ing1,ing2], [step1,step2], calories, minutes, difficulty, category, imageUrl, fiber\n'
+                '  title2, [ing3,ing4], [step3,step4], calories, minutes, difficulty, category, imageUrl, fiber\n\n'
+                'Örnek TONL formatı:\n'
+                'recipes[2]{title,ingredients,steps,calories,durationMinutes,difficulty,category,imageUrl,fiber}:\n'
+                '  Menemen, [yumurta,domates,biber], [Domatesleri doğra,Yumurtaları kır], 250, 15, kolay, kahvaltı, https://example.com/image.jpg, 5\n'
+                '  Omlet, [yumurta,peynir], [Yumurtaları çırp,Tavada pişir], 200, 10, kolay, kahvaltı, https://example.com/image2.jpg, 3',
           },
           <String, String>{
             'role': 'user',
             'content':
-                'Dolap: [$pantryText]. En az $count tarif öner. '
+                'Dolap verileri (TONL formatında):\n$pantryTONL\n\n'
+                'En az $count tarif öner. '
                 'Porsiyon: $servings kişilik. '
                 '${query != null ? 'Arama: $query. ' : ''}'
                 '${excludeTitles != null && excludeTitles.isNotEmpty ? 'Şu '
@@ -131,25 +142,28 @@ class OpenAIService implements IOpenAIService {
                 'Her tarif için imageUrl alanına uygun, '
                 'telifsiz bir görsel (ör. üretim değil, '
                 'stok görsel) ekle. '
-                'Yalnızca JSON dön.',
+                'Yanıtını TONL formatında ver.',
           },
         ],
       },
     );
 
     final DateTime endTime = DateTime.now();
-    final Duration duration = endTime.difference(startTime);
-    print(
-      '[OpenAIService] API yanıtı geldi - Süre: ${duration.inSeconds} saniye',
+    // Duration logged for performance monitoring
+    final Duration _duration = endTime.difference(startTime);
+    Logger.info(
+      '[OpenAIService] Recipe suggestion took ${_duration.inMilliseconds}ms',
     );
 
     try {
       // Parse response safely
       final Map<String, dynamic> data2 = res.data as Map<String, dynamic>;
-      
+
       // Validate response structure
       if (!data2.containsKey('choices')) {
-        Logger.error('[OpenAIService] Invalid response structure - missing choices');
+        Logger.error(
+          '[OpenAIService] Invalid response structure - missing choices',
+        );
         throw const OpenAIParsingException('invalid_format');
       }
 
@@ -162,31 +176,47 @@ class OpenAIService implements IOpenAIService {
       final Map<String, dynamic> message2 =
           (choices2.first as Map<String, dynamic>)['message']
               as Map<String, dynamic>;
-      
+
       if (!message2.containsKey('content')) {
-        Logger.error('[OpenAIService] Invalid message structure - missing content');
+        Logger.error(
+          '[OpenAIService] Invalid message structure - missing content',
+        );
         throw const OpenAIParsingException('invalid_format');
       }
 
       final String content = message2['content'] as String;
-      
+
       if (content.isEmpty) {
         Logger.error('[OpenAIService] Empty content');
         throw const OpenAIParsingException('empty_response');
       }
 
-      // Parse JSON safely
+      // Parse TONL or JSON response safely
       Map<String, dynamic> json;
       try {
-        json = jsonDecode(content) as Map<String, dynamic>;
+        // Try TONL first (more efficient)
+        if (content.trim().startsWith('#version') ||
+            content.contains('[') && content.contains(']{')) {
+          json = TONLEncoder.decode(content) as Map<String, dynamic>;
+          Logger.info('[OpenAIService] Successfully parsed TONL response');
+        } else {
+          // Fallback to JSON
+          json = jsonDecode(content) as Map<String, dynamic>;
+          Logger.info('[OpenAIService] Parsed JSON response (fallback)');
+        }
       } on FormatException catch (e, s) {
-        Logger.error('[OpenAIService] JSON decode error', e, s);
+        Logger.error('[OpenAIService] TONL/JSON decode error', e, s);
+        throw const OpenAIParsingException('invalid_format');
+      } catch (e, s) {
+        Logger.error('[OpenAIService] Parse error', e, s);
         throw const OpenAIParsingException('invalid_format');
       }
 
       // Validate recipes array
       if (!json.containsKey('recipes')) {
-        Logger.error('[OpenAIService] Invalid JSON structure - missing recipes');
+        Logger.error(
+          '[OpenAIService] Invalid JSON structure - missing recipes',
+        );
         throw const OpenAIParsingException('invalid_format');
       }
 
@@ -197,7 +227,6 @@ class OpenAIService implements IOpenAIService {
       }
 
       final List<dynamic> recipes = recipesJson;
-      print('[OpenAIService] ${recipes.length} tarif parse ediliyor...');
 
       // Parse each recipe with schema validation
       final List<RecipeSuggestion> result = <RecipeSuggestion>[];
@@ -210,63 +239,91 @@ class OpenAIService implements IOpenAIService {
           }
 
           // Schema validation - required fields
-          if (!recipeMap.containsKey('title') || recipeMap['title'] is! String) {
-            Logger.error('[OpenAIService] Invalid recipe - missing or invalid title');
+          if (!recipeMap.containsKey('title') ||
+              recipeMap['title'] is! String) {
+            Logger.error(
+              '[OpenAIService] Invalid recipe - missing or invalid title',
+            );
             continue;
           }
 
-          if (!recipeMap.containsKey('ingredients') || recipeMap['ingredients'] is! List) {
-            Logger.error('[OpenAIService] Invalid recipe - missing or invalid ingredients');
+          // Parse ingredients (handle both TONL string format and JSON List)
+          List<String> ingredients = <String>[];
+          final dynamic ingredientsData = recipeMap['ingredients'];
+          if (ingredientsData is List) {
+            ingredients = ingredientsData.map<String>((dynamic e) {
+              if (e is String) {
+                return e;
+              }
+              if (e is Map<String, dynamic>) {
+                return (e['name'] as String?) ??
+                    (e.values.first as String?) ??
+                    e.toString();
+              }
+              return e.toString();
+            }).toList();
+          } else if (ingredientsData is String) {
+            // TONL format: parse comma-separated string like "[ing1,ing2,ing3]"
+            final String cleaned = ingredientsData
+                .replaceAll('[', '')
+                .replaceAll(']', '')
+                .trim();
+            if (cleaned.isNotEmpty) {
+              ingredients = cleaned
+                  .split(',')
+                  .map((String e) => e.trim())
+                  .toList();
+            }
+          } else if (!recipeMap.containsKey('ingredients')) {
+            Logger.error(
+              '[OpenAIService] Invalid recipe - missing ingredients',
+            );
             continue;
           }
 
-          if (!recipeMap.containsKey('steps') || recipeMap['steps'] is! List) {
-            Logger.error('[OpenAIService] Invalid recipe - missing or invalid steps');
+          // Parse steps (handle both TONL string format and JSON List)
+          List<String> steps = <String>[];
+          final dynamic stepsData = recipeMap['steps'];
+          if (stepsData is List) {
+            steps = stepsData.map<String>((dynamic e) {
+              if (e is String) {
+                return e;
+              }
+              if (e is Map<String, dynamic>) {
+                return (e['step'] as String?) ??
+                    (e['text'] as String?) ??
+                    (e.values.first as String?) ??
+                    e.toString();
+              }
+              return e.toString();
+            }).toList();
+          } else if (stepsData is String) {
+            // TONL format: parse comma-separated string like "[step1,step2,step3]"
+            final String cleaned = stepsData
+                .replaceAll('[', '')
+                .replaceAll(']', '')
+                .trim();
+            if (cleaned.isNotEmpty) {
+              steps = cleaned.split(',').map((String e) => e.trim()).toList();
+            }
+          } else if (!recipeMap.containsKey('steps')) {
+            Logger.error('[OpenAIService] Invalid recipe - missing steps');
             continue;
           }
 
-          // Parse ingredients
-          final List<String> ingredients = (recipeMap['ingredients'] as List<dynamic>)
-              .map<String>((dynamic e) {
-                if (e is String) {
-                  return e;
-                }
-                if (e is Map<String, dynamic>) {
-                  return (e['name'] as String?) ??
-                      (e.values.first as String?) ??
-                      e.toString();
-                }
-                return e.toString();
-              })
-              .toList();
-
-          // Parse steps
-          final List<String> steps = (recipeMap['steps'] as List<dynamic>)
-              .map<String>((dynamic e) {
-                if (e is String) {
-                  return e;
-                }
-                if (e is Map<String, dynamic>) {
-                  return (e['step'] as String?) ??
-                      (e['text'] as String?) ??
-                      (e.values.first as String?) ??
-                      e.toString();
-                }
-                return e.toString();
-              })
-              .toList();
-
-          result.add(RecipeSuggestion(
-            title: recipeMap['title'] as String,
-            ingredients: ingredients,
-            steps: steps,
-            calories: (recipeMap['calories'] as num?)?.toInt(),
-            durationMinutes: (recipeMap['durationMinutes'] as num?)?.toInt(),
-            difficulty: recipeMap['difficulty'] as String?,
-            imageUrl: recipeMap['imageUrl'] as String?,
-            category: recipeMap['category'] as String?,
-            fiber: (recipeMap['fiber'] as num?)?.toInt(),
-          ));
+          result.add(
+            RecipeSuggestion(
+              title: recipeMap['title'] as String,
+              ingredients: ingredients,
+              steps: steps,
+              calories: (recipeMap['calories'] as num?)?.toInt(),
+              durationMinutes: (recipeMap['durationMinutes'] as num?)?.toInt(),
+              difficulty: recipeMap['difficulty'] as String?,
+              imageUrl: recipeMap['imageUrl'] as String?,
+              category: recipeMap['category'] as String?,
+              fiber: (recipeMap['fiber'] as num?)?.toInt(),
+            ),
+          );
         } catch (e) {
           Logger.error('[OpenAIService] Error parsing individual recipe', e);
           // Continue with next recipe instead of failing completely
@@ -279,9 +336,6 @@ class OpenAIService implements IOpenAIService {
         throw const OpenAIParsingException('empty_response');
       }
 
-      print(
-        '[OpenAIService] suggestRecipes tamamlandı - ${result.length} tarif döndürüldü',
-      );
       return result;
     } on OpenAIParsingException {
       rethrow;

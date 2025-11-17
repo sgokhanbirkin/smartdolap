@@ -184,7 +184,7 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
       quantity: roundedQty,
       unit: _unitController.text.trim(),
     );
-    await context.read<PantryCubit>().update(widget.userId, updated);
+    await context.read<PantryCubit>().update(widget.userId, updated); // userId is householdId here
     if (mounted) {
       Navigator.of(context).pop(true);
     }
@@ -218,7 +218,7 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
     );
     if (confirm == true && mounted) {
       final PantryCubit cubit = navigatorContext.read<PantryCubit>();
-      await cubit.remove(widget.userId, widget.item.id);
+      await cubit.remove(widget.userId, widget.item.id); // userId is householdId here
       if (mounted) {
         Navigator.of(navigatorContext).pop(true);
       }

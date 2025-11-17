@@ -2,7 +2,7 @@
 
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 
-/// PantryItem entity stored under /users/{uid}/pantry/{itemId}
+/// PantryItem entity stored under /households/{householdId}/pantry/{itemId}
 class PantryItem {
   const PantryItem({
     required this.id,
@@ -15,6 +15,8 @@ class PantryItem {
     this.category,
     this.createdAt,
     this.updatedAt,
+    this.addedByUserId,
+    this.addedByAvatarId,
   });
 
   final String id;
@@ -27,6 +29,8 @@ class PantryItem {
   final String? category;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? addedByUserId;
+  final String? addedByAvatarId;
 
   PantryItem copyWith({
     String? id,
@@ -39,16 +43,21 @@ class PantryItem {
     String? category,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) => PantryItem(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    quantity: quantity ?? this.quantity,
-    unit: unit ?? this.unit,
-    expiryDate: expiryDate ?? this.expiryDate,
-    imageUrl: imageUrl ?? this.imageUrl,
-    ingredients: ingredients ?? this.ingredients,
-    category: category ?? this.category,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-  );
+    String? addedByUserId,
+    String? addedByAvatarId,
+  }) =>
+      PantryItem(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        quantity: quantity ?? this.quantity,
+        unit: unit ?? this.unit,
+        expiryDate: expiryDate ?? this.expiryDate,
+        imageUrl: imageUrl ?? this.imageUrl,
+        ingredients: ingredients ?? this.ingredients,
+        category: category ?? this.category,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        addedByUserId: addedByUserId ?? this.addedByUserId,
+        addedByAvatarId: addedByAvatarId ?? this.addedByAvatarId,
+      );
 }

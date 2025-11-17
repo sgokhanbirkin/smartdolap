@@ -1,8 +1,9 @@
 import 'package:hive/hive.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 
 /// Persists and reads personalization preferences.
-class PromptPreferenceService {
+class PromptPreferenceService implements IPromptPreferenceService {
   /// Creates a service backed by the provided Hive box.
   PromptPreferenceService(this._box);
 

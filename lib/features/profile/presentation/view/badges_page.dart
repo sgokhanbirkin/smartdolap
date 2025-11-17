@@ -9,7 +9,7 @@ import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/profile/data/badge_service.dart';
-import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/domain/entities/badge.dart'
     as domain;
@@ -41,7 +41,7 @@ class _BadgesPageState extends State<BadgesPage> {
     await authState.whenOrNull(
       authenticated: (domain.User user) async {
         final BadgeService badgeService = BadgeService(
-          statsService: sl<ProfileStatsService>(),
+          statsService: sl<IProfileStatsService>(),
           badgeRepository: sl<IBadgeRepository>(),
           userId: user.id,
         );

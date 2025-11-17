@@ -189,7 +189,7 @@ void main() {
         'should not schedule notification for item without expiry date',
         () async {
           // Arrange
-          final PantryItem item = PantryItem(
+          const PantryItem item = PantryItem(
             id: 'item-1',
             name: 'Test Item',
             expiryDate: null,

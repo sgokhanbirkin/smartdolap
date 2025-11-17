@@ -21,7 +21,7 @@ void main() {
 
     test('should return stream of pantry items from repository', () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
       final List<PantryItem> testItems = <PantryItem>[
         const PantryItem(
           id: 'item-1',
@@ -37,12 +37,12 @@ void main() {
       ];
 
       when(
-        () => mockRepository.watchItems(userId: testUserId),
+        () => mockRepository.watchItems(householdId: testHouseholdId),
       ).thenAnswer((_) => Stream<List<PantryItem>>.value(testItems));
 
       // Act
       final Stream<List<PantryItem>> result =
-          listPantryItems(userId: testUserId);
+          listPantryItems(householdId: testHouseholdId);
 
       // Assert
       expect(result, isA<Stream<List<PantryItem>>>());
@@ -50,42 +50,42 @@ void main() {
       expect(items.length, equals(2));
       expect(items.first.name, equals('Yumurta'));
       expect(items.last.name, equals('Süt'));
-      verify(() => mockRepository.watchItems(userId: testUserId)).called(1);
+      verify(() => mockRepository.watchItems(householdId: testHouseholdId)).called(1);
     });
 
     test('should return empty stream when repository returns empty list',
         () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
 
       when(
-        () => mockRepository.watchItems(userId: testUserId),
+        () => mockRepository.watchItems(householdId: testHouseholdId),
       ).thenAnswer((_) => Stream<List<PantryItem>>.value(<PantryItem>[]));
 
       // Act
       final Stream<List<PantryItem>> result =
-          listPantryItems(userId: testUserId);
+          listPantryItems(householdId: testHouseholdId);
 
       // Assert
       final List<PantryItem> items = await result.first;
       expect(items, isEmpty);
-      verify(() => mockRepository.watchItems(userId: testUserId)).called(1);
+      verify(() => mockRepository.watchItems(householdId: testHouseholdId)).called(1);
     });
 
     test('should propagate errors from repository', () async {
       // Arrange
-      const String testUserId = 'test-user-123';
+      const String testHouseholdId = 'test-household-123';
       final Exception testError = Exception('Repository error');
 
       when(
-        () => mockRepository.watchItems(userId: testUserId),
+        () => mockRepository.watchItems(householdId: testHouseholdId),
       ).thenAnswer((_) => Stream<List<PantryItem>>.error(testError));
 
       // Act & Assert
       final Stream<List<PantryItem>> result =
-          listPantryItems(userId: testUserId);
+          listPantryItems(householdId: testHouseholdId);
       expect(result, emitsError(testError));
-      verify(() => mockRepository.watchItems(userId: testUserId)).called(1);
+      verify(() => mockRepository.watchItems(householdId: testHouseholdId)).called(1);
     });
   });
 }

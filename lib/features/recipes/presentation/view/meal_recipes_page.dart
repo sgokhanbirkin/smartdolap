@@ -287,7 +287,11 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
     await st.whenOrNull(
       authenticated: (domain.User user) async {
         final IPantryRepository repo = sl<IPantryRepository>();
-        final List<PantryItem> items = await repo.getItems(userId: user.id);
+        if (user.householdId == null) {
+          return;
+        }
+        final List<PantryItem> items =
+            await repo.getItems(householdId: user.householdId!);
 
         if (!authContext.mounted) {
           return;
@@ -298,7 +302,7 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
           arguments: <String, dynamic>{
             'items': items,
             'meal': widget.meal,
-            'userId': user.id,
+            'householdId': user.householdId!,
           },
         );
         if (ok == true && dialogContext.mounted) {

@@ -48,8 +48,9 @@ class _RegisterPageState extends State<RegisterPage> {
             initial: () {},
             loading: () {},
             authenticated: (domain.User user) {
-              debugPrint('[RegisterPage] Authenticated - navigating to home');
-              Navigator.of(context).pushReplacementNamed(AppRouter.home);
+              debugPrint('[RegisterPage] Authenticated - navigating to household setup');
+              // Navigate to household setup after registration
+              Navigator.of(context).pushReplacementNamed(AppRouter.householdSetup);
             },
             unauthenticated: () {},
             error: (AuthFailure failure) {

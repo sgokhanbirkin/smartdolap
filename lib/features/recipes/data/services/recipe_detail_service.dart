@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/profile/data/badge_service.dart';
-import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
@@ -15,16 +15,16 @@ class RecipeDetailService {
   /// Constructor
   RecipeDetailService({
     UserRecipeService? userRecipeService,
-    ProfileStatsService? profileStatsService,
+    IProfileStatsService? profileStatsService,
     IStorageService? storageService,
     IBadgeRepository? badgeRepository,
   }) : _userRecipeService = userRecipeService ?? sl<UserRecipeService>(),
-       _profileStatsService = profileStatsService ?? sl<ProfileStatsService>(),
+       _profileStatsService = profileStatsService ?? sl<IProfileStatsService>(),
        _storageService = storageService ?? sl<IStorageService>(),
        _badgeRepository = badgeRepository ?? sl<IBadgeRepository>();
 
   final UserRecipeService _userRecipeService;
-  final ProfileStatsService _profileStatsService;
+  final IProfileStatsService _profileStatsService;
   final IStorageService _storageService;
   final IBadgeRepository _badgeRepository;
 

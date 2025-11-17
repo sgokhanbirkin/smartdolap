@@ -8,6 +8,7 @@ import 'package:smartdolap/core/guards/auth_guard.dart';
 import 'package:smartdolap/features/pantry/presentation/view/pantry_page.dart';
 import 'package:smartdolap/features/profile/presentation/view/profile_page.dart';
 import 'package:smartdolap/features/recipes/presentation/view/recipes_page.dart';
+import 'package:smartdolap/product/router/app_router.dart';
 
 /// App shell with bottom navigation
 /// Prevents back navigation - user must logout to exit
@@ -128,6 +129,14 @@ class _AppShellState extends State<AppShell> {
               _idx = 1;
             });
             Navigator.of(context).pop();
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.shopping_cart_outlined, size: AppSizes.icon),
+          title: Text(tr('shopping_list.title')),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).pushNamed(AppRouter.shoppingList);
           },
         ),
         ListTile(
