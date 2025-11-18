@@ -75,6 +75,7 @@ class TONLEncoder {
     return buffer.toString().trim();
   }
 
+  // ignore: strict_raw_type
   static String _encodeList(List list, {bool includeTypes = false}) {
     if (list.isEmpty) {
       return '#version 1.0\nitems[0]{}:';
@@ -216,14 +217,31 @@ class TONLEncoder {
       } else if (currentFields != null &&
           currentArray != null &&
           trimmed.isNotEmpty) {
-        // Parse data row
-        final List<String> values = _parseRow(trimmed);
+        // Parse data row (remove leading spaces if present)
+        final String cleanRow = trimmed.startsWith('  ') 
+            ? trimmed.substring(2) 
+            : trimmed;
+        final List<String> values = _parseRow(cleanRow);
+        
         if (values.length == currentFields.length) {
           final Map<String, dynamic> item = <String, dynamic>{};
           for (int i = 0; i < currentFields.length; i++) {
             item[currentFields[i]] = _parseValue(values[i]);
           }
           currentArray.add(item);
+        } else if (values.length > currentFields.length) {
+          // Try to handle extra commas in values (e.g., in step descriptions)
+          final Map<String, dynamic> item = <String, dynamic>{};
+          int valueIndex = 0;
+          for (int i = 0; i < currentFields.length; i++) {
+            if (valueIndex < values.length) {
+              item[currentFields[i]] = _parseValue(values[valueIndex]);
+              valueIndex++;
+            }
+          }
+          if (item.isNotEmpty) {
+            currentArray.add(item);
+          }
         }
       }
     }
@@ -295,13 +313,25 @@ class TONLEncoder {
     final List<String> result = <String>[];
     final StringBuffer current = StringBuffer();
     bool inQuotes = false;
+    bool inBrackets = false;
+    int bracketDepth = 0;
 
     for (int i = 0; i < row.length; i++) {
       final String char = row[i];
       if (char == '"') {
         inQuotes = !inQuotes;
         current.write(char);
-      } else if (char == ',' && !inQuotes) {
+      } else if (char == '[') {
+        inBrackets = true;
+        bracketDepth++;
+        current.write(char);
+      } else if (char == ']') {
+        bracketDepth--;
+        if (bracketDepth == 0) {
+          inBrackets = false;
+        }
+        current.write(char);
+      } else if (char == ',' && !inQuotes && !inBrackets) {
         result.add(current.toString().trim());
         current.clear();
       } else {
@@ -323,6 +353,17 @@ class TONLEncoder {
       return false;
     } else if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
       return trimmed.substring(1, trimmed.length - 1);
+    } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      // Parse array format: [item1,item2,item3]
+      final String arrayContent = trimmed.substring(1, trimmed.length - 1).trim();
+      if (arrayContent.isEmpty) {
+        return <String>[];
+      }
+      return arrayContent
+          .split(',')
+          .map((String e) => e.trim())
+          .where((String e) => e.isNotEmpty)
+          .toList();
     } else if (RegExp(r'^-?\d+$').hasMatch(trimmed)) {
       return int.parse(trimmed);
     } else if (RegExp(r'^-?\d+\.\d+$').hasMatch(trimmed)) {

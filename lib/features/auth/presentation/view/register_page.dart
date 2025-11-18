@@ -41,6 +41,7 @@ class _RegisterPageState extends State<RegisterPage> {
         style: TextStyle(fontSize: AppSizes.textL),
       ),
     ),
+    resizeToAvoidBottomInset: true,
     body: SafeArea(
       child: BlocConsumer<AuthCubit, AuthState>(
         listener: (BuildContext context, AuthState state) {
@@ -101,6 +102,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   TextFormField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    enabled: true,
+                    readOnly: false,
+                    enableInteractiveSelection: true,
                     style: TextStyle(fontSize: AppSizes.textM),
                     decoration: InputDecoration(
                       labelText: tr('display_name'),
@@ -116,6 +121,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    enabled: true,
+                    readOnly: false,
+                    enableInteractiveSelection: true,
                     style: TextStyle(fontSize: AppSizes.textM),
                     validator: Validators.emailValidator,
                     decoration: InputDecoration(
@@ -132,6 +141,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    enabled: true,
+                    readOnly: false,
+                    enableInteractiveSelection: true,
                     style: TextStyle(fontSize: AppSizes.textM),
                     validator: Validators.passwordValidator,
                     decoration: InputDecoration(
@@ -154,6 +167,17 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
+                    onFieldSubmitted: (_) {
+                      if (_formKey.currentState!.validate()) {
+                        context.read<AuthCubit>().register(
+                          email: _emailController.text.trim(),
+                          password: _passwordController.text,
+                          displayName: _nameController.text.trim().isEmpty
+                              ? null
+                              : _nameController.text.trim(),
+                        );
+                      }
+                    },
                   ),
                   SizedBox(height: AppSizes.verticalSpacingL),
                   ElevatedButton(

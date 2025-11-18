@@ -108,6 +108,24 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
                     title: Text(tr('share_title')),
                     actions: <Widget>[
                       IconButton(
+                        icon: const Icon(Icons.shopping_cart_outlined),
+                        tooltip: tr('shopping_list.title'),
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(
+                            AppRouter.shoppingList,
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.restaurant_menu_outlined),
+                        tooltip: tr('food_preferences'),
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(
+                            AppRouter.foodPreferencesOnboarding,
+                          );
+                        },
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.person_add_outlined),
                         tooltip: tr('invite_member'),
                         onPressed: () => _showInviteDialog(scaffoldContext, user.householdId!),

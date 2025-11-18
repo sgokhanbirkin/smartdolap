@@ -1,11 +1,14 @@
 // ignore_for_file: directives_ordering, prefer_const_constructors, lines_longer_than_80_chars
 
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/utils/pantry_categories.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
 import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
@@ -13,10 +16,12 @@ import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/pantry/presentation/widgets/unit_dropdown_widget.dart';
 import 'package:smartdolap/features/shopping/domain/entities/shopping_list_item.dart';
 import 'package:smartdolap/features/shopping/domain/services/i_shopping_list_service.dart';
 import 'package:smartdolap/features/shopping/presentation/viewmodel/shopping_list_cubit.dart';
 import 'package:smartdolap/features/shopping/presentation/viewmodel/shopping_list_state.dart';
+import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
 import 'package:smartdolap/product/widgets/error_state.dart';
 
@@ -32,128 +37,190 @@ class ShoppingListPage extends StatefulWidget {
 
 class _ShoppingListPageState extends State<ShoppingListPage> {
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
-    body: SafeArea(
-      child: BlocBuilder<AuthCubit, AuthState>(
-        builder: (BuildContext context, AuthState state) => state.when(
-          initial: () => const SizedBox.shrink(),
-          loading: () => Center(
+  Widget build(BuildContext context) => BlocBuilder<AuthCubit, AuthState>(
+    builder: (BuildContext context, AuthState state) {
+      return state.when(
+        initial: () => Scaffold(
+          appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
+          body: const SizedBox.shrink(),
+        ),
+        loading: () => Scaffold(
+          appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
+          body: Center(
             child: CustomLoadingIndicator(type: LoadingType.wave, size: 50),
           ),
-          error: (_) => EmptyState(messageKey: 'auth_error'),
-          unauthenticated: () => EmptyState(messageKey: 'auth_error'),
-          authenticated: (domain.User user) {
-            if (user.householdId == null) {
-              return Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSizes.padding),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Icon(
-                        Icons.shopping_cart_outlined,
-                        size: 64.w,
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        tr('join_household'),
-                        style: TextStyle(
-                          fontSize: AppSizes.textL,
-                          fontWeight: FontWeight.bold,
+        ),
+        error: (_) => Scaffold(
+          appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
+          body: SafeArea(child: EmptyState(messageKey: 'auth_error')),
+        ),
+        unauthenticated: () => Scaffold(
+          appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
+          body: SafeArea(child: EmptyState(messageKey: 'auth_error')),
+        ),
+        authenticated: (domain.User user) {
+          if (user.householdId == null) {
+            return Scaffold(
+              appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
+              body: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSizes.padding),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(
+                          Icons.shopping_cart_outlined,
+                          size: 64.w,
+                          color: Theme.of(context).colorScheme.outline,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                        SizedBox(height: 16.h),
+                        Text(
+                          tr('join_household'),
+                          style: TextStyle(
+                            fontSize: AppSizes.textL,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            }
-            return BlocProvider<ShoppingListCubit>(
-              create: (BuildContext _) =>
-                  sl<ShoppingListCubit>()..watch(user.householdId!),
-              child: BlocBuilder<ShoppingListCubit, ShoppingListState>(
-                builder: (BuildContext context, ShoppingListState s) {
-                  if (s is ShoppingListLoading || s is ShoppingListInitial) {
-                    return Center(
-                      child: CustomLoadingIndicator(
-                        type: LoadingType.wave,
-                        size: 50,
-                      ),
-                    );
-                  }
-                  if (s is ShoppingListFailure) {
-                    return ErrorState(
-                      messageKey: 'shopping_list.empty_message',
-                      onRetry: () => context.read<ShoppingListCubit>().watch(
-                        user.householdId!,
-                      ),
-                    );
-                  }
-                  final ShoppingListLoaded loaded = s as ShoppingListLoaded;
-                  if (loaded.items.isEmpty) {
-                    return EmptyState(
-                      messageKey: 'shopping_list.empty_message',
-                      actionLabelKey: 'shopping_list.add_item',
-                      onAction: () => _showAddItemDialog(
-                        context,
-                        user.householdId!,
-                        user.id,
-                        user.avatarId,
-                      ),
-                      lottieAsset: 'assets/animations/Food_Carousel.json',
-                    );
-                  }
-
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      await context.read<ShoppingListCubit>().refresh(
-                        user.householdId!,
-                      );
-                    },
-                    child: context.isTablet
-                        ? _buildTabletLayout(
+              ),
+            );
+          }
+          return BlocProvider<ShoppingListCubit>(
+            create: (BuildContext _) =>
+                sl<ShoppingListCubit>()..watch(user.householdId!),
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text(tr('shopping_list.title')),
+                elevation: 0,
+                actions: <Widget>[
+                  BlocBuilder<ShoppingListCubit, ShoppingListState>(
+                    builder: (BuildContext context, ShoppingListState s) {
+                      if (s is! ShoppingListLoaded) {
+                        return const SizedBox.shrink();
+                      }
+                      final ShoppingListLoaded loaded = s;
+                      final int completedCount = loaded.items
+                          .where((ShoppingListItem item) => item.isCompleted)
+                          .length;
+                      if (completedCount == 0) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: EdgeInsets.only(right: AppSizes.padding),
+                        child: TextButton.icon(
+                          onPressed: () => _handleShoppingDone(
                             context,
-                            loaded.items,
-                            user.householdId!,
-                            user.id,
-                            user.avatarId,
-                          )
-                        : _buildPhoneLayout(
-                            context,
-                            loaded.items,
                             user.householdId!,
                             user.id,
                             user.avatarId,
                           ),
+                          icon: const Icon(Icons.shopping_cart_checkout),
+                          label: Text(tr('shopping_list.shopping_done')),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              body: SafeArea(
+                child: BlocBuilder<ShoppingListCubit, ShoppingListState>(
+                  builder: (BuildContext context, ShoppingListState s) {
+                    if (s is ShoppingListLoading || s is ShoppingListInitial) {
+                      return Center(
+                        child: CustomLoadingIndicator(
+                          type: LoadingType.wave,
+                          size: 50,
+                        ),
+                      );
+                    }
+                    if (s is ShoppingListFailure) {
+                      return ErrorState(
+                        messageKey: 'shopping_list.empty_message',
+                        onRetry: () => context.read<ShoppingListCubit>().watch(
+                          user.householdId!,
+                        ),
+                      );
+                    }
+                    final ShoppingListLoaded loaded = s as ShoppingListLoaded;
+                    if (loaded.items.isEmpty) {
+                      return EmptyState(
+                        messageKey: 'shopping_list.empty_message',
+                        actionLabelKey: 'shopping_list.add_item',
+                        onAction: () => _showAddItemDialog(
+                          context,
+                          user.householdId!,
+                          user.id,
+                          user.avatarId,
+                          context.read<ShoppingListCubit>(),
+                        ),
+                        lottieAsset: 'assets/animations/Food_Carousel.json',
+                      );
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        await context.read<ShoppingListCubit>().refresh(
+                          user.householdId!,
+                        );
+                      },
+                      child: context.isTablet
+                          ? _buildTabletLayout(
+                              context,
+                              loaded.items,
+                              user.householdId!,
+                              user.id,
+                              user.avatarId,
+                            )
+                          : _buildPhoneLayout(
+                              context,
+                              loaded.items,
+                              user.householdId!,
+                              user.id,
+                              user.avatarId,
+                            ),
+                    );
+                  },
+                ),
+              ),
+              floatingActionButton: BlocBuilder<AuthCubit, AuthState>(
+                builder: (BuildContext authContext, AuthState authState) {
+                  return authState.maybeWhen(
+                    authenticated: (domain.User authUser) {
+                      if (authUser.householdId == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return BlocBuilder<ShoppingListCubit, ShoppingListState>(
+                        builder: (BuildContext shoppingContext, ShoppingListState s) {
+                          return FloatingActionButton(
+                            onPressed: () => _showAddItemDialog(
+                              shoppingContext,
+                              authUser.householdId!,
+                              authUser.id,
+                              authUser.avatarId,
+                              shoppingContext.read<ShoppingListCubit>(),
+                            ),
+                            child: const Icon(Icons.add),
+                          );
+                        },
+                      );
+                    },
+                    orElse: () => const SizedBox.shrink(),
                   );
                 },
               ),
-            );
-          },
-        ),
-      ),
-    ),
-    floatingActionButton: BlocBuilder<AuthCubit, AuthState>(
-      builder: (BuildContext context, AuthState state) => state.maybeWhen(
-        authenticated: (domain.User user) {
-          if (user.householdId == null) {
-            return const SizedBox.shrink();
-          }
-          return FloatingActionButton(
-            onPressed: () => _showAddItemDialog(
-              context,
-              user.householdId!,
-              user.id,
-              user.avatarId,
             ),
-            child: const Icon(Icons.add),
           );
         },
-        orElse: () => const SizedBox.shrink(),
-      ),
-    ),
+      );
+    },
   );
 
   Widget _buildShoppingListItem(
@@ -267,20 +334,132 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
     );
   }
 
-  Future<void> _showAddItemDialog(
+  Future<void> _handleShoppingDone(
     BuildContext context,
     String householdId,
     String userId,
     String? avatarId,
   ) async {
+    final IShoppingListService shoppingListService = sl<IShoppingListService>();
+    
+    try {
+      // Show loading indicator
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: <Widget>[
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: AppSizes.spacingM),
+              Text(tr('shopping_list.shopping_done')),
+            ],
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Complete all completed items and add to pantry
+      final int addedCount = await shoppingListService
+          .completeAllCompletedAndAddToPantry(
+        householdId: householdId,
+        userId: userId,
+        avatarId: avatarId,
+      );
+
+      // Refresh the shopping list
+      if (!mounted) return;
+      await context.read<ShoppingListCubit>().refresh(householdId);
+
+      // Show success message
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            addedCount > 0
+                ? tr('shopping_list.shopping_done_message', args: <String>[addedCount.toString()])
+                : tr('shopping_list.shopping_done_no_items'),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hata: ${e.toString()}'),
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showAddItemDialog(
+    BuildContext context,
+    String householdId,
+    String userId,
+    String? avatarId,
+    ShoppingListCubit shoppingListCubit,
+  ) async {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController quantityController = TextEditingController();
     final TextEditingController unitController = TextEditingController();
     String? category;
+    Timer? categoryDebounce;
+
+    const List<String> unitOptions = <String>[
+      'adet',
+      'kg',
+      'g',
+      'lt',
+      'ml',
+      'paket',
+      'kutu',
+      'şişe',
+      'demet',
+      'bağ',
+      'tane',
+    ];
+
+    void onNameChanged(String value) {
+      categoryDebounce?.cancel();
+      final String name = value.trim();
+      if (name.length < 2) {
+        category = null;
+        return;
+      }
+
+      // Quick guess
+      final String quickGuess = PantryCategoryHelper.guess(name);
+      category = PantryCategoryHelper.normalize(quickGuess);
+
+      // AI category suggestion
+      categoryDebounce = Timer(
+        const Duration(milliseconds: 600),
+        () async {
+          try {
+            final String cat = await sl<IOpenAIService>().categorizeItem(name);
+            if (nameController.text.trim() != name) {
+              return;
+            }
+            category = PantryCategoryHelper.normalize(cat);
+          } on Exception catch (_) {
+            // Ignore errors, keep quick guess
+          }
+        },
+      );
+    }
 
     final bool? result = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
+      builder: (BuildContext dialogContext) => AlertDialog(
         title: Text(tr('shopping_list.add_item')),
         content: SingleChildScrollView(
           child: Column(
@@ -294,6 +473,7 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
                     borderRadius: BorderRadius.circular(AppSizes.radius),
                   ),
                 ),
+                onChanged: onNameChanged,
               ),
               SizedBox(height: AppSizes.verticalSpacingM),
               Row(
@@ -313,14 +493,10 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
                   ),
                   SizedBox(width: AppSizes.spacingS),
                   Expanded(
-                    child: TextField(
-                      controller: unitController,
-                      decoration: InputDecoration(
-                        labelText: tr('shopping_list.unit'),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radius),
-                        ),
-                      ),
+                    child: UnitDropdownWidget(
+                      unitController: unitController,
+                      unitOptions: unitOptions,
+                      wrapInCard: false,
                     ),
                   ),
                 ],
@@ -330,7 +506,10 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
         ),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () {
+              categoryDebounce?.cancel();
+              Navigator.of(context).pop(false);
+            },
             child: Text(tr('cancel')),
           ),
           ElevatedButton(
@@ -338,6 +517,7 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
               if (nameController.text.trim().isEmpty) {
                 return;
               }
+              categoryDebounce?.cancel();
               Navigator.of(context).pop(true);
             },
             child: Text(tr('save')),
@@ -345,6 +525,8 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
         ],
       ),
     );
+
+    categoryDebounce?.cancel();
 
     if (result == true && nameController.text.trim().isNotEmpty) {
       final ShoppingListItem newItem = ShoppingListItem(
@@ -364,7 +546,7 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
         createdAt: DateTime.now(),
       );
 
-      await context.read<ShoppingListCubit>().add(householdId, newItem);
+      await shoppingListCubit.add(householdId, newItem);
       if (mounted) {
         ScaffoldMessenger.of(
           context,

@@ -99,7 +99,8 @@ class _ChipGroupWidgetState extends State<ChipGroupWidget> {
   /// Localize option value based on field key
   String _localizeOption(String option) {
     // Try to find translation key for this option
-    final String translationKey = 'profile_${widget.fieldKey}_$option';
+    // Convert option to lowercase for translation key matching
+    final String translationKey = 'profile_${widget.fieldKey}_${option.toLowerCase()}';
     try {
       final String translated = tr(translationKey);
       // If translation exists and is different from the key, use it

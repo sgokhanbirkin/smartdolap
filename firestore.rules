@@ -11,10 +11,47 @@ service cloud.firestore {
       return request.auth.uid;
     }
     
+    // Helper function to check if user is a household member
+    function isHouseholdMember(householdId) {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/households/$(householdId)/members/$(currentUserId()))
+        || get(/databases/$(database)/documents/households/$(householdId)).data.ownerId == currentUserId()
+      );
+    }
+    
     // Users collection - users can read/update their own data
     match /users/{userId} {
       allow read: if isAuthenticated() && currentUserId() == userId;
       allow write: if isAuthenticated() && currentUserId() == userId;
+      
+      // Achievements subcollection (badges)
+      match /achievements/{badgeId} {
+        // Users can read their own achievements
+        allow read: if isAuthenticated() && currentUserId() == userId;
+        
+        // Users can create/update their own achievements
+        allow create, update: if isAuthenticated() 
+          && currentUserId() == userId;
+        
+        // Users can delete their own achievements
+        allow delete: if isAuthenticated() 
+          && currentUserId() == userId;
+      }
+      
+      // Food preferences subcollection
+      match /foodPreferences/{preferenceId} {
+        // Users can read their own food preferences (both get and list queries)
+        // This includes document snapshots (.snapshots()) and queries
+        allow read: if isAuthenticated() && currentUserId() == userId;
+        
+        // Users can create/update their own food preferences
+        allow create, update: if isAuthenticated() 
+          && currentUserId() == userId;
+        
+        // Users can delete their own food preferences
+        allow delete: if isAuthenticated() 
+          && currentUserId() == userId;
+      }
     }
     
     // Households collection
@@ -134,6 +171,27 @@ service cloud.firestore {
         allow delete: if isAuthenticated() 
           && resource.data.userId == currentUserId();
       }
+      
+      // Recipe comments subcollection (household-only comments)
+      match /recipeComments/{commentId} {
+        // Household members can read comments
+        allow read: if isAuthenticated() && isHouseholdMember(householdId);
+        
+        // Household members can create comments
+        allow create: if isAuthenticated() 
+          && isHouseholdMember(householdId)
+          && request.resource.data.userId == currentUserId()
+          && request.resource.data.isHouseholdOnly == true
+          && request.resource.data.householdId == householdId;
+        
+        // Comments cannot be updated
+        allow update: if false;
+        
+        // Only comment author can delete their comment
+        allow delete: if isAuthenticated() 
+          && isHouseholdMember(householdId)
+          && resource.data.userId == currentUserId();
+      }
     }
     
     // Invite codes collection
@@ -167,6 +225,36 @@ service cloud.firestore {
       
       // Users can create/update/delete their own recipes
       allow write: if isAuthenticated() && currentUserId() == userId;
+    }
+    
+    // Global recipes collection - recipes/{recipeId}
+    // This collection is used for global comments on recipes
+    // Recipe document itself may not exist, but comments subcollection can be created
+    match /recipes/{recipeId} {
+      // Anyone authenticated can read recipe document (if it exists)
+      allow read: if isAuthenticated();
+      
+      // Allow creating recipe document (needed when first comment is added)
+      allow create: if isAuthenticated();
+      
+      // Comments subcollection (global comments)
+      match /comments/{commentId} {
+        // Anyone authenticated can read comments
+        allow read: if isAuthenticated();
+        
+        // Anyone authenticated can create comments (must be their own)
+        allow create: if isAuthenticated() 
+          && request.resource.data.userId == currentUserId()
+          && request.resource.data.isHouseholdOnly == false
+          && request.resource.data.recipeId == recipeId;
+        
+        // Comments cannot be updated
+        allow update: if false;
+        
+        // Only comment author can delete their comment
+        allow delete: if isAuthenticated() 
+          && resource.data.userId == currentUserId();
+      }
     }
   }
 }

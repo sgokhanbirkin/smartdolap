@@ -46,25 +46,39 @@ class PantryHeaderWidget extends StatelessWidget {
                   if (user.householdId == null) {
                     return const SizedBox.shrink();
                   }
-                  return TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pushNamed(
-                        AppRouter.pantryAdd,
-                        arguments: <String, dynamic>{
-                          'householdId': user.householdId!,
-                          'userId': user.id,
-                          'avatarId': user.avatarId,
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      IconButton(
+                        icon: const Icon(Icons.shopping_cart_outlined),
+                        tooltip: tr('shopping_list.title'),
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(
+                            AppRouter.shoppingList,
+                          );
                         },
-                      );
-                    },
-                    icon: Icon(Icons.add, size: AppSizes.iconS),
-                    label: Text(tr('add_item')),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSizes.spacingS,
-                        vertical: AppSizes.spacingXS,
                       ),
-                    ),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(
+                            AppRouter.pantryAdd,
+                            arguments: <String, dynamic>{
+                              'householdId': user.householdId!,
+                              'userId': user.id,
+                              'avatarId': user.avatarId,
+                            },
+                          );
+                        },
+                        icon: Icon(Icons.add, size: AppSizes.iconS),
+                        label: Text(tr('add_item')),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.spacingS,
+                            vertical: AppSizes.spacingXS,
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ) ?? const SizedBox.shrink();

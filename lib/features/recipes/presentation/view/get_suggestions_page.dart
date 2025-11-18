@@ -134,6 +134,7 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
       if (mounted) {
         // Close loading overlay
         Navigator.of(context).pop();
+        setState(() => _isLoading = false);
         // Close suggestions page
         Navigator.of(context).pop(true);
       }
@@ -153,66 +154,64 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(title: Text(tr('get_suggestions'))),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(AppSizes.padding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // Meal selector
-                  MealSelectorWidget(
-                    selectedMeal: _controller.selectedMeal,
-                    onMealChanged: (String meal) {
-                      setState(() {
-                        _controller.updateMeal(meal);
-                      });
-                    },
-                  ),
-                  SizedBox(height: AppSizes.verticalSpacingL),
-                  // Ingredients selection section
-                  IngredientsSelectionSectionWidget(
-                    items: _controller.currentItems,
-                    selectedIngredients: _controller.selectedIngredients,
-                    expandedCategories: _controller.expandedCategories,
-                    onToggleCategory: (String category) {
-                      setState(() {
-                        _controller.toggleCategory(category);
-                      });
-                    },
-                    onToggleIngredient: (String ingredient) {
-                      setState(() {
-                        _controller.toggleIngredient(ingredient);
-                      });
-                    },
-                    onAddIngredient: _showAddIngredientDialog,
-                  ),
-                  SizedBox(height: AppSizes.verticalSpacingL),
-                  // Note field
-                  NoteFieldWidget(controller: _noteController),
-                ],
-              ),
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.white,
+    appBar: AppBar(title: Text(tr('get_suggestions'))),
+    body: Column(
+      children: <Widget>[
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(AppSizes.padding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Meal selector
+                MealSelectorWidget(
+                  selectedMeal: _controller.selectedMeal,
+                  onMealChanged: (String meal) {
+                    setState(() {
+                      _controller.updateMeal(meal);
+                    });
+                  },
+                ),
+                SizedBox(height: AppSizes.verticalSpacingL),
+                // Ingredients selection section
+                IngredientsSelectionSectionWidget(
+                  items: _controller.currentItems,
+                  selectedIngredients: _controller.selectedIngredients,
+                  expandedCategories: _controller.expandedCategories,
+                  onToggleCategory: (String category) {
+                    setState(() {
+                      _controller.toggleCategory(category);
+                    });
+                  },
+                  onToggleIngredient: (String ingredient) {
+                    setState(() {
+                      _controller.toggleIngredient(ingredient);
+                    });
+                  },
+                  onAddIngredient: _showAddIngredientDialog,
+                ),
+                SizedBox(height: AppSizes.verticalSpacingL),
+                // Note field
+                NoteFieldWidget(controller: _noteController),
+              ],
             ),
           ),
-          // Action buttons
-          GetSuggestionsActionButtonsWidget(
-            selectedCount: _controller.selectedIngredients.length,
-            totalCount: _controller.currentItems.length,
-            isLoading: _isLoading,
-            onToggleSelectAll: () {
-              setState(() {
-                _controller.toggleSelectAll();
-              });
-            },
-            onConfirm: _confirmSelection,
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        // Action buttons
+        GetSuggestionsActionButtonsWidget(
+          selectedCount: _controller.selectedIngredients.length,
+          totalCount: _controller.currentItems.length,
+          isLoading: _isLoading,
+          onToggleSelectAll: () {
+            setState(() {
+              _controller.toggleSelectAll();
+            });
+          },
+          onConfirm: _confirmSelection,
+        ),
+      ],
+    ),
+  );
 }

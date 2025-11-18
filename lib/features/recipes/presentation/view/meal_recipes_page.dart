@@ -290,8 +290,9 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
         if (user.householdId == null) {
           return;
         }
-        final List<PantryItem> items =
-            await repo.getItems(householdId: user.householdId!);
+        final List<PantryItem> items = await repo.getItems(
+          householdId: user.householdId!,
+        );
 
         if (!authContext.mounted) {
           return;
@@ -366,7 +367,7 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
                 const RecipeCardSkeleton(),
           )
         : _recipes.isEmpty
-        ? EmptyState(
+        ? const EmptyState(
             messageKey: 'no_recipes_yet',
             lottieAsset: 'assets/animations/Recipe_Book.json',
           )

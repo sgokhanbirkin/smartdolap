@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -15,8 +17,12 @@ import 'package:smartdolap/features/analytics/domain/services/i_analytics_servic
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/household/presentation/viewmodel/share_cubit.dart';
+import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_detail_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/comment_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/widgets/comment_section_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/hero_image_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/ingredients_list_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/mark_as_made_button_widget.dart';
@@ -24,13 +30,19 @@ import 'package:smartdolap/features/recipes/presentation/widgets/progress_card_w
 import 'package:smartdolap/features/recipes/presentation/widgets/recipe_chips_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/steps_list_widget.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Recipe detail screen
 class RecipeDetailPage extends StatefulWidget {
-  const RecipeDetailPage({required this.recipe, super.key});
+  const RecipeDetailPage({
+    required this.recipe,
+    this.isHouseholdOnly = false,
+    this.householdId,
+    super.key,
+  });
 
   final Recipe? recipe;
+  final bool isHouseholdOnly;
+  final String? householdId;
 
   @override
   State<RecipeDetailPage> createState() => _RecipeDetailPageState();
@@ -76,6 +88,86 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       return 0.0;
     }
     return _collectedIngredients.length / widget.recipe!.ingredients.length;
+  }
+
+  Future<void> _shareWithFamily(
+    BuildContext context,
+    Recipe recipe,
+    domain.User user,
+  ) async {
+    try {
+      // Convert Recipe to UserRecipe
+      final UserRecipe userRecipe = UserRecipe(
+        id: recipe.id,
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        steps: recipe.steps,
+        imagePath: recipe.imageUrl,
+        tags: recipe.category != null ? <String>[recipe.category!] : <String>[],
+        createdAt: DateTime.now(),
+      );
+
+      // Share recipe using ShareCubit (get from DI or context)
+      ShareCubit? shareCubit;
+      try {
+        shareCubit = context.read<ShareCubit>();
+      } catch (_) {
+        // If ShareCubit is not available in context, create a new instance
+        shareCubit = sl<ShareCubit>();
+      }
+      await shareCubit.shareRecipe(
+        householdId: user.householdId!,
+        userId: user.id,
+        userName: user.displayName ?? user.email,
+        recipe: userRecipe,
+        avatarId: user.avatarId,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('share_recipe_success'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('share_recipe_error'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onErrorContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _shareRecipe() async {
@@ -367,6 +459,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       appBar: AppBar(
         title: Text(data.title),
         actions: <Widget>[
+          // Share with family button (only if user has household)
+          BlocBuilder<AuthCubit, AuthState>(
+            builder: (BuildContext context, AuthState authState) =>
+                authState.maybeWhen(
+                  authenticated: (domain.User user) {
+                    if (user.householdId != null && !widget.isHouseholdOnly) {
+                      return IconButton(
+                        icon: const Icon(Icons.group),
+                        onPressed: () => _shareWithFamily(context, data, user),
+                        tooltip: tr('share_with_family'),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                  orElse: () => const SizedBox.shrink(),
+                ),
+          ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareRecipe,
@@ -414,6 +523,32 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   steps: data.steps,
                   completedSteps: _completedSteps,
                   onStepToggled: _toggleStep,
+                ),
+                SizedBox(height: AppSizes.verticalSpacingL),
+                // Comments section
+                BlocBuilder<AuthCubit, AuthState>(
+                  builder: (BuildContext context, AuthState authState) =>
+                      authState.maybeWhen(
+                        authenticated: (domain.User user) => ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: 300.h,
+                            maxHeight: MediaQuery.of(context).size.height * 0.5,
+                          ),
+                          child: BlocProvider<CommentCubit>(
+                            create: (_) => sl<CommentCubit>(),
+                            child: CommentSectionWidget(
+                              recipeId: data.id,
+                              currentUserId: user.id,
+                              currentUserName: user.displayName ?? user.email,
+                              currentAvatarId: user.avatarId,
+                              isHouseholdOnly: widget.isHouseholdOnly,
+                              householdId:
+                                  widget.householdId ?? user.householdId,
+                            ),
+                          ),
+                        ),
+                        orElse: () => const SizedBox.shrink(),
+                      ),
                 ),
                 SizedBox(height: AppSizes.verticalSpacingL),
               ],

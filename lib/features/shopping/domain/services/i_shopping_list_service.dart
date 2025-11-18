@@ -16,4 +16,12 @@ abstract class IShoppingListService {
     required String userId,
     String? avatarId,
   });
+
+  /// Complete all completed items and add them to pantry
+  /// Returns the number of items added
+  Future<int> completeAllCompletedAndAddToPantry({
+    required String householdId,
+    required String userId,
+    String? avatarId,
+  });
 }

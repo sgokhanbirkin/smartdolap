@@ -18,8 +18,9 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    resizeToAvoidBottomInset: true,
     body: SafeArea(
-      child: BlocListener<AuthCubit, AuthState>(
+      child: BlocConsumer<AuthCubit, AuthState>(
         listener: (BuildContext context, AuthState state) {
           state.when(
             initial: () {},
@@ -32,31 +33,32 @@ class LoginPage extends StatelessWidget {
             error: (AuthFailure failure) {},
           );
         },
-        child: BlocBuilder<AuthCubit, AuthState>(
-          builder: (BuildContext context, AuthState state) {
-            // Check for AuthLoading state
-            final bool isLoading = state.maybeWhen(
-              loading: () => true,
-              orElse: () => false,
+        builder: (BuildContext context, AuthState state) {
+          // Check for AuthLoading state
+          final bool isLoading = state.maybeWhen(
+            loading: () => true,
+            orElse: () => false,
+          );
+
+          if (isLoading) {
+            return const Center(
+              child: CustomLoadingIndicator(
+                type: LoadingType.pulsingGrid,
+                size: 50,
+              ),
             );
+          }
 
-            if (isLoading) {
-              return const Center(
-                child: CustomLoadingIndicator(
-                  type: LoadingType.pulsingGrid,
-                  size: 50,
-                ),
-              );
-            }
+          // Check for AuthFailure state
+          final AuthFailure? failure = state.maybeWhen(
+            error: (AuthFailure failure) => failure,
+            orElse: () => null,
+          );
 
-            // Check for AuthFailure state
-            final AuthFailure? failure = state.maybeWhen(
-              error: (AuthFailure failure) => failure,
-              orElse: () => null,
-            );
-
-            if (failure != null) {
-              return Column(
+          if (failure != null) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(AppSizes.padding),
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Padding(
@@ -75,13 +77,13 @@ class LoginPage extends StatelessWidget {
                   ),
                   const _LoginForm(),
                 ],
-              );
-            }
+              ),
+            );
+          }
 
-            // Return login form for other states
-            return const _LoginForm();
-          },
-        ),
+          // Return login form for other states
+          return const _LoginForm();
+        },
       ),
     ),
   );
@@ -141,6 +143,10 @@ class _LoginFormState extends State<_LoginForm> {
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            enabled: true,
+            readOnly: false,
+            enableInteractiveSelection: true,
             style: TextStyle(fontSize: AppSizes.textM),
             decoration: InputDecoration(
               labelText: tr('email'),
@@ -157,6 +163,10 @@ class _LoginFormState extends State<_LoginForm> {
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            enabled: true,
+            readOnly: false,
+            enableInteractiveSelection: true,
             style: TextStyle(fontSize: AppSizes.textM),
             decoration: InputDecoration(
               labelText: tr('password'),
@@ -179,6 +189,14 @@ class _LoginFormState extends State<_LoginForm> {
               ),
             ),
             validator: Validators.passwordValidator,
+            onFieldSubmitted: (_) {
+              if (_formKey.currentState!.validate()) {
+                context.read<AuthCubit>().login(
+                  email: _emailController.text.trim(),
+                  password: _passwordController.text,
+                );
+              }
+            },
           ),
           SizedBox(height: AppSizes.verticalSpacingL),
           ElevatedButton(

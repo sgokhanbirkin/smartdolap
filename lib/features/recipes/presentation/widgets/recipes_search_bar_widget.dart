@@ -10,6 +10,7 @@ class RecipesSearchBarWidget extends StatelessWidget {
     required this.query,
     required this.onQueryChanged,
     required this.onClear,
+    this.onGetSuggestions,
     super.key,
   });
 
@@ -25,66 +26,93 @@ class RecipesSearchBarWidget extends StatelessWidget {
   /// Callback when clear button is pressed
   final VoidCallback onClear;
 
+  /// Callback when get suggestions button is pressed
+  final Future<void> Function()? onGetSuggestions;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.all(AppSizes.padding),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppSizes.radius * 2),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Theme.of(context)
-                  .colorScheme
-                  .shadow
-                  .withValues(alpha: 0.05),
-              blurRadius: AppSizes.spacingS,
-              offset: Offset(0, AppSizes.spacingS),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppSizes.radius * 2),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .shadow
+                        .withValues(alpha: 0.05),
+                    blurRadius: AppSizes.spacingS,
+                    offset: Offset(0, AppSizes.spacingS),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: controller,
+                onChanged: onQueryChanged,
+                style: TextStyle(
+                  fontSize: AppSizes.text,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w400,
+                ),
+                decoration: InputDecoration(
+                  hintText: tr('search'),
+                  hintStyle: TextStyle(
+                    fontSize: AppSizes.text,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    size: 24,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  suffixIcon: query.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear_rounded,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          onPressed: onClear,
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: AppSizes.spacingM,
+                    vertical: AppSizes.spacingM + 2,
+                  ),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                ),
+              ),
             ),
-          ],
-        ),
-        child: TextField(
-          controller: controller,
-          onChanged: onQueryChanged,
-          style: TextStyle(
-            fontSize: AppSizes.text,
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w400,
           ),
-          decoration: InputDecoration(
-            hintText: tr('search'),
-            hintStyle: TextStyle(
-              fontSize: AppSizes.text,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w400,
+          SizedBox(width: AppSizes.spacingS),
+          IconButton(
+            icon: Icon(
+              Icons.lightbulb_outline,
+              color: Theme.of(context).colorScheme.primary,
             ),
-            prefixIcon: Icon(
-              Icons.search_rounded,
-              size: 24,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            suffixIcon: query.isNotEmpty
-                ? IconButton(
-                    icon: Icon(
-                      Icons.clear_rounded,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: onClear,
-                  )
+            tooltip: tr('get_suggestions'),
+            onPressed: onGetSuggestions != null
+                ? () {
+                    onGetSuggestions!();
+                  }
                 : null,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: AppSizes.spacingM,
-              vertical: AppSizes.spacingM + 2,
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              padding: EdgeInsets.all(AppSizes.spacingM),
             ),
-            filled: true,
-            fillColor: Colors.transparent,
           ),
-        ),
+        ],
       ),
     );
   }

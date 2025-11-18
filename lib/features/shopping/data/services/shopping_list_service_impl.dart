@@ -92,4 +92,80 @@ class ShoppingListServiceImpl implements IShoppingListService {
       rethrow;
     }
   }
+
+  @override
+  Future<int> completeAllCompletedAndAddToPantry({
+    required String householdId,
+    required String userId,
+    String? avatarId,
+  }) async {
+    try {
+      // Get all shopping list items
+      final List<ShoppingListItem> items = await _shoppingListRepository
+          .getItems(householdId: householdId);
+
+      // Filter completed items
+      final List<ShoppingListItem> completedItems = items
+          .where((ShoppingListItem item) => item.isCompleted)
+          .toList();
+
+      if (completedItems.isEmpty) {
+        Logger.info('[ShoppingListService] No completed items to add to pantry');
+        return 0;
+      }
+
+      int addedCount = 0;
+
+      // Add each completed item to pantry
+      for (final ShoppingListItem item in completedItems) {
+        try {
+          // Create pantry item from shopping list item
+          final PantryItem pantryItem = PantryItem(
+            id: _uuid.v4(),
+            name: item.name,
+            quantity: item.quantity ?? 1.0,
+            unit: item.unit ?? 'adet',
+            category: item.category, // Category already determined when adding to shopping list
+            addedByUserId: userId,
+            addedByAvatarId: avatarId,
+            createdAt: DateTime.now(),
+          );
+
+          // Add to pantry
+          await _pantryRepository.addItem(
+            householdId: householdId,
+            item: pantryItem,
+          );
+
+          // Delete from shopping list
+          await _shoppingListRepository.deleteItem(
+            householdId: householdId,
+            itemId: item.id,
+          );
+
+          addedCount++;
+          Logger.info(
+            '[ShoppingListService] Added ${pantryItem.name} to pantry and removed from shopping list',
+          );
+        } catch (e) {
+          Logger.error(
+            '[ShoppingListService] Error adding ${item.name} to pantry',
+            e,
+          );
+          // Continue with next item instead of failing completely
+        }
+      }
+
+      Logger.info(
+        '[ShoppingListService] Completed and added $addedCount items to pantry',
+      );
+      return addedCount;
+    } catch (e) {
+      Logger.error(
+        '[ShoppingListService] Error completing all and adding to pantry',
+        e,
+      );
+      rethrow;
+    }
+  }
 }

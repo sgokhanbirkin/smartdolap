@@ -15,6 +15,7 @@ import 'package:smartdolap/core/services/sync_service.dart';
 import 'package:smartdolap/features/analytics/domain/use_cases/get_user_analytics_usecase.dart';
 import 'package:smartdolap/features/analytics/presentation/viewmodel/analytics_cubit.dart';
 import 'package:smartdolap/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:smartdolap/features/profile/presentation/viewmodel/profile_cubit.dart';
 import 'package:smartdolap/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
@@ -79,6 +80,19 @@ import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_reposi
 import 'package:smartdolap/features/recipes/domain/use_cases/get_recipe_detail.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/data/repositories/comment_repository_impl.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_comment_repository.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/add_comment_usecase.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/delete_comment_usecase.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/watch_global_comments_usecase.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/watch_household_comments_usecase.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/comment_cubit.dart';
+import 'package:smartdolap/features/food_preferences/data/repositories/food_preference_repository_impl.dart';
+import 'package:smartdolap/features/food_preferences/domain/repositories/i_food_preference_repository.dart';
+import 'package:smartdolap/features/food_preferences/domain/use_cases/get_all_food_preferences_usecase.dart';
+import 'package:smartdolap/features/food_preferences/domain/use_cases/get_user_food_preferences_usecase.dart';
+import 'package:smartdolap/features/food_preferences/domain/use_cases/save_user_food_preferences_usecase.dart';
+import 'package:smartdolap/features/food_preferences/presentation/viewmodel/food_preferences_cubit.dart';
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
 import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart'
@@ -324,6 +338,16 @@ Future<void> setupLocator() async {
   // Analytics cubit
   sl.registerFactory(() => AnalyticsCubit(getUserAnalytics: sl()));
 
+  // Profile cubit
+  sl.registerFactory<ProfileCubit>(
+    () => ProfileCubit(
+      prefService: sl<IPromptPreferenceService>(),
+      statsService: sl<IProfileStatsService>(),
+      userRecipeService: sl<UserRecipeService>(),
+      authCubit: sl<AuthCubit>(),
+    ),
+  );
+
   // Smart notification service - DIP: Register via interface
   sl.registerLazySingleton<ISmartNotificationService>(
     () => SmartNotificationServiceImpl(
@@ -436,6 +460,35 @@ Future<void> setupLocator() async {
     () => SharedRecipeRepositoryImpl(sl<FirebaseFirestore>()),
   );
 
+  // Comment Repository
+  sl.registerLazySingleton<ICommentRepository>(
+    () => CommentRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+
+  // Comment Use Cases
+  sl.registerLazySingleton<WatchGlobalCommentsUseCase>(
+    () => WatchGlobalCommentsUseCase(sl<ICommentRepository>()),
+  );
+  sl.registerLazySingleton<WatchHouseholdCommentsUseCase>(
+    () => WatchHouseholdCommentsUseCase(sl<ICommentRepository>()),
+  );
+  sl.registerLazySingleton<AddCommentUseCase>(
+    () => AddCommentUseCase(sl<ICommentRepository>()),
+  );
+  sl.registerLazySingleton<DeleteCommentUseCase>(
+    () => DeleteCommentUseCase(sl<ICommentRepository>()),
+  );
+
+  // Comment Cubit
+  sl.registerFactory<CommentCubit>(
+    () => CommentCubit(
+      watchGlobalCommentsUseCase: sl<WatchGlobalCommentsUseCase>(),
+      watchHouseholdCommentsUseCase: sl<WatchHouseholdCommentsUseCase>(),
+      addCommentUseCase: sl<AddCommentUseCase>(),
+      deleteCommentUseCase: sl<DeleteCommentUseCase>(),
+    ),
+  );
+
   // Household use cases
   sl.registerFactory(() => CreateHouseholdUseCase(sl()));
   sl.registerFactory(() => GetHouseholdUseCase(sl()));
@@ -464,6 +517,21 @@ Future<void> setupLocator() async {
       sharedRecipeRepository: sl(),
       sendMessageUseCase: sl(),
       shareRecipeUseCase: sl(),
+    ),
+  );
+
+  // Food Preferences
+  sl.registerLazySingleton<IFoodPreferenceRepository>(
+    () => FoodPreferenceRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+  sl.registerFactory(() => GetAllFoodPreferencesUseCase(sl()));
+  sl.registerFactory(() => GetUserFoodPreferencesUseCase(sl()));
+  sl.registerFactory(() => SaveUserFoodPreferencesUseCase(sl()));
+  sl.registerFactory<FoodPreferencesCubit>(
+    () => FoodPreferencesCubit(
+      getAllFoodPreferencesUseCase: sl(),
+      getUserFoodPreferencesUseCase: sl(),
+      saveUserFoodPreferencesUseCase: sl(),
     ),
   );
 }

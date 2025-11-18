@@ -120,13 +120,13 @@ class OpenAIService implements IOpenAIService {
                 '• Default delimiter is comma\n'
                 '• Value types: unquoted numbers/booleans, quoted strings, null\n\n'
                 'Yanıtını TONL formatında ver. Şema:\n'
-                'recipes[count]{title,ingredients,steps,calories,durationMinutes,difficulty,category,imageUrl,fiber}:\n'
-                '  title1, [ing1,ing2], [step1,step2], calories, minutes, difficulty, category, imageUrl, fiber\n'
-                '  title2, [ing3,ing4], [step3,step4], calories, minutes, difficulty, category, imageUrl, fiber\n\n'
+                'recipes[count]{title,ingredients,steps,calories,durationMinutes,difficulty,category,fiber}:\n'
+                '  title1, [ing1,ing2], [step1,step2], calories, minutes, difficulty, category, fiber\n'
+                '  title2, [ing3,ing4], [step3,step4], calories, minutes, difficulty, category, fiber\n\n'
                 'Örnek TONL formatı:\n'
-                'recipes[2]{title,ingredients,steps,calories,durationMinutes,difficulty,category,imageUrl,fiber}:\n'
-                '  Menemen, [yumurta,domates,biber], [Domatesleri doğra,Yumurtaları kır], 250, 15, kolay, kahvaltı, https://example.com/image.jpg, 5\n'
-                '  Omlet, [yumurta,peynir], [Yumurtaları çırp,Tavada pişir], 200, 10, kolay, kahvaltı, https://example.com/image2.jpg, 3',
+                'recipes[2]{title,ingredients,steps,calories,durationMinutes,difficulty,category,fiber}:\n'
+                '  Menemen, [yumurta,domates,biber], [Domatesleri doğra,Yumurtaları kır], 250, 15, kolay, kahvaltı, 5\n'
+                '  Omlet, [yumurta,peynir], [Yumurtaları çırp,Tavada pişir], 200, 10, kolay, kahvaltı, 3',
           },
           <String, String>{
             'role': 'user',
@@ -139,9 +139,6 @@ class OpenAIService implements IOpenAIService {
                           'başlıkları tekrar etme: '
                           '${excludeTitles.join(', ')}. ' : ''}'
                 'Gerekirse ekstra malzeme ekleyebilirsin. '
-                'Her tarif için imageUrl alanına uygun, '
-                'telifsiz bir görsel (ör. üretim değil, '
-                'stok görsel) ekle. '
                 'Yanıtını TONL formatında ver.',
           },
         ],
@@ -198,35 +195,77 @@ class OpenAIService implements IOpenAIService {
         if (content.trim().startsWith('#version') ||
             content.contains('[') && content.contains(']{')) {
           json = TONLEncoder.decode(content) as Map<String, dynamic>;
-          Logger.info('[OpenAIService] Successfully parsed TONL response');
+          Logger.info(
+            '[OpenAIService] Successfully parsed TONL response. Content length: ${content.length}',
+          );
+          Logger.info(
+            '[OpenAIService] TONL parsed JSON keys: ${json.keys.toList()}',
+          );
         } else {
           // Fallback to JSON
           json = jsonDecode(content) as Map<String, dynamic>;
           Logger.info('[OpenAIService] Parsed JSON response (fallback)');
+          Logger.info('[OpenAIService] JSON keys: ${json.keys.toList()}');
         }
       } on FormatException catch (e, s) {
-        Logger.error('[OpenAIService] TONL/JSON decode error', e, s);
+        final String preview = content.length > 500
+            ? '${content.substring(0, 500)}...'
+            : content;
+        Logger.error(
+          '[OpenAIService] TONL/JSON decode error. Content preview: $preview',
+          e,
+          s,
+        );
         throw const OpenAIParsingException('invalid_format');
       } catch (e, s) {
-        Logger.error('[OpenAIService] Parse error', e, s);
+        final String preview = content.length > 500
+            ? '${content.substring(0, 500)}...'
+            : content;
+        Logger.error(
+          '[OpenAIService] Parse error. Content preview: $preview',
+          e,
+          s,
+        );
         throw const OpenAIParsingException('invalid_format');
       }
 
       // Validate recipes array
       if (!json.containsKey('recipes')) {
         Logger.error(
-          '[OpenAIService] Invalid JSON structure - missing recipes',
+          '[OpenAIService] Invalid JSON structure - missing recipes. JSON keys: ${json.keys.toList()}',
         );
         throw const OpenAIParsingException('invalid_format');
       }
 
       final dynamic recipesJson = json['recipes'];
       if (recipesJson is! List) {
-        Logger.error('[OpenAIService] Invalid recipes format - not a list');
+        Logger.error(
+          '[OpenAIService] Invalid recipes format - not a list. Type: ${recipesJson.runtimeType}, Value: $recipesJson',
+        );
         throw const OpenAIParsingException('invalid_format');
       }
 
       final List<dynamic> recipes = recipesJson;
+
+      // Debug: Log the full JSON structure
+      Logger.info('[OpenAIService] JSON structure keys: ${json.keys.toList()}');
+      Logger.info(
+        '[OpenAIService] Recipes type: ${recipesJson.runtimeType}, Length: ${recipes.length}',
+      );
+
+      // Log full content if recipes array is empty
+      if (recipes.isEmpty) {
+        Logger.error(
+          '[OpenAIService] Recipes array is empty. Full JSON: $json',
+        );
+        Logger.error(
+          '[OpenAIService] Full content preview (first 1000 chars): ${content.substring(0, content.length > 1000 ? 1000 : content.length)}',
+        );
+      } else {
+        Logger.info(
+          '[OpenAIService] Found ${recipes.length} recipes in response. First recipe preview: ${recipes.first.toString().substring(0, recipes.first.toString().length > 200 ? 200 : recipes.first.toString().length)}',
+        );
+      }
 
       // Parse each recipe with schema validation
       final List<RecipeSuggestion> result = <RecipeSuggestion>[];
@@ -242,8 +281,14 @@ class OpenAIService implements IOpenAIService {
           if (!recipeMap.containsKey('title') ||
               recipeMap['title'] is! String) {
             Logger.error(
-              '[OpenAIService] Invalid recipe - missing or invalid title',
+              '[OpenAIService] Invalid recipe - missing or invalid title: $recipeMap',
             );
+            continue;
+          }
+
+          final String title = recipeMap['title'] as String;
+          if (title.trim().isEmpty) {
+            Logger.error('[OpenAIService] Empty title in recipe');
             continue;
           }
 
@@ -251,17 +296,21 @@ class OpenAIService implements IOpenAIService {
           List<String> ingredients = <String>[];
           final dynamic ingredientsData = recipeMap['ingredients'];
           if (ingredientsData is List) {
-            ingredients = ingredientsData.map<String>((dynamic e) {
-              if (e is String) {
-                return e;
-              }
-              if (e is Map<String, dynamic>) {
-                return (e['name'] as String?) ??
-                    (e.values.first as String?) ??
-                    e.toString();
-              }
-              return e.toString();
-            }).toList();
+            ingredients = ingredientsData
+                .map<String>((dynamic e) {
+                  if (e is String) {
+                    return e.trim();
+                  }
+                  if (e is Map<String, dynamic>) {
+                    return ((e['name'] as String?) ??
+                            (e.values.first as String?) ??
+                            e.toString())
+                        .trim();
+                  }
+                  return e.toString().trim();
+                })
+                .where((String e) => e.isNotEmpty)
+                .toList();
           } else if (ingredientsData is String) {
             // TONL format: parse comma-separated string like "[ing1,ing2,ing3]"
             final String cleaned = ingredientsData
@@ -272,11 +321,20 @@ class OpenAIService implements IOpenAIService {
               ingredients = cleaned
                   .split(',')
                   .map((String e) => e.trim())
+                  .where((String e) => e.isNotEmpty)
                   .toList();
             }
           } else if (!recipeMap.containsKey('ingredients')) {
             Logger.error(
-              '[OpenAIService] Invalid recipe - missing ingredients',
+              '[OpenAIService] Invalid recipe - missing ingredients: $recipeMap',
+            );
+            continue;
+          }
+
+          // Validate that we have at least one ingredient
+          if (ingredients.isEmpty) {
+            Logger.error(
+              '[OpenAIService] Invalid recipe - empty ingredients: $recipeMap',
             );
             continue;
           }
@@ -285,18 +343,22 @@ class OpenAIService implements IOpenAIService {
           List<String> steps = <String>[];
           final dynamic stepsData = recipeMap['steps'];
           if (stepsData is List) {
-            steps = stepsData.map<String>((dynamic e) {
-              if (e is String) {
-                return e;
-              }
-              if (e is Map<String, dynamic>) {
-                return (e['step'] as String?) ??
-                    (e['text'] as String?) ??
-                    (e.values.first as String?) ??
-                    e.toString();
-              }
-              return e.toString();
-            }).toList();
+            steps = stepsData
+                .map<String>((dynamic e) {
+                  if (e is String) {
+                    return e.trim();
+                  }
+                  if (e is Map<String, dynamic>) {
+                    return ((e['step'] as String?) ??
+                            (e['text'] as String?) ??
+                            (e.values.first as String?) ??
+                            e.toString())
+                        .trim();
+                  }
+                  return e.toString().trim();
+                })
+                .where((String e) => e.isNotEmpty)
+                .toList();
           } else if (stepsData is String) {
             // TONL format: parse comma-separated string like "[step1,step2,step3]"
             final String cleaned = stepsData
@@ -304,10 +366,24 @@ class OpenAIService implements IOpenAIService {
                 .replaceAll(']', '')
                 .trim();
             if (cleaned.isNotEmpty) {
-              steps = cleaned.split(',').map((String e) => e.trim()).toList();
+              steps = cleaned
+                  .split(',')
+                  .map((String e) => e.trim())
+                  .where((String e) => e.isNotEmpty)
+                  .toList();
             }
           } else if (!recipeMap.containsKey('steps')) {
-            Logger.error('[OpenAIService] Invalid recipe - missing steps');
+            Logger.error(
+              '[OpenAIService] Invalid recipe - missing steps: $recipeMap',
+            );
+            continue;
+          }
+
+          // Validate that we have at least one step
+          if (steps.isEmpty) {
+            Logger.error(
+              '[OpenAIService] Invalid recipe - empty steps: $recipeMap',
+            );
             continue;
           }
 
@@ -319,22 +395,33 @@ class OpenAIService implements IOpenAIService {
               calories: (recipeMap['calories'] as num?)?.toInt(),
               durationMinutes: (recipeMap['durationMinutes'] as num?)?.toInt(),
               difficulty: recipeMap['difficulty'] as String?,
-              imageUrl: recipeMap['imageUrl'] as String?,
+              imageUrl:
+                  null, // Image will be fetched separately via ImageLookupService
               category: recipeMap['category'] as String?,
               fiber: (recipeMap['fiber'] as num?)?.toInt(),
             ),
           );
-        } catch (e) {
-          Logger.error('[OpenAIService] Error parsing individual recipe', e);
+        } catch (e, s) {
+          Logger.error(
+            '[OpenAIService] Error parsing individual recipe: $r',
+            e,
+            s,
+          );
           // Continue with next recipe instead of failing completely
           continue;
         }
       }
 
       if (result.isEmpty) {
-        Logger.error('[OpenAIService] No valid recipes parsed');
+        Logger.error(
+          '[OpenAIService] No valid recipes parsed. Total recipes in response: ${recipes.length}. Parsed recipes array preview: ${recipes.length > 3 ? recipes.take(3).toString() : recipes.toString()}',
+        );
         throw const OpenAIParsingException('empty_response');
       }
+
+      Logger.info(
+        '[OpenAIService] Successfully parsed ${result.length} recipes from ${recipes.length} total',
+      );
 
       return result;
     } on OpenAIParsingException {

@@ -204,8 +204,8 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
             // Wait a bit for Firestore write to complete
             await Future<void>.delayed(const Duration(milliseconds: 500));
             await context.read<AuthCubit>().refreshUser();
-            // Navigate to home after successful household creation/join
-            Navigator.of(context).pushReplacementNamed(AppRouter.home);
+            // Navigate to food preferences onboarding after successful household creation/join
+            Navigator.of(context).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
           },
           noHousehold: () {},
           error: (String message) {
@@ -296,8 +296,8 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
             // Wait a bit for Firestore write to complete
             await Future<void>.delayed(const Duration(milliseconds: 500));
             await context.read<AuthCubit>().refreshUser();
-            // Navigate to home after successful household creation/join
-            Navigator.of(context).pushReplacementNamed(AppRouter.home);
+            // Navigate to food preferences onboarding after successful household creation/join
+            Navigator.of(context).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
           },
           noHousehold: () {},
           error: (String message) {

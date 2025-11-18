@@ -25,6 +25,7 @@ class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _opacityAnimation;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _SplashPageState extends State<SplashPage>
 
     // Wait 2 seconds before checking auth state
     Future<void>.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
+      if (mounted && !_hasNavigated) {
         _checkAuthState();
       }
     });
@@ -59,6 +60,10 @@ class _SplashPageState extends State<SplashPage>
   }
 
   void _checkAuthState() {
+    if (_hasNavigated) {
+      return;
+    }
+
     final AuthCubit authCubit = context.read<AuthCubit>();
     final AuthState currentState = authCubit.state;
     final IOnboardingService onboardingService = sl<IOnboardingService>();
@@ -70,6 +75,7 @@ class _SplashPageState extends State<SplashPage>
       debugPrint(
         '[SplashPage] Onboarding not completed - redirecting to onboarding',
       );
+      _hasNavigated = true;
       Navigator.of(context).pushReplacementNamed(AppRouter.onboarding);
       return;
     }
@@ -83,7 +89,11 @@ class _SplashPageState extends State<SplashPage>
         debugPrint('[SplashPage] Loading state - waiting');
       },
       authenticated: (user) {
+        if (_hasNavigated) {
+          return;
+        }
         debugPrint('[SplashPage] Authenticated - checking household');
+        _hasNavigated = true;
         if (user.householdId == null) {
           debugPrint(
             '[SplashPage] No household - redirecting to household setup (required)',
@@ -95,11 +105,19 @@ class _SplashPageState extends State<SplashPage>
         }
       },
       unauthenticated: () {
+        if (_hasNavigated) {
+          return;
+        }
         debugPrint('[SplashPage] Unauthenticated - redirecting to login');
+        _hasNavigated = true;
         Navigator.of(context).pushReplacementNamed(AppRouter.login);
       },
       error: (failure) {
+        if (_hasNavigated) {
+          return;
+        }
         debugPrint('[SplashPage] Error state - redirecting to login');
+        _hasNavigated = true;
         Navigator.of(context).pushReplacementNamed(AppRouter.login);
       },
     );
@@ -108,6 +126,11 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) => BlocListener<AuthCubit, AuthState>(
     listener: (BuildContext context, AuthState state) {
+      // Only navigate if we haven't navigated yet and state is ready
+      if (_hasNavigated) {
+        return;
+      }
+
       debugPrint('[SplashPage] AuthState changed: $state');
       final IOnboardingService onboardingService = sl<IOnboardingService>();
 
@@ -116,6 +139,7 @@ class _SplashPageState extends State<SplashPage>
         debugPrint(
           '[SplashPage] Onboarding not completed - redirecting to onboarding',
         );
+        _hasNavigated = true;
         Navigator.of(context).pushReplacementNamed(AppRouter.onboarding);
         return;
       }
@@ -123,30 +147,42 @@ class _SplashPageState extends State<SplashPage>
       state.when(
         initial: () {},
         loading: () {},
-      authenticated: (user) {
-        debugPrint(
-          '[SplashPage] Authenticated during splash - checking household',
-        );
-        if (user.householdId == null) {
+        authenticated: (user) {
+          if (_hasNavigated) {
+            return;
+          }
           debugPrint(
-            '[SplashPage] No household - redirecting to household setup (required)',
+            '[SplashPage] Authenticated during splash - checking household',
           );
-          Navigator.of(
-            context,
-          ).pushReplacementNamed(AppRouter.householdSetup);
-        } else {
-          debugPrint('[SplashPage] Has household - redirecting to home');
-          Navigator.of(context).pushReplacementNamed(AppRouter.home);
-        }
-      },
+          _hasNavigated = true;
+          if (user.householdId == null) {
+            debugPrint(
+              '[SplashPage] No household - redirecting to household setup (required)',
+            );
+            Navigator.of(
+              context,
+            ).pushReplacementNamed(AppRouter.householdSetup);
+          } else {
+            debugPrint('[SplashPage] Has household - redirecting to home');
+            Navigator.of(context).pushReplacementNamed(AppRouter.home);
+          }
+        },
         unauthenticated: () {
+          if (_hasNavigated) {
+            return;
+          }
           debugPrint(
             '[SplashPage] Unauthenticated during splash - redirecting to login',
           );
+          _hasNavigated = true;
           Navigator.of(context).pushReplacementNamed(AppRouter.login);
         },
         error: (failure) {
+          if (_hasNavigated) {
+            return;
+          }
           debugPrint('[SplashPage] Error during splash - redirecting to login');
+          _hasNavigated = true;
           Navigator.of(context).pushReplacementNamed(AppRouter.login);
         },
       );

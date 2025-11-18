@@ -23,6 +23,8 @@ import 'package:smartdolap/features/analytics/presentation/view/analytics_page.d
 import 'package:smartdolap/features/household/presentation/view/household_setup_page.dart';
 import 'package:smartdolap/features/household/presentation/view/share_page.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
+import 'package:smartdolap/features/food_preferences/presentation/view/food_preferences_onboarding_page.dart';
+import 'package:smartdolap/features/food_preferences/presentation/viewmodel/food_preferences_cubit.dart';
 import 'package:smartdolap/features/shopping/presentation/view/shopping_list_page.dart';
 import 'package:smartdolap/product/widgets/app_shell.dart';
 
@@ -66,6 +68,9 @@ class AppRouter {
 
   /// Household setup route path
   static const String householdSetup = '/household/setup';
+
+  /// Food preferences onboarding route path
+  static const String foodPreferencesOnboarding = '/food-preferences/onboarding';
 
   /// Share route path
   static const String share = '/share';
@@ -241,6 +246,13 @@ class AppRouter {
           builder: (BuildContext context) => BlocProvider<HouseholdCubit>(
             create: (BuildContext _) => sl<HouseholdCubit>(),
             child: const HouseholdSetupPage(),
+          ),
+        );
+      case foodPreferencesOnboarding:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => BlocProvider<FoodPreferencesCubit>(
+            create: (BuildContext _) => sl<FoodPreferencesCubit>(),
+            child: const FoodPreferencesOnboardingPage(),
           ),
         );
       case share:

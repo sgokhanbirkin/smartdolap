@@ -10,10 +10,7 @@ import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 /// Shared recipes tab page - Shows shared recipes grid
 class SharedRecipesTabPage extends StatelessWidget {
   /// Shared recipes tab page constructor
-  const SharedRecipesTabPage({
-    required this.sharedRecipes,
-    super.key,
-  });
+  const SharedRecipesTabPage({required this.sharedRecipes, super.key});
 
   final List<SharedRecipe> sharedRecipes;
 
@@ -80,6 +77,8 @@ class SharedRecipesTabPage extends StatelessWidget {
             MaterialPageRoute<void>(
               builder: (BuildContext context) => RecipeDetailPage(
                 recipe: recipe,
+                isHouseholdOnly: true,
+                householdId: sharedRecipe.householdId,
               ),
             ),
           );
@@ -109,7 +108,8 @@ class SharedRecipesTabPage extends StatelessWidget {
                         child: Image.network(
                           sharedRecipe.recipe.imagePath!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildImagePlaceholder(context),
+                          errorBuilder: (_, __, ___) =>
+                              _buildImagePlaceholder(context),
                         ),
                       )
                     : _buildImagePlaceholder(context),
@@ -145,9 +145,9 @@ class SharedRecipesTabPage extends StatelessWidget {
                             sharedRecipe.sharedByName,
                             style: TextStyle(
                               fontSize: AppSizes.textXS,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -175,4 +175,3 @@ class SharedRecipesTabPage extends StatelessWidget {
     );
   }
 }
-

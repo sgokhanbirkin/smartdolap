@@ -31,7 +31,7 @@ mixin AuthGuard {
 }
 
 /// Route guard widget that protects routes requiring authentication
-class AuthGuardWidget extends StatelessWidget {
+class AuthGuardWidget extends StatefulWidget {
   const AuthGuardWidget({
     required this.child,
     this.redirectToLogin = true,
@@ -42,32 +42,70 @@ class AuthGuardWidget extends StatelessWidget {
   final bool redirectToLogin;
 
   @override
-  Widget build(BuildContext context) => BlocBuilder<AuthCubit, AuthState>(
-    builder: (BuildContext context, AuthState state) {
-      return state.when(
-        initial: () => const SizedBox.shrink(),
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        authenticated: (_) => child,
+  State<AuthGuardWidget> createState() => _AuthGuardWidgetState();
+}
+
+class _AuthGuardWidgetState extends State<AuthGuardWidget> {
+  bool _hasNavigated = false;
+
+  @override
+  Widget build(BuildContext context) => BlocListener<AuthCubit, AuthState>(
+    listener: (BuildContext context, AuthState state) {
+      if (_hasNavigated) {
+        return;
+      }
+
+      state.when(
+        initial: () {},
+        loading: () {},
+        authenticated: (_) {},
         unauthenticated: () {
-          if (redirectToLogin) {
+          if (widget.redirectToLogin) {
+            _hasNavigated = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.of(context).pushReplacementNamed(AppRouter.login);
+              if (mounted) {
+                Navigator.of(context).pushReplacementNamed(AppRouter.login);
+              }
             });
           }
-          return const SizedBox.shrink();
         },
         error: (_) {
-          if (redirectToLogin) {
+          if (widget.redirectToLogin) {
+            _hasNavigated = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.of(context).pushReplacementNamed(AppRouter.login);
+              if (mounted) {
+                Navigator.of(context).pushReplacementNamed(AppRouter.login);
+              }
             });
           }
-          return const SizedBox.shrink();
         },
       );
     },
+    child: BlocBuilder<AuthCubit, AuthState>(
+      buildWhen: (AuthState previous, AuthState current) {
+        // Only rebuild when authentication status changes (not on every state change)
+        final bool wasAuthenticated = previous.maybeWhen(
+          authenticated: (_) => true,
+          orElse: () => false,
+        );
+        final bool isAuthenticated = current.maybeWhen(
+          authenticated: (_) => true,
+          orElse: () => false,
+        );
+        return wasAuthenticated != isAuthenticated;
+      },
+      builder: (BuildContext context, AuthState state) {
+        return state.when(
+          initial: () => const SizedBox.shrink(),
+          loading: () => const Center(
+            child: CircularProgressIndicator(),
+          ),
+          authenticated: (_) => widget.child,
+          unauthenticated: () => const SizedBox.shrink(),
+          error: (_) => const SizedBox.shrink(),
+        );
+      },
+    ),
   );
 }
 

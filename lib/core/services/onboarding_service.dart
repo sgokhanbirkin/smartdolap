@@ -10,15 +10,18 @@ class OnboardingService implements IOnboardingService {
   static const String _onboardingKey = 'onboarding_completed';
 
   /// Checks if onboarding has been completed
+  @override
   bool isOnboardingCompleted() =>
       _box.get(_onboardingKey, defaultValue: false) as bool;
 
   /// Marks onboarding as completed
+  @override
   Future<void> completeOnboarding() async {
     await _box.put(_onboardingKey, true);
   }
 
   /// Resets onboarding (for testing purposes)
+  @override
   Future<void> resetOnboarding() async {
     await _box.put(_onboardingKey, false);
   }

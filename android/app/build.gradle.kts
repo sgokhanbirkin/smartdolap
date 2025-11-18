@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.birkinapps.smartdolap"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     // Use the highest NDK required by Firebase/AndroidX plugins
     ndkVersion = "27.0.12077973"
 
