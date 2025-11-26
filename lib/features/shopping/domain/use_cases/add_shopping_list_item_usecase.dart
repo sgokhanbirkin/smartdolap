@@ -12,7 +12,5 @@ class AddShoppingListItemUseCase {
   Future<ShoppingListItem> call({
     required String householdId,
     required ShoppingListItem item,
-  }) async {
-    return _repository.addItem(householdId: householdId, item: item);
-  }
+  }) async => _repository.addItem(householdId: householdId, item: item);
 }

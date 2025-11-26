@@ -38,8 +38,7 @@ class CommentRepositoryImpl implements ICommentRepository {
   Stream<List<RecipeComment>> watchHouseholdComments(
     String recipeId,
     String householdId,
-  ) {
-    return _firestore
+  ) => _firestore
         .collection(_households)
         .doc(householdId)
         .collection(_recipeComments)
@@ -54,7 +53,6 @@ class CommentRepositoryImpl implements ICommentRepository {
               )
               .toList(),
         );
-  }
 
   @override
   Future<void> addComment(RecipeComment comment) async {

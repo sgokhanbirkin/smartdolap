@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/domain/entities/recipe_step.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 
@@ -25,7 +26,10 @@ void main() {
           id: 'recipe-1',
           title: 'Yumurta Salatası',
           ingredients: <String>['Yumurta', 'Mayonez'],
-          steps: <String>['Yumurtaları haşla', 'Doğra ve karıştır'],
+          steps: <RecipeStep>[
+            RecipeStep(description: 'Yumurtaları haşla'),
+            RecipeStep(description: 'Doğra ve karıştır'),
+          ],
           calories: 200,
           durationMinutes: 15,
           difficulty: 'kolay',
@@ -35,7 +39,10 @@ void main() {
           id: 'recipe-2',
           title: 'Mantarlı Omlet',
           ingredients: <String>['Yumurta', 'Mantar'],
-          steps: <String>['Mantarları kızart', 'Yumurta ekle'],
+          steps: <RecipeStep>[
+            RecipeStep(description: 'Mantarları kızart'),
+            RecipeStep(description: 'Yumurta ekle'),
+          ],
           calories: 250,
           durationMinutes: 20,
           difficulty: 'orta',
@@ -86,7 +93,9 @@ void main() {
           id: 'recipe-1',
           title: 'Test Recipe',
           ingredients: <String>['Yumurta', 'Süt', 'Un'],
-          steps: <String>['Karıştır'],
+          steps: <RecipeStep>[
+            RecipeStep(description: 'Karıştır'),
+          ],
           missingCount: 1,
         ),
       ];

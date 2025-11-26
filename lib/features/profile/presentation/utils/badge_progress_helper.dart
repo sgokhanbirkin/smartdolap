@@ -96,11 +96,11 @@ class BadgeProgressHelper {
       if (allBadges.isEmpty) {
         break;
       }
-      final Badge? badge = allBadges.firstWhere(
+      final Badge badge = allBadges.firstWhere(
         (Badge b) => b.id == id,
         orElse: () => allBadges.first,
       );
-      if (badge != null && !result.contains(badge)) {
+      if (!result.contains(badge)) {
         result.add(badge);
       }
     }

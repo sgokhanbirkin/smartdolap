@@ -9,8 +9,6 @@ class GetAllFoodPreferencesUseCase {
   final IFoodPreferenceRepository _repository;
 
   /// Execute getting all food preferences
-  Future<List<FoodPreference>> call() async {
-    return _repository.getAllFoodPreferences();
-  }
+  Future<List<FoodPreference>> call() async => _repository.getAllFoodPreferences();
 }
 

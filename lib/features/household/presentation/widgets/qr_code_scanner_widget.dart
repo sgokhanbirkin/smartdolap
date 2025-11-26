@@ -6,8 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 class QrCodeScannerWidget extends StatefulWidget {
   /// QR code scanner widget constructor
   const QrCodeScannerWidget({
-    super.key,
-    required this.onCodeScanned,
+    required this.onCodeScanned, super.key,
   });
 
   /// Callback when QR code is scanned
@@ -27,8 +26,7 @@ class _QrCodeScannerWidgetState extends State<QrCodeScannerWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('QR Kod Tara'),
       ),
@@ -86,6 +84,5 @@ class _QrCodeScannerWidgetState extends State<QrCodeScannerWidget> {
         ],
       ),
     );
-  }
 }
 

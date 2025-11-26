@@ -27,7 +27,7 @@ void main() {
         const String itemId = 'test-item-123';
         final int baseId = itemId.hashCode;
 
-        when(() => mockNotifications.cancel(any())).thenAnswer((_) async => {});
+        when(() => mockNotifications.cancel(any())).thenAnswer((_) async => <dynamic, dynamic>{});
 
         // Act
         await service.cancelItemNotifications(itemId);
@@ -75,7 +75,7 @@ void main() {
                 named: 'uiLocalNotificationDateInterpretation',
               ),
             ),
-          ).thenAnswer((_) async => {});
+          ).thenAnswer((_) async => <dynamic, dynamic>{});
 
           // Act
           await service.schedulePerItem(item);
@@ -119,7 +119,7 @@ void main() {
                 named: 'uiLocalNotificationDateInterpretation',
               ),
             ),
-          ).thenAnswer((_) async => {});
+          ).thenAnswer((_) async => <dynamic, dynamic>{});
 
           // Act
           await service.schedulePerItem(item);
@@ -163,7 +163,7 @@ void main() {
                 named: 'uiLocalNotificationDateInterpretation',
               ),
             ),
-          ).thenAnswer((_) async => {});
+          ).thenAnswer((_) async => <dynamic, dynamic>{});
 
           // Act
           await service.schedulePerItem(item);
@@ -192,7 +192,6 @@ void main() {
           const PantryItem item = PantryItem(
             id: 'item-1',
             name: 'Test Item',
-            expiryDate: null,
           );
 
           // Act
@@ -273,7 +272,7 @@ void main() {
                 named: 'uiLocalNotificationDateInterpretation',
               ),
             ),
-          ).thenAnswer((_) async => {});
+          ).thenAnswer((_) async => <dynamic, dynamic>{});
 
           // Act
           await service.scheduleNotifications(items);

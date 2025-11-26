@@ -5,7 +5,11 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
+import 'package:smartdolap/features/profile/domain/entities/badge.dart'
+    as profile_domain;
+import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
+import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
 import 'package:smartdolap/features/profile/presentation/mixins/profile_actions_mixin.dart';
 import 'package:smartdolap/features/profile/presentation/viewmodel/profile_cubit.dart';
 import 'package:smartdolap/features/profile/presentation/viewmodel/profile_state.dart';
@@ -29,7 +33,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage>
-    with TickerProviderStateMixin, ProfileActionsMixin {
+    with TickerProviderStateMixin<ProfilePage>, ProfileActionsMixin<ProfilePage> {
   late AnimationController _pulseController;
 
   @override
@@ -73,10 +77,10 @@ class _ProfilePageState extends State<ProfilePage>
           ).animate().fadeIn(duration: 300.ms),
           loaded:
               (
-                preferences,
-                stats,
-                badges,
-                userRecipes,
+                PromptPreferences preferences,
+                ProfileStats stats,
+                List<profile_domain.Badge> badges,
+                List<UserRecipe> userRecipes,
                 int favoritesCount,
               ) => CustomScrollView(
                 slivers: <Widget>[

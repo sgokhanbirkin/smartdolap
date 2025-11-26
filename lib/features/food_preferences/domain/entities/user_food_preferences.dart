@@ -12,6 +12,26 @@ class UserFoodPreferences {
     this.isCompleted = false,
   });
 
+  /// Create from JSON
+  factory UserFoodPreferences.fromJson(Map<String, dynamic> json) =>
+      UserFoodPreferences(
+        userId: json['userId'] as String,
+        householdId: json['householdId'] as String,
+        selectedFoodIds: (json['selectedFoodIds'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const <String>[],
+        mealTypePreferences: json['mealTypePreferences'] != null
+            ? MealTypePreferences.fromJson(
+                json['mealTypePreferences'] as Map<String, dynamic>,
+              )
+            : const MealTypePreferences(),
+        completedAt: json['completedAt'] != null
+            ? DateTime.parse(json['completedAt'] as String)
+            : null,
+        isCompleted: json['isCompleted'] as bool? ?? false,
+      );
+
   /// User ID
   final String userId;
 
@@ -29,26 +49,6 @@ class UserFoodPreferences {
 
   /// Whether onboarding is completed
   final bool isCompleted;
-
-  /// Create from JSON
-  factory UserFoodPreferences.fromJson(Map<String, dynamic> json) =>
-      UserFoodPreferences(
-        userId: json['userId'] as String,
-        householdId: json['householdId'] as String,
-        selectedFoodIds: (json['selectedFoodIds'] as List<dynamic>?)
-                ?.map((dynamic e) => e as String)
-                .toList() ??
-            const <String>[],
-        mealTypePreferences: json['mealTypePreferences'] != null
-            ? MealTypePreferences.fromJson(
-                json['mealTypePreferences'] as Map<String, dynamic>,
-              )
-            : const MealTypePreferences(),
-        completedAt: json['completedAt'] != null
-            ? DateTime.parse(json['completedAt'] as String)
-            : null,
-        isCompleted: json['isCompleted'] as bool? ?? false,
-      );
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{

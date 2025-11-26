@@ -13,11 +13,9 @@ class CompleteShoppingListItemUseCase {
     required String householdId,
     required String itemId,
     required String completedByUserId,
-  }) async {
-    return _repository.completeItem(
+  }) async => _repository.completeItem(
       householdId: householdId,
       itemId: itemId,
       completedByUserId: completedByUserId,
     );
-  }
 }

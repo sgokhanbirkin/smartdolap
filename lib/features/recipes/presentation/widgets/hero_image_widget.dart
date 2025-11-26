@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/widgets/cached_image_widget.dart';
 
 /// Hero image widget for recipe detail page
 class HeroImageWidget extends StatelessWidget {
@@ -24,25 +25,12 @@ class HeroImageWidget extends StatelessWidget {
         ),
       );
     }
-    return ClipRRect(
+    return CachedImageWidget(
+      imageUrl: imageUrl,
+      aspectRatio: 16 / 9,
       borderRadius: BorderRadius.circular(AppSizes.cardRadius),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Image.network(
-          imageUrl!,
-          fit: BoxFit.cover,
-          errorBuilder: (_, Object error, StackTrace? stackTrace) {
-            debugPrint('Resim yüklenemedi: $imageUrl - $error');
-            return Container(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Icon(
-                Icons.restaurant,
-                size: AppSizes.iconXL,
-              ),
-            );
-          },
-        ),
-      ),
+      placeholderIcon: Icons.restaurant,
+      errorIcon: Icons.restaurant,
     );
   }
 }

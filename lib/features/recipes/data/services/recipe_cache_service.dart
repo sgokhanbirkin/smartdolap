@@ -11,10 +11,12 @@ class RecipeCacheService implements IRecipeCacheService {
   final Box<dynamic> _cacheBox;
 
   /// Get cache key for meal-specific recipes
+  @override
   String getMealCacheKey(String userId, String meal) =>
       'recipes_cache_${meal}_$userId';
 
   /// Get recipes from cache as Map list
+  @override
   List<Map<String, Object?>>? getRecipes(String cacheKey) {
     final List<dynamic>? cachedRecipes =
         _cacheBox.get(cacheKey) as List<dynamic>?;
@@ -22,7 +24,7 @@ class RecipeCacheService implements IRecipeCacheService {
       return null;
     }
 
-    return cachedRecipes.map<Map<String, Object?>>((dynamic item) {
+    return cachedRecipes.map<Map<String, Object?>>((item) {
       final Map<dynamic, dynamic> map = item as Map<dynamic, dynamic>;
       return <String, Object?>{
         'id': map['id'] as String?,
@@ -40,48 +42,37 @@ class RecipeCacheService implements IRecipeCacheService {
   }
 
   /// Get recipes from cache as Recipe list
+  @override
   List<Recipe>? getRecipesAsRecipeList(String cacheKey) {
     final List<Map<String, Object?>>? cached = getRecipes(cacheKey);
     if (cached == null || cached.isEmpty) {
       return null;
     }
 
-    return cached.map((Map<String, Object?> map) {
-      return Recipe.fromMap(map as Map<dynamic, dynamic>);
-    }).toList();
+    return cached.map((Map<String, Object?> map) => Recipe.fromMap(map as Map<dynamic, dynamic>)).toList();
   }
 
   /// Save recipes to cache (replaces existing) - alias for saveRecipes
-  Future<void> putRecipes(String cacheKey, List<Recipe> recipes) async {
-    return saveRecipes(cacheKey, recipes);
-  }
+  @override
+  Future<void> putRecipes(String cacheKey, List<Recipe> recipes) async => saveRecipes(cacheKey, recipes);
 
   /// Save recipes to cache (replaces existing)
+  @override
   Future<void> saveRecipes(String cacheKey, List<Recipe> recipes) async {
     final List<Map<String, Object?>> cacheData = recipes
         .map(
-          (Recipe e) => <String, Object?>{
-            'id': e.id,
-            'title': e.title,
-            'ingredients': e.ingredients,
-            'steps': e.steps,
-            'calories': e.calories,
-            'durationMinutes': e.durationMinutes,
-            'difficulty': e.difficulty,
-            'imageUrl': e.imageUrl,
-            'category': e.category,
-            'fiber': e.fiber,
-          },
+          (Recipe e) => e.toMap().cast<String, Object?>(),
         )
         .toList();
 
     await _cacheBox.put(cacheKey, cacheData);
     debugPrint(
-      '[RecipeCacheService] Cache\'e kaydedildi ($cacheKey) - ${recipes.length} tarif',
+      "[RecipeCacheService] Cache'e kaydedildi ($cacheKey) - ${recipes.length} tarif",
     );
   }
 
   /// Add recipes to existing cache (prepends new recipes)
+  @override
   Future<void> addRecipesToCache(
     String cacheKey,
     List<Recipe> newRecipes,
@@ -89,18 +80,7 @@ class RecipeCacheService implements IRecipeCacheService {
     final List<Map<String, Object?>>? existingCache = getRecipes(cacheKey);
     final List<Map<String, Object?>> newCacheData = newRecipes
         .map(
-          (Recipe e) => <String, Object?>{
-            'id': e.id,
-            'title': e.title,
-            'ingredients': e.ingredients,
-            'steps': e.steps,
-            'calories': e.calories,
-            'durationMinutes': e.durationMinutes,
-            'difficulty': e.difficulty,
-            'imageUrl': e.imageUrl,
-            'category': e.category,
-            'fiber': e.fiber,
-          },
+          (Recipe e) => e.toMap().cast<String, Object?>(),
         )
         .toList();
 
@@ -125,17 +105,18 @@ class RecipeCacheService implements IRecipeCacheService {
 
       await _cacheBox.put(cacheKey, combinedCache);
       debugPrint(
-        '[RecipeCacheService] Cache\'e eklendi ($cacheKey) - ${uniqueNewRecipes.length} yeni tarif, toplam: ${combinedCache.length}',
+        "[RecipeCacheService] Cache'e eklendi ($cacheKey) - ${uniqueNewRecipes.length} yeni tarif, toplam: ${combinedCache.length}",
       );
     } else {
       await _cacheBox.put(cacheKey, newCacheData);
       debugPrint(
-        '[RecipeCacheService] Cache\'e kaydedildi ($cacheKey) - ${newRecipes.length} yeni tarif',
+        "[RecipeCacheService] Cache'e kaydedildi ($cacheKey) - ${newRecipes.length} yeni tarif",
       );
     }
   }
 
   /// Delete recipes from cache by titles
+  @override
   Future<void> deleteRecipesByTitles(
     String cacheKey,
     List<String> titles,
@@ -155,7 +136,7 @@ class RecipeCacheService implements IRecipeCacheService {
 
     await _cacheBox.put(cacheKey, remaining);
     debugPrint(
-      '[RecipeCacheService] Cache\'den silindi ($cacheKey) - ${titles.length} tarif, kalan: ${remaining.length}',
+      "[RecipeCacheService] Cache'den silindi ($cacheKey) - ${titles.length} tarif, kalan: ${remaining.length}",
     );
   }
 }

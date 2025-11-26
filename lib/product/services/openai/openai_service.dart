@@ -9,18 +9,22 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/core/utils/tonl_encoder.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
+import 'package:smartdolap/features/rate_limiting/domain/services/i_rate_limit_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
+import 'package:smartdolap/product/services/openai/rate_limit_exception.dart';
 
 /// OpenAI Service implementation
 /// Follows Single Responsibility Principle - only handles OpenAI API communication
 class OpenAIService implements IOpenAIService {
-  OpenAIService({Dio? dio, String? apiKey})
+  OpenAIService({Dio? dio, String? apiKey, IRateLimitService? rateLimitService})
     : _dio = dio ?? Dio(BaseOptions(baseUrl: 'https://api.openai.com/v1')),
-      _apiKey = apiKey ?? (dotenv.maybeGet('OPENAI_API_KEY') ?? '');
+      _apiKey = apiKey ?? (dotenv.maybeGet('OPENAI_API_KEY') ?? ''),
+      _rateLimitService = rateLimitService;
 
   final Dio _dio;
   final String _apiKey;
+  final IRateLimitService? _rateLimitService;
 
   Map<String, String> get _headers => <String, String>{
     'Authorization': 'Bearer $_apiKey',
@@ -28,11 +32,28 @@ class OpenAIService implements IOpenAIService {
   };
 
   @override
-  Future<List<Ingredient>> parseFridgeImage(Uint8List imageBytes) async {
+  Future<List<Ingredient>> parseFridgeImage(
+    Uint8List imageBytes, {
+    CancelToken? cancelToken,
+    String? userId,
+  }) async {
+    // Check rate limit if service is available and userId is provided
+    if (_rateLimitService != null && userId != null) {
+      final bool canMakeRequest = await _rateLimitService.canMakeRequest(
+        userId,
+      );
+      if (!canMakeRequest) {
+        throw const RateLimitException(
+          'API request limit reached. Please upgrade your plan or wait for reset.',
+        );
+      }
+    }
+
     final String b64 = base64Encode(imageBytes);
     final Response<dynamic> res = await _dio.post(
       '/chat/completions',
       options: Options(headers: _headers),
+      cancelToken: cancelToken,
       data: <String, dynamic>{
         'model': 'gpt-4o-mini',
         'response_format': <String, String>{'type': 'json_object'},
@@ -67,7 +88,7 @@ class OpenAIService implements IOpenAIService {
         jsonDecode(content) as Map<String, dynamic>;
     final List<dynamic> items =
         (json['items'] as List<dynamic>?) ?? <dynamic>[];
-    return items.map((Object? e) {
+    final List<Ingredient> result = items.map((Object? e) {
       final Map<String, dynamic>? itemMap = e as Map<String, dynamic>?;
       if (itemMap == null) {
         return const Ingredient(name: '');
@@ -80,6 +101,13 @@ class OpenAIService implements IOpenAIService {
             : 1.0,
       );
     }).toList();
+
+    // Track request if service is available and userId is provided
+    if (_rateLimitService != null && userId != null) {
+      await _rateLimitService.trackRequest(userId);
+    }
+
+    return result;
   }
 
   @override
@@ -89,15 +117,26 @@ class OpenAIService implements IOpenAIService {
     int count = 6,
     String? query,
     List<String>? excludeTitles,
+    CancelToken? cancelToken,
+    String? userId,
   }) async {
+    // Check rate limit if service is available and userId is provided
+    if (_rateLimitService != null && userId != null) {
+      final bool canMakeRequest = await _rateLimitService.canMakeRequest(
+        userId,
+      );
+      if (!canMakeRequest) {
+        throw const RateLimitException(
+          'API request limit reached. Please upgrade your plan or wait for reset.',
+        );
+      }
+    }
     // Convert pantry to TONL format for token optimization
-    final List<Map<String, dynamic>> pantryList = pantry.map((Ingredient e) {
-      return <String, dynamic>{
+    final List<Map<String, dynamic>> pantryList = pantry.map((Ingredient e) => <String, dynamic>{
         'name': e.name,
         'quantity': e.quantity,
         'unit': e.unit,
-      };
-    }).toList();
+      }).toList();
     final String pantryTONL = TONLEncoder.encode(<String, dynamic>{
       'pantry': pantryList,
     });
@@ -106,6 +145,7 @@ class OpenAIService implements IOpenAIService {
     final Response<dynamic> res = await _dio.post(
       '/chat/completions',
       options: Options(headers: _headers),
+      cancelToken: cancelToken,
       data: <String, dynamic>{
         'model': 'gpt-4o-mini',
         'messages': <Map<String, String>>[
@@ -120,13 +160,23 @@ class OpenAIService implements IOpenAIService {
                 '• Default delimiter is comma\n'
                 '• Value types: unquoted numbers/booleans, quoted strings, null\n\n'
                 'Yanıtını TONL formatında ver. Şema:\n'
-                'recipes[count]{title,ingredients,steps,calories,durationMinutes,difficulty,category,fiber}:\n'
-                '  title1, [ing1,ing2], [step1,step2], calories, minutes, difficulty, category, fiber\n'
-                '  title2, [ing3,ing4], [step3,step4], calories, minutes, difficulty, category, fiber\n\n'
+                'recipes[count]{title,ingredients,steps,calories,durationMinutes,difficulty,category,fiber,imageSearchQuery}:\n'
+                '  title1, [ing1,ing2], [{description:"...",durationMinutes:5,stepType:"prep"},...], calories, minutes, difficulty, category, fiber, "english food search query"\n'
+                '  title2, [ing3,ing4], [{description:"...",durationMinutes:10,stepType:"cook"},...], calories, minutes, difficulty, category, fiber, "english food search query"\n\n'
+                'imageSearchQuery: Her tarif için İngilizce görsel arama terimi ekle. '
+                'Örnek: "İmambayıldı" -> "stuffed eggplant turkish food high quality", '
+                '"Menemen" -> "turkish scrambled eggs tomatoes peppers". '
+                "Bu terim Pexels/Unsplash API'lerinde kullanılacak.\n\n"
+                'Adımlar (steps) detaylı olmalı:\n'
+                '- Her adım için description: Ayrıntılı açıklama (örn: "Domatesleri küp küp doğrayın ve bir kaseye alın")\n'
+                '- durationMinutes: Bu adımın kaç dakika süreceği (opsiyonel, sadece pişirme/fırınlama için)\n'
+                '- stepType: Adım tipi - "prep" (hazırlık), "cook" (pişirme), "bake" (fırınlama), "rest" (dinlendirme), "serve" (servis)\n'
+                '- temperature: Sıcaklık (°C) - sadece fırınlama/pişirme için (opsiyonel)\n'
+                '- tips: İpuçları (opsiyonel, örn: "Kısık ateşte pişirin")\n\n'
                 'Örnek TONL formatı:\n'
                 'recipes[2]{title,ingredients,steps,calories,durationMinutes,difficulty,category,fiber}:\n'
-                '  Menemen, [yumurta,domates,biber], [Domatesleri doğra,Yumurtaları kır], 250, 15, kolay, kahvaltı, 5\n'
-                '  Omlet, [yumurta,peynir], [Yumurtaları çırp,Tavada pişir], 200, 10, kolay, kahvaltı, 3',
+                '  Menemen, [yumurta,domates,biber], [{description:"Domatesleri küp küp doğrayın ve bir kaseye alın",durationMinutes:3,stepType:"prep"},{description:"Biberleri ince ince doğrayın ve domateslere ekleyin",durationMinutes:2,stepType:"prep"},{description:"Tavaya zeytinyağı ekleyip ısıtın, domates ve biberi ekleyin",durationMinutes:5,stepType:"cook"},{description:"Yumurtaları kırıp ekleyin ve karıştırın",durationMinutes:3,stepType:"cook"}], 250, 15, kolay, kahvaltı, 5\n'
+                '  Omlet, [yumurta,peynir], [{description:"Yumurtaları bir kaseye kırın ve çırpın",durationMinutes:2,stepType:"prep"},{description:"Peyniri küçük parçalara bölün",durationMinutes:1,stepType:"prep"},{description:"Tavaya yağ ekleyip ısıtın, yumurtayı dökün",durationMinutes:5,stepType:"cook"},{description:"Peyniri ekleyip katlayın",durationMinutes:2,stepType:"cook"}], 200, 10, kolay, kahvaltı, 3',
           },
           <String, String>{
             'role': 'user',
@@ -147,9 +197,9 @@ class OpenAIService implements IOpenAIService {
 
     final DateTime endTime = DateTime.now();
     // Duration logged for performance monitoring
-    final Duration _duration = endTime.difference(startTime);
+    final Duration duration = endTime.difference(startTime);
     Logger.info(
-      '[OpenAIService] Recipe suggestion took ${_duration.inMilliseconds}ms',
+      '[OpenAIService] Recipe suggestion took ${duration.inMilliseconds}ms',
     );
 
     try {
@@ -297,7 +347,7 @@ class OpenAIService implements IOpenAIService {
           final dynamic ingredientsData = recipeMap['ingredients'];
           if (ingredientsData is List) {
             ingredients = ingredientsData
-                .map<String>((dynamic e) {
+                .map<String>((e) {
                   if (e is String) {
                     return e.trim();
                   }
@@ -339,16 +389,23 @@ class OpenAIService implements IOpenAIService {
             continue;
           }
 
-          // Parse steps (handle both TONL string format and JSON List)
+          // Parse steps (handle RecipeStep objects with details, or simple strings for backward compatibility)
           List<String> steps = <String>[];
           final dynamic stepsData = recipeMap['steps'];
           if (stepsData is List) {
             steps = stepsData
-                .map<String>((dynamic e) {
+                .map<String>((e) {
                   if (e is String) {
+                    // Simple string format (backward compatibility)
                     return e.trim();
                   }
                   if (e is Map<String, dynamic>) {
+                    // RecipeStep object format - extract description
+                    final String? description = e['description'] as String?;
+                    if (description != null && description.isNotEmpty) {
+                      return description.trim();
+                    }
+                    // Fallback to old format fields
                     return ((e['step'] as String?) ??
                             (e['text'] as String?) ??
                             (e.values.first as String?) ??
@@ -395,10 +452,9 @@ class OpenAIService implements IOpenAIService {
               calories: (recipeMap['calories'] as num?)?.toInt(),
               durationMinutes: (recipeMap['durationMinutes'] as num?)?.toInt(),
               difficulty: recipeMap['difficulty'] as String?,
-              imageUrl:
-                  null, // Image will be fetched separately via ImageLookupService
               category: recipeMap['category'] as String?,
               fiber: (recipeMap['fiber'] as num?)?.toInt(),
+              imageSearchQuery: recipeMap['imageSearchQuery'] as String?,
             ),
           );
         } catch (e, s) {
@@ -423,6 +479,11 @@ class OpenAIService implements IOpenAIService {
         '[OpenAIService] Successfully parsed ${result.length} recipes from ${recipes.length} total',
       );
 
+      // Track request if service is available and userId is provided
+      if (_rateLimitService != null && userId != null) {
+        await _rateLimitService.trackRequest(userId);
+      }
+
       return result;
     } on OpenAIParsingException {
       rethrow;
@@ -436,10 +497,26 @@ class OpenAIService implements IOpenAIService {
   }
 
   @override
-  Future<String> categorizeItem(String itemName) async {
+  Future<String> categorizeItem(
+    String itemName, {
+    CancelToken? cancelToken,
+    String? userId,
+  }) async {
+    // Check rate limit if service is available and userId is provided
+    if (_rateLimitService != null && userId != null) {
+      final bool canMakeRequest = await _rateLimitService.canMakeRequest(
+        userId,
+      );
+      if (!canMakeRequest) {
+        throw const RateLimitException(
+          'API request limit reached. Please upgrade your plan or wait for reset.',
+        );
+      }
+    }
     final Response<dynamic> res = await _dio.post(
       '/chat/completions',
       options: Options(headers: _headers),
+      cancelToken: cancelToken,
       data: <String, dynamic>{
         'model': 'gpt-4o-mini',
         'response_format': <String, String>{'type': 'json_object'},
@@ -468,6 +545,13 @@ class OpenAIService implements IOpenAIService {
     final String content = message['content'] as String;
     final Map<String, dynamic> json =
         jsonDecode(content) as Map<String, dynamic>;
-    return (json['category'] as String?) ?? 'Diğer';
+    final String category = (json['category'] as String?) ?? 'Diğer';
+
+    // Track request if service is available and userId is provided
+    if (_rateLimitService != null && userId != null) {
+      await _rateLimitService.trackRequest(userId);
+    }
+
+    return category;
   }
 }

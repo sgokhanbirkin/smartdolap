@@ -11,140 +11,169 @@ class RecipeCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    clipBehavior: Clip.antiAlias,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppSizes.cardRadius),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        // Category chip skeleton
-        Padding(
-          padding: EdgeInsets.only(
-            left: AppSizes.cardPadding,
-            right: AppSizes.cardPadding,
-            top: AppSizes.cardPadding,
-          ),
-          child: Shimmer.fromColors(
-            baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            highlightColor: Theme.of(context).colorScheme.surface,
-            child: Container(
-              width: 80.w,
-              height: 24.h,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(AppSizes.radius),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.cardRadius),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // Category chip skeleton
+            Padding(
+              padding: EdgeInsets.only(
+                left: AppSizes.cardPadding,
+                right: AppSizes.cardPadding,
+                top: AppSizes.cardPadding,
+              ),
+              child: Shimmer.fromColors(
+                baseColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                highlightColor: Theme.of(context).colorScheme.surface,
+                child: Container(
+                  width: 80.w,
+                  height: 24.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppSizes.radius),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        // Image skeleton
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Shimmer.fromColors(
-            baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            highlightColor: Theme.of(context).colorScheme.surface,
-            child: Container(
-              width: double.infinity,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        // Content skeleton
-        Padding(
-          padding: EdgeInsets.all(AppSizes.cardPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // Title skeleton
-              Shimmer.fromColors(
-                baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                highlightColor: Theme.of(context).colorScheme.surface,
-                child: Container(
-                  width: double.infinity,
-                  height: 20.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ),
-              SizedBox(height: AppSizes.verticalSpacingS),
-              Shimmer.fromColors(
-                baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                highlightColor: Theme.of(context).colorScheme.surface,
-                child: Container(
-                  width: 150.w,
-                  height: 20.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ),
-              SizedBox(height: AppSizes.verticalSpacingM),
-              // Ingredients skeleton
-              Shimmer.fromColors(
-                baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                highlightColor: Theme.of(context).colorScheme.surface,
-                child: Container(
-                  width: double.infinity,
-                  height: 16.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ),
-              SizedBox(height: AppSizes.verticalSpacingS),
-              Shimmer.fromColors(
-                baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                highlightColor: Theme.of(context).colorScheme.surface,
-                child: Container(
-                  width: 120.w,
-                  height: 16.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ),
-              SizedBox(height: AppSizes.verticalSpacingM),
-              // Badges skeleton
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Remaining content (image + text)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Shimmer.fromColors(
-                    baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    highlightColor: Theme.of(context).colorScheme.surface,
-                    child: Container(
-                      width: 70.w,
-                      height: 24.h,
-                      decoration: BoxDecoration(
+                  // Image skeleton fills available height
+                  Expanded(
+                    child: Shimmer.fromColors(
+                      baseColor: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
+                      highlightColor: Theme.of(context).colorScheme.surface,
+                      child: Container(
+                        width: double.infinity,
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppSizes.radius),
                       ),
                     ),
                   ),
-                  Shimmer.fromColors(
-                    baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    highlightColor: Theme.of(context).colorScheme.surface,
-                    child: Container(
-                      width: 70.w,
-                      height: 24.h,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppSizes.radius),
-                      ),
+                  // Content skeleton
+                  Padding(
+                    padding: EdgeInsets.all(AppSizes.cardPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        // Title skeleton
+                        Shimmer.fromColors(
+                          baseColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          highlightColor: Theme.of(context).colorScheme.surface,
+                          child: Container(
+                            width: double.infinity,
+                            height: 20.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.verticalSpacingS),
+                        Shimmer.fromColors(
+                          baseColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          highlightColor: Theme.of(context).colorScheme.surface,
+                          child: Container(
+                            width: 150.w,
+                            height: 20.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.verticalSpacingM),
+                        // Ingredients skeleton
+                        Shimmer.fromColors(
+                          baseColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          highlightColor: Theme.of(context).colorScheme.surface,
+                          child: Container(
+                            width: double.infinity,
+                            height: 16.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.verticalSpacingS),
+                        Shimmer.fromColors(
+                          baseColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          highlightColor: Theme.of(context).colorScheme.surface,
+                          child: Container(
+                            width: 120.w,
+                            height: 16.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.verticalSpacingM),
+                        // Badges skeleton
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Shimmer.fromColors(
+                                baseColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                highlightColor:
+                                    Theme.of(context).colorScheme.surface,
+                                child: Container(
+                                  height: 24.h,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius:
+                                        BorderRadius.circular(AppSizes.radius),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: AppSizes.spacingS),
+                            Expanded(
+                              child: Shimmer.fromColors(
+                                baseColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                highlightColor:
+                                    Theme.of(context).colorScheme.surface,
+                                child: Container(
+                                  height: 24.h,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius:
+                                        BorderRadius.circular(AppSizes.radius),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 }
 

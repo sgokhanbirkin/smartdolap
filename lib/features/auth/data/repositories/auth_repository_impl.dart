@@ -195,8 +195,6 @@ class AuthRepositoryImpl implements IAuthRepository {
               email: user.email,
               displayName: user.displayName,
               photoUrl: user.photoUrl,
-              householdId: null,
-              avatarId: null,
             ).toEntity();
           }
 

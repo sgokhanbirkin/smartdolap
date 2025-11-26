@@ -62,6 +62,7 @@ class CommentCubit extends Cubit<CommentState> {
     String? avatarId,
     String? householdId,
     bool isHouseholdOnly = false,
+    int? rating,
   }) async {
     if (text.trim().isEmpty) {
       return;
@@ -80,6 +81,7 @@ class CommentCubit extends Cubit<CommentState> {
         createdAt: DateTime.now(),
         isHouseholdOnly: isHouseholdOnly,
         householdId: householdId,
+        rating: rating,
       );
 
       await addCommentUseCase.call(comment);

@@ -6,8 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 class QrCodeGeneratorWidget extends StatelessWidget {
   /// QR code generator widget constructor
   const QrCodeGeneratorWidget({
-    super.key,
-    required this.inviteCode,
+    required this.inviteCode, super.key,
     this.size,
   });
 
@@ -36,7 +35,6 @@ class QrCodeGeneratorWidget extends StatelessWidget {
       ),
       child: QrImageView(
         data: inviteCode,
-        version: QrVersions.auto,
         size: qrSize,
         backgroundColor: Colors.white,
         errorCorrectionLevel: QrErrorCorrectLevel.M,

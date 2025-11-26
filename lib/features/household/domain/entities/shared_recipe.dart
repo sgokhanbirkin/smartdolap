@@ -9,9 +9,21 @@ class SharedRecipe {
     required this.sharedBy,
     required this.sharedByName,
     required this.recipe,
-    this.avatarId,
-    required this.createdAt,
+    required this.createdAt, this.avatarId,
   });
+
+  /// Create from JSON
+  factory SharedRecipe.fromJson(Map<String, dynamic> json) => SharedRecipe(
+    id: json['id'] as String,
+    householdId: json['householdId'] as String,
+    sharedBy: json['sharedBy'] as String,
+    sharedByName: json['sharedByName'] as String,
+    avatarId: json['avatarId'] as String?,
+    recipe: UserRecipe.fromMap(json['recipe'] as Map<dynamic, dynamic>),
+    createdAt: json['createdAt'] != null
+        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+        : DateTime.now(),
+  );
 
   /// Shared recipe ID
   final String id;
@@ -33,19 +45,6 @@ class SharedRecipe {
 
   /// Creation timestamp
   final DateTime createdAt;
-
-  /// Create from JSON
-  factory SharedRecipe.fromJson(Map<String, dynamic> json) => SharedRecipe(
-    id: json['id'] as String,
-    householdId: json['householdId'] as String,
-    sharedBy: json['sharedBy'] as String,
-    sharedByName: json['sharedByName'] as String,
-    avatarId: json['avatarId'] as String?,
-    recipe: UserRecipe.fromMap(json['recipe'] as Map<dynamic, dynamic>),
-    createdAt: json['createdAt'] != null
-        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-        : DateTime.now(),
-  );
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{

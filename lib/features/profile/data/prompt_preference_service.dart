@@ -11,6 +11,7 @@ class PromptPreferenceService implements IPromptPreferenceService {
   static const String _prefKey = 'prompt_preferences';
 
   /// Returns the cached preferences or a default instance.
+  @override
   PromptPreferences getPreferences() {
     final Map<dynamic, dynamic>? raw =
         _box.get(_prefKey) as Map<dynamic, dynamic>?;
@@ -18,11 +19,13 @@ class PromptPreferenceService implements IPromptPreferenceService {
   }
 
   /// Persists personalization preferences.
+  @override
   Future<void> savePreferences(PromptPreferences prefs) async {
     await _box.put(_prefKey, prefs.toMap());
   }
 
   /// Increments the generated recipe counter.
+  @override
   Future<void> incrementGenerated(int added) async {
     final PromptPreferences prefs = getPreferences();
     await savePreferences(

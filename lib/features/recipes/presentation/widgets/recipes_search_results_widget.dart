@@ -61,9 +61,11 @@ class RecipesSearchResultsWidget extends StatelessWidget {
       itemCount: recipes.length,
       itemBuilder: (BuildContext context, int index) {
         final Recipe recipe = recipes[index];
-        return CompactRecipeCardWidget(
-          recipe: recipe,
-          onTap: () => onRecipeTap(recipe),
+        return RepaintBoundary(
+          child: CompactRecipeCardWidget(
+            recipe: recipe,
+            onTap: () => onRecipeTap(recipe),
+          ),
         );
       },
     );

@@ -2,10 +2,10 @@
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive/hive.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/widgets/cached_image_widget.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 
 class RecipeCard extends StatefulWidget {
@@ -92,7 +92,7 @@ class _RecipeCardState extends State<RecipeCard> {
                       visualDensity: VisualDensity.compact,
                     ),
                   ),
-                  if (widget.recipe.missingCount != null) ...[
+                  if (widget.recipe.missingCount != null) ...<Widget>[
                     SizedBox(width: AppSizes.spacingXS),
                     Flexible(
                       child: Chip(
@@ -118,37 +118,11 @@ class _RecipeCardState extends State<RecipeCard> {
           // Image area with favorite and difficulty badge
           Stack(
             children: <Widget>[
-              AspectRatio(
+              CachedImageWidget(
+                imageUrl: widget.recipe.imageUrl,
                 aspectRatio: 16 / 9,
-                child:
-                    widget.recipe.imageUrl != null &&
-                        widget.recipe.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        widget.recipe.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (
-                          _,
-                          Object error,
-                          StackTrace? stackTrace,
-                        ) {
-                          debugPrint(
-                            'Resim yüklenemedi: '
-                            '${widget.recipe.imageUrl} - $error',
-                          );
-                          return Container(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                            child: Icon(Icons.restaurant_menu, size: 32.sp),
-                          );
-                        },
-                      )
-                    : Container(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        child: Icon(Icons.restaurant_menu, size: 32.sp),
-                      ),
+                placeholderIcon: Icons.restaurant_menu,
+                errorIcon: Icons.restaurant_menu,
               ),
               // Difficulty badge - sol üst
               if (widget.recipe.difficulty != null &&

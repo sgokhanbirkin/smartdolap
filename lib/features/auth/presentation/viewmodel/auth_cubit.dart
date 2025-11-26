@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/services/i_sync_service.dart';
 import 'package:smartdolap/features/auth/data/models/auth_failure.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/register_usecase.dart';
-import 'package:smartdolap/core/di/dependency_injection.dart';
-import 'package:smartdolap/core/services/i_sync_service.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 
 /// Auth cubit - Presentation layer view model

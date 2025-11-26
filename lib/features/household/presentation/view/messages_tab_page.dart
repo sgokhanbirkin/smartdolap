@@ -52,9 +52,7 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
+  Widget build(BuildContext context) => Container(
       child: Column(
         children: <Widget>[
           Expanded(
@@ -82,7 +80,6 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
         ],
       ),
     );
-  }
 
   Widget _buildMessageItem(
     BuildContext context,
@@ -157,8 +154,7 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
     );
   }
 
-  Widget _buildMessageInput(BuildContext context) {
-    return Container(
+  Widget _buildMessageInput(BuildContext context) => Container(
       padding: EdgeInsets.all(AppSizes.padding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -191,8 +187,7 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
           SizedBox(width: 8.w),
           ValueListenableBuilder<bool>(
             valueListenable: _hasText,
-            builder: (BuildContext context, bool hasText, Widget? child) {
-              return IconButton.filled(
+            builder: (BuildContext context, bool hasText, Widget? child) => IconButton.filled(
                 onPressed: !hasText
                     ? null
                     : () => _handleSendMessage(context),
@@ -201,13 +196,11 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
-              );
-            },
+              ),
           ),
         ],
       ),
     );
-  }
 
   Future<void> _handleSendMessage(BuildContext context) async {
     final String text = _messageController.text.trim();

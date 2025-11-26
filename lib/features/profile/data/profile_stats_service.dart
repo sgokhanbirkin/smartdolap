@@ -19,13 +19,16 @@ class ProfileStatsService implements IProfileStatsService {
   final Future<void> Function(ProfileStats stats)? onStatsChanged;
 
   /// Stream of profile stats changes
+  @override
   Stream<ProfileStats> watch() => _controller.stream;
 
   /// Reads the latest profile stats or returns defaults.
+  @override
   ProfileStats load() =>
       ProfileStats.fromMap(_box.get(_statsKey) as Map<dynamic, dynamic>?);
 
   /// Persists the given stats atomically.
+  @override
   Future<void> save(ProfileStats stats) async {
     await _box.put(_statsKey, stats.toMap());
     _controller.add(stats);
@@ -33,6 +36,7 @@ class ProfileStatsService implements IProfileStatsService {
   }
 
   /// Adds the provided XP amount and performs level-up logic.
+  @override
   Future<ProfileStats> addXp(int amount) async {
     ProfileStats stats = load();
     int newXp = stats.xp + amount;
@@ -49,6 +53,7 @@ class ProfileStatsService implements IProfileStatsService {
   }
 
   /// Adds one AI-generated recipe to the counters.
+  @override
   Future<ProfileStats> incrementAiRecipes() async {
     final ProfileStats current = load();
     final ProfileStats updated = current.copyWith(
@@ -59,6 +64,7 @@ class ProfileStatsService implements IProfileStatsService {
   }
 
   /// Adds a manual recipe and optionally increases the photo upload count.
+  @override
   Future<ProfileStats> incrementUserRecipes({bool withPhoto = false}) async {
     final ProfileStats current = load();
     final ProfileStats updated = current.copyWith(
@@ -70,6 +76,7 @@ class ProfileStatsService implements IProfileStatsService {
   }
 
   /// Dispose the stream controller
+  @override
   void dispose() {
     _controller.close();
   }

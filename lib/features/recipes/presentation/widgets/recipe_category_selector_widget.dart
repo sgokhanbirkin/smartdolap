@@ -81,7 +81,7 @@ class _CategoryChip extends StatelessWidget {
     label: Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        if (icon != null) ...[
+        if (icon != null) ...<Widget>[
           Icon(icon, size: AppSizes.iconXS),
           SizedBox(width: AppSizes.spacingXS * 0.5),
         ],

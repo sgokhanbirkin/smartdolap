@@ -12,11 +12,9 @@ class CalculateIngredientUsageUseCase {
   Future<Map<String, IngredientUsage>> call({
     required String userId,
     required String householdId,
-  }) async {
-    return _service.getIngredientUsage(
+  }) async => _service.getIngredientUsage(
       userId: userId,
       householdId: householdId,
     );
-  }
 }
 

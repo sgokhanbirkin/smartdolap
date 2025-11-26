@@ -49,8 +49,7 @@ class FoodPreferenceRepositoryImpl implements IFoodPreferenceRepository {
   }
 
   @override
-  Stream<UserFoodPreferences?> watchUserFoodPreferences(String userId) {
-    return _firestore
+  Stream<UserFoodPreferences?> watchUserFoodPreferences(String userId) => _firestore
         .collection(_users)
         .doc(userId)
         .collection(_foodPreferences)
@@ -62,7 +61,6 @@ class FoodPreferenceRepositoryImpl implements IFoodPreferenceRepository {
                   ? UserFoodPreferences.fromJson(snapshot.data()!)
                   : null,
         );
-  }
 
   @override
   Future<Map<String, dynamic>> getHouseholdFoodPreferences(

@@ -1,12 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
-import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/core/services/avatar_service.dart';
+import 'package:smartdolap/core/widgets/avatar_widget.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/household/domain/entities/household.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_state.dart';
 import 'package:smartdolap/features/household/presentation/widgets/qr_code_scanner_widget.dart';
@@ -35,11 +37,9 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('household_setup_title')),
-      ),
+  Widget build(BuildContext context) => BackgroundWrapper(
+    child: Scaffold(
+      appBar: AppBar(title: Text(tr('household_setup_title'))),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(AppSizes.padding),
@@ -49,10 +49,7 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
               // Welcome message
               Text(
                 tr('household_setup_welcome'),
-                style: TextStyle(
-                  fontSize: 22.sp,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 16.h),
@@ -77,7 +74,9 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
                         tr('household_setup_description'),
                         style: TextStyle(
                           fontSize: 14.sp,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
@@ -125,261 +124,256 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 
-  Widget _buildModeToggle() {
-    return Container(
-      padding: EdgeInsets.all(4.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: _buildToggleButton(
-              label: tr('create_household'),
-              isSelected: _isCreating,
-              onTap: () => setState(() => _isCreating = true),
-            ),
+  Widget _buildModeToggle() => Container(
+    padding: EdgeInsets.all(4.w),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12.r),
+    ),
+    child: Row(
+      children: <Widget>[
+        Expanded(
+          child: _buildToggleButton(
+            label: tr('create_household'),
+            isSelected: _isCreating,
+            onTap: () => setState(() => _isCreating = true),
           ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: _buildToggleButton(
-              label: tr('join_household'),
-              isSelected: !_isCreating,
-              onTap: () => setState(() => _isCreating = false),
-            ),
+        ),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: _buildToggleButton(
+            label: tr('join_household'),
+            isSelected: !_isCreating,
+            onTap: () => setState(() => _isCreating = false),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 
   Widget _buildToggleButton({
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12.h),
-        decoration: BoxDecoration(
+  }) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: EdgeInsets.symmetric(vertical: 12.h),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? Theme.of(context).colorScheme.primary
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
           color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8.r),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: isSelected
-                ? Theme.of(context).colorScheme.onPrimary
-                : Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 14.sp,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 14.sp,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
-    );
-  }
+    ),
+  );
 
-  Widget _buildCreateForm() {
-    return BlocConsumer<HouseholdCubit, HouseholdState>(
-      listener: (BuildContext context, HouseholdState state) {
-        state.when(
-          initial: () {},
-          loading: () {},
-          loaded: (household) async {
-            // Debug: Log household creation
-            debugPrint('[HouseholdSetup] Household created: ${household.id}');
-            debugPrint('[HouseholdSetup] Members count: ${household.members.length}');
-            for (final member in household.members) {
-              debugPrint('[HouseholdSetup] Member: ${member.userId} - ${member.userName}');
-            }
-            // Refresh user data to get updated householdId
-            // Wait a bit for Firestore write to complete
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-            await context.read<AuthCubit>().refreshUser();
-            // Navigate to food preferences onboarding after successful household creation/join
-            Navigator.of(context).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
-          },
-          noHousehold: () {},
-          error: (String message) {
-            debugPrint('[HouseholdSetup] Error: $message');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message)),
+  Widget _buildCreateForm() => BlocConsumer<HouseholdCubit, HouseholdState>(
+    listener: (BuildContext context, HouseholdState state) {
+      state.when(
+        initial: () {},
+        loading: () {},
+        loaded: (Household household) async {
+          // Debug: Log household creation
+          debugPrint('[HouseholdSetup] Household created: ${household.id}');
+          debugPrint(
+            '[HouseholdSetup] Members count: ${household.members.length}',
+          );
+          for (final HouseholdMember member in household.members) {
+            debugPrint(
+              '[HouseholdSetup] Member: ${member.userId} - ${member.userName}',
             );
-          },
-        );
-      },
-      builder: (BuildContext context, HouseholdState state) {
-        final bool isLoading = state.maybeWhen(
-          loading: () => true,
-          orElse: () => false,
-        );
+          }
+          // Refresh user data to get updated householdId
+          // Wait a bit for Firestore write to complete
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          await context.read<AuthCubit>().refreshUser();
+          // Navigate to food preferences onboarding after successful household creation/join
+          Navigator.of(
+            context,
+          ).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
+        },
+        noHousehold: () {},
+        error: (String message) {
+          debugPrint('[HouseholdSetup] Error: $message');
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
+        },
+      );
+    },
+    builder: (BuildContext context, HouseholdState state) {
+      final bool isLoading = state.maybeWhen(
+        loading: () => true,
+        orElse: () => false,
+      );
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            // Avatar selection
-            Text(
-              tr('select_avatar'),
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          // Avatar selection
+          Text(
+            tr('select_avatar'),
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16.h),
+          AvatarSelectorWidget(
+            selectedAvatarId: _selectedAvatarId,
+            onAvatarSelected: (String avatarId) {
+              setState(() => _selectedAvatarId = avatarId);
+            },
+          ),
+          SizedBox(height: 24.h),
+          // Household name
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: tr('household_name'),
+              hintText: tr('household_name_hint'),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
               ),
             ),
-            SizedBox(height: 16.h),
-            AvatarSelectorWidget(
-              selectedAvatarId: _selectedAvatarId,
-              onAvatarSelected: (String avatarId) {
-                setState(() => _selectedAvatarId = avatarId);
-              },
-            ),
-            SizedBox(height: 24.h),
-            // Household name
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: tr('household_name'),
-                hintText: tr('household_name_hint'),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
+          ),
+          SizedBox(height: 24.h),
+          // Create button
+          ElevatedButton(
+            onPressed: isLoading ? null : _handleCreate,
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
               ),
             ),
-            SizedBox(height: 24.h),
-            // Create button
-            ElevatedButton(
-              onPressed: isLoading ? null : _handleCreate,
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-              ),
-              child: isLoading
-                  ? SizedBox(
-                      height: 20.h,
-                      width: 20.w,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      tr('create_household'),
-                      style: TextStyle(fontSize: 16.sp),
-                    ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+            child: isLoading
+                ? SizedBox(
+                    height: 20.h,
+                    width: 20.w,
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    tr('create_household'),
+                    style: TextStyle(fontSize: 16.sp),
+                  ),
+          ),
+        ],
+      );
+    },
+  );
 
-  Widget _buildJoinForm() {
-    return BlocConsumer<HouseholdCubit, HouseholdState>(
-      listener: (BuildContext context, HouseholdState state) {
-        state.when(
-          initial: () {},
-          loading: () {},
-          loaded: (household) async {
-            // Debug: Log household creation
-            debugPrint('[HouseholdSetup] Household created: ${household.id}');
-            debugPrint('[HouseholdSetup] Members count: ${household.members.length}');
-            for (final member in household.members) {
-              debugPrint('[HouseholdSetup] Member: ${member.userId} - ${member.userName}');
-            }
-            // Refresh user data to get updated householdId
-            // Wait a bit for Firestore write to complete
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-            await context.read<AuthCubit>().refreshUser();
-            // Navigate to food preferences onboarding after successful household creation/join
-            Navigator.of(context).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
-          },
-          noHousehold: () {},
-          error: (String message) {
-            debugPrint('[HouseholdSetup] Error: $message');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message)),
+  Widget _buildJoinForm() => BlocConsumer<HouseholdCubit, HouseholdState>(
+    listener: (BuildContext context, HouseholdState state) {
+      state.when(
+        initial: () {},
+        loading: () {},
+        loaded: (Household household) async {
+          // Debug: Log household creation
+          debugPrint('[HouseholdSetup] Household created: ${household.id}');
+          debugPrint(
+            '[HouseholdSetup] Members count: ${household.members.length}',
+          );
+          for (final HouseholdMember member in household.members) {
+            debugPrint(
+              '[HouseholdSetup] Member: ${member.userId} - ${member.userName}',
             );
-          },
-        );
-      },
-      builder: (BuildContext context, HouseholdState state) {
-        final bool isLoading = state.maybeWhen(
-          loading: () => true,
-          orElse: () => false,
-        );
+          }
+          // Refresh user data to get updated householdId
+          // Wait a bit for Firestore write to complete
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          await context.read<AuthCubit>().refreshUser();
+          // Navigate to food preferences onboarding after successful household creation/join
+          Navigator.of(
+            context,
+          ).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
+        },
+        noHousehold: () {},
+        error: (String message) {
+          debugPrint('[HouseholdSetup] Error: $message');
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
+        },
+      );
+    },
+    builder: (BuildContext context, HouseholdState state) {
+      final bool isLoading = state.maybeWhen(
+        loading: () => true,
+        orElse: () => false,
+      );
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            // Avatar selection
-            Text(
-              tr('select_avatar'),
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          // Avatar selection
+          Text(
+            tr('select_avatar'),
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16.h),
+          AvatarSelectorWidget(
+            selectedAvatarId: _selectedAvatarId,
+            onAvatarSelected: (String avatarId) {
+              setState(() => _selectedAvatarId = avatarId);
+            },
+          ),
+          SizedBox(height: 24.h),
+          // Invite code input
+          TextField(
+            controller: _inviteCodeController,
+            decoration: InputDecoration(
+              labelText: tr('invite_code'),
+              hintText: tr('invite_code_hint'),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.qr_code_scanner),
+                onPressed: _scanQRCode,
               ),
             ),
-            SizedBox(height: 16.h),
-            AvatarSelectorWidget(
-              selectedAvatarId: _selectedAvatarId,
-              onAvatarSelected: (String avatarId) {
-                setState(() => _selectedAvatarId = avatarId);
-              },
-            ),
-            SizedBox(height: 24.h),
-            // Invite code input
-            TextField(
-              controller: _inviteCodeController,
-              decoration: InputDecoration(
-                labelText: tr('invite_code'),
-                hintText: tr('invite_code_hint'),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                suffixIcon: IconButton(
-                        icon: const Icon(Icons.qr_code_scanner),
-                        onPressed: _scanQRCode,
-                      ),
+          ),
+          SizedBox(height: 24.h),
+          // Join button
+          ElevatedButton(
+            onPressed: isLoading ? null : _handleJoin,
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
               ),
             ),
-            SizedBox(height: 24.h),
-            // Join button
-            ElevatedButton(
-              onPressed: isLoading ? null : _handleJoin,
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-              ),
-              child: isLoading
-                  ? SizedBox(
-                      height: 20.h,
-                      width: 20.w,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      tr('join_household'),
-                      style: TextStyle(fontSize: 16.sp),
-                    ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+            child: isLoading
+                ? SizedBox(
+                    height: 20.h,
+                    width: 20.w,
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(tr('join_household'), style: TextStyle(fontSize: 16.sp)),
+          ),
+        ],
+      );
+    },
+  );
 
   Future<void> _handleCreate() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('household_name_required'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('household_name_required'))));
       return;
     }
 
@@ -389,13 +383,12 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
     authCubit.state.when(
       initial: () {},
       loading: () {},
-      authenticated: (user) async {
+      authenticated: (User user) async {
         await householdCubit.createHousehold(
           name: _nameController.text.trim(),
           ownerId: user.id,
           ownerName: user.displayName ?? user.email,
-          ownerAvatarId: _selectedAvatarId ??
-              AvatarService.getDefaultAvatar(),
+          ownerAvatarId: _selectedAvatarId ?? AvatarService.getDefaultAvatar(),
         );
       },
       unauthenticated: () {},
@@ -406,9 +399,9 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
   Future<void> _handleJoin() async {
     final String inviteCode = _inviteCodeController.text.trim().toUpperCase();
     if (inviteCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('invite_code_required'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('invite_code_required'))));
       return;
     }
 
@@ -418,20 +411,18 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
     authCubit.state.when(
       initial: () {},
       loading: () {},
-      authenticated: (user) async {
+      authenticated: (User user) async {
         await householdCubit.joinHouseholdWithCode(
           inviteCode: inviteCode,
           userId: user.id,
           userName: user.displayName ?? user.email,
-          avatarId: _selectedAvatarId ??
-              AvatarService.getDefaultAvatar(),
+          avatarId: _selectedAvatarId ?? AvatarService.getDefaultAvatar(),
         );
       },
       unauthenticated: () {},
       error: (_) {},
     );
   }
-
 
   void _scanQRCode() {
     Navigator.of(context).push(
@@ -447,4 +438,3 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
     );
   }
 }
-

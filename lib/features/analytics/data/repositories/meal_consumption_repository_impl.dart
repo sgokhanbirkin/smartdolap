@@ -60,15 +60,13 @@ class MealConsumptionRepositoryImpl implements IMealConsumptionRepository {
 
     return query.snapshots().map((
       QuerySnapshot<Map<String, dynamic>> snapshot,
-    ) {
-      return snapshot.docs.map((
+    ) => snapshot.docs.map((
         QueryDocumentSnapshot<Map<String, dynamic>> doc,
       ) {
         final Map<String, dynamic> data = doc.data();
         data['id'] = doc.id;
         return MealConsumption.fromJson(data);
-      }).toList();
-    });
+      }).toList());
   }
 
   @override

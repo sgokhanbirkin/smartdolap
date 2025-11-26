@@ -414,13 +414,15 @@ class _PantryPageState extends State<PantryPage> {
         childAspectRatio: aspectRatio,
       ),
       itemCount: items.length,
-      itemBuilder: (BuildContext context, int index) => PantryItemGridCard(
-        item: items[index],
-        userId: householdId,
-        onTap: () => _openDetail(context, householdId, items[index]),
-        onQuantityChanged: (PantryItem updatedItem) {
-          context.read<PantryCubit>().update(householdId, updatedItem);
-        },
+      itemBuilder: (BuildContext context, int index) => RepaintBoundary(
+        child: PantryItemGridCard(
+          item: items[index],
+          userId: householdId,
+          onTap: () => _openDetail(context, householdId, items[index]),
+          onQuantityChanged: (PantryItem updatedItem) {
+            context.read<PantryCubit>().update(householdId, updatedItem);
+          },
+        ),
       ),
     );
   }
@@ -431,20 +433,28 @@ class _PantryPageState extends State<PantryPage> {
     String householdId,
     String userId,
     String? avatarId,
-  ) => ListView.separated(
+  ) => ListView.builder(
     physics: const AlwaysScrollableScrollPhysics(),
     padding: EdgeInsets.zero,
-    itemCount: items.length,
-    separatorBuilder: (_, __) => SizedBox(height: AppSizes.verticalSpacingS),
+    itemCount: items.length * 2 - 1, // Items + separators
+    // Optimize: Add itemExtent for fixed-height items (approximately 100px card + 8px separator)
+    itemExtent: 108,
     itemBuilder: (BuildContext _, int i) {
-      _lastDeletedItem = items[i];
+      // Even indices are items, odd indices are separators
+      if (i.isOdd) {
+        return SizedBox(height: AppSizes.verticalSpacingS);
+      }
+      final int itemIndex = i ~/ 2;
+      _lastDeletedItem = items[itemIndex];
       _lastDeletedUserId = householdId;
-      return _buildDismissibleCard(
-        context,
-        items[i],
-        householdId,
-        () => _openDetail(context, householdId, items[i]),
-        i,
+      return RepaintBoundary(
+        child: _buildDismissibleCard(
+          context,
+          items[itemIndex],
+          householdId,
+          () => _openDetail(context, householdId, items[itemIndex]),
+          itemIndex,
+        ),
       );
     },
   );

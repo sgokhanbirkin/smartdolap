@@ -6,7 +6,7 @@ import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 class RecipeFilterService {
   RecipeFilterService();
 
-  Map<String, dynamic> _activeFilters = <String, dynamic>{};
+  final Map<String, dynamic> _activeFilters = <String, dynamic>{};
 
   /// Get current active filters
   Map<String, dynamic> get activeFilters => Map<String, dynamic>.unmodifiable(_activeFilters);
@@ -23,9 +23,7 @@ class RecipeFilterService {
     if (_activeFilters.containsKey('maxCalories')) {
       final int? maxCalories = _activeFilters['maxCalories'] as int?;
       if (maxCalories != null && maxCalories > 0) {
-        filtered = filtered.where((Recipe r) {
-          return r.calories == null || r.calories! <= maxCalories;
-        }).toList();
+        filtered = filtered.where((Recipe r) => r.calories == null || r.calories! <= maxCalories).toList();
       }
     }
 
@@ -33,9 +31,7 @@ class RecipeFilterService {
     if (_activeFilters.containsKey('minFiber')) {
       final int? minFiber = _activeFilters['minFiber'] as int?;
       if (minFiber != null && minFiber > 0) {
-        filtered = filtered.where((Recipe r) {
-          return r.fiber == null || r.fiber! >= minFiber;
-        }).toList();
+        filtered = filtered.where((Recipe r) => r.fiber == null || r.fiber! >= minFiber).toList();
       }
     }
 
@@ -43,9 +39,7 @@ class RecipeFilterService {
     if (_activeFilters.containsKey('difficulty')) {
       final String? difficulty = _activeFilters['difficulty'] as String?;
       if (difficulty != null && difficulty.isNotEmpty) {
-        filtered = filtered.where((Recipe r) {
-          return r.difficulty?.toLowerCase() == difficulty.toLowerCase();
-        }).toList();
+        filtered = filtered.where((Recipe r) => r.difficulty?.toLowerCase() == difficulty.toLowerCase()).toList();
       }
     }
 
@@ -53,9 +47,7 @@ class RecipeFilterService {
     if (_activeFilters.containsKey('maxDuration')) {
       final int? maxDuration = _activeFilters['maxDuration'] as int?;
       if (maxDuration != null && maxDuration > 0) {
-        filtered = filtered.where((Recipe r) {
-          return r.durationMinutes == null || r.durationMinutes! <= maxDuration;
-        }).toList();
+        filtered = filtered.where((Recipe r) => r.durationMinutes == null || r.durationMinutes! <= maxDuration).toList();
       }
     }
 
@@ -63,7 +55,7 @@ class RecipeFilterService {
   }
 
   /// Set a filter value
-  void setFilter(String key, dynamic value) {
+  void setFilter(String key, value) {
     if (value == null) {
       _activeFilters.remove(key);
     } else {
@@ -99,9 +91,7 @@ class RecipeFilterService {
     // Filter by exclude titles
     if (excludeTitles.isNotEmpty) {
       final Set<String> excludeSet = excludeTitles.map((String s) => s.toLowerCase()).toSet();
-      filtered = filtered.where((Recipe r) {
-        return !excludeSet.contains(r.title.toLowerCase());
-      }).toList();
+      filtered = filtered.where((Recipe r) => !excludeSet.contains(r.title.toLowerCase())).toList();
     }
 
     // Filter by ingredients (all ingredients must be present)
@@ -113,7 +103,7 @@ class RecipeFilterService {
         final Set<String> recipeIngredients = r.ingredients
             .map((String e) => e.toLowerCase())
             .toSet();
-        return ingredientNames.every((String name) => recipeIngredients.contains(name));
+        return ingredientNames.every(recipeIngredients.contains);
       }).toList();
     }
 

@@ -4,11 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/services/i_onboarding_service.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
+import 'package:smartdolap/features/auth/data/models/auth_failure.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
-import 'package:smartdolap/core/services/i_onboarding_service.dart';
-import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
 /// Splash screen - Shows logo and loading message
@@ -88,7 +90,7 @@ class _SplashPageState extends State<SplashPage>
       loading: () {
         debugPrint('[SplashPage] Loading state - waiting');
       },
-      authenticated: (user) {
+      authenticated: (User user) {
         if (_hasNavigated) {
           return;
         }
@@ -112,7 +114,7 @@ class _SplashPageState extends State<SplashPage>
         _hasNavigated = true;
         Navigator.of(context).pushReplacementNamed(AppRouter.login);
       },
-      error: (failure) {
+      error: (AuthFailure failure) {
         if (_hasNavigated) {
           return;
         }
@@ -147,7 +149,7 @@ class _SplashPageState extends State<SplashPage>
       state.when(
         initial: () {},
         loading: () {},
-        authenticated: (user) {
+        authenticated: (User user) {
           if (_hasNavigated) {
             return;
           }
@@ -177,7 +179,7 @@ class _SplashPageState extends State<SplashPage>
           _hasNavigated = true;
           Navigator.of(context).pushReplacementNamed(AppRouter.login);
         },
-        error: (failure) {
+        error: (AuthFailure failure) {
           if (_hasNavigated) {
             return;
           }

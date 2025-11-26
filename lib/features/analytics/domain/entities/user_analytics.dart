@@ -14,30 +14,6 @@ class UserAnalytics {
     required this.lastUpdated,
   });
 
-  /// User ID
-  final String userId;
-
-  /// Household ID
-  final String householdId;
-
-  /// Meal time distribution: {"08:00": 5, "12:00": 10}
-  final Map<String, int> mealTimeDistribution;
-
-  /// Meal type distribution: {"breakfast": 20, "lunch": 30}
-  final Map<String, int> mealTypeDistribution;
-
-  /// Ingredient usage statistics
-  final Map<String, IngredientUsage> ingredientUsage;
-
-  /// Category usage: {"dairy": 50, "vegetables": 30}
-  final Map<String, int> categoryUsage;
-
-  /// Dietary pattern: {"vegetable_heavy": 0.6, "protein_heavy": 0.3}
-  final Map<String, double> dietaryPattern;
-
-  /// Last update timestamp
-  final DateTime lastUpdated;
-
   /// Create from JSON
   factory UserAnalytics.fromJson(Map<String, dynamic> json) => UserAnalytics(
     userId: json['userId'] as String,
@@ -75,6 +51,30 @@ class UserAnalytics {
         : DateTime.now(),
   );
 
+  /// User ID
+  final String userId;
+
+  /// Household ID
+  final String householdId;
+
+  /// Meal time distribution: {"08:00": 5, "12:00": 10}
+  final Map<String, int> mealTimeDistribution;
+
+  /// Meal type distribution: {"breakfast": 20, "lunch": 30}
+  final Map<String, int> mealTypeDistribution;
+
+  /// Ingredient usage statistics
+  final Map<String, IngredientUsage> ingredientUsage;
+
+  /// Category usage: {"dairy": 50, "vegetables": 30}
+  final Map<String, int> categoryUsage;
+
+  /// Dietary pattern: {"vegetable_heavy": 0.6, "protein_heavy": 0.3}
+  final Map<String, double> dietaryPattern;
+
+  /// Last update timestamp
+  final DateTime lastUpdated;
+
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
     'userId': userId,
@@ -82,7 +82,7 @@ class UserAnalytics {
     'mealTimeDistribution': mealTimeDistribution,
     'mealTypeDistribution': mealTypeDistribution,
     'ingredientUsage': ingredientUsage.map(
-      (key, value) => MapEntry(key, value.toJson()),
+      (String key, IngredientUsage value) => MapEntry(key, value.toJson()),
     ),
     'categoryUsage': categoryUsage,
     'dietaryPattern': dietaryPattern,

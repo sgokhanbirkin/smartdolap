@@ -9,6 +9,17 @@ class FoodPreference {
     this.createdAt,
   });
 
+  /// Create from JSON
+  factory FoodPreference.fromJson(Map<String, dynamic> json) => FoodPreference(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        category: json['category'] as String,
+        icon: json['icon'] as String?,
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'] as String)
+            : null,
+      );
+
   /// Food preference ID
   final String id;
 
@@ -23,17 +34,6 @@ class FoodPreference {
 
   /// Creation timestamp
   final DateTime? createdAt;
-
-  /// Create from JSON
-  factory FoodPreference.fromJson(Map<String, dynamic> json) => FoodPreference(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        category: json['category'] as String,
-        icon: json['icon'] as String?,
-        createdAt: json['createdAt'] != null
-            ? DateTime.parse(json['createdAt'] as String)
-            : null,
-      );
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{

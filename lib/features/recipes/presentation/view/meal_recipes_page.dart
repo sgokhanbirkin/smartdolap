@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
@@ -315,90 +315,94 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.white,
-    appBar: AppBar(
-      backgroundColor: MealTimeOrderHelper.getMealAppBarColor(widget.meal),
-      foregroundColor: Colors.white,
-      title: Text(
-        '${tr('you_can_make')} - ${MealTimeOrderHelper.getMealName(widget.meal)}',
-        style: TextStyle(fontSize: AppSizes.textM, fontWeight: FontWeight.w600),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      actions: <Widget>[
-        if (_isSelectionMode) ...[
-          IconButton(
-            icon: Icon(
-              _selectedRecipeTitles.length == _recipes.length
-                  ? Icons.deselect
-                  : Icons.select_all,
-            ),
-            tooltip: _selectedRecipeTitles.length == _recipes.length
-                ? tr('deselect_all')
-                : tr('select_all'),
-            onPressed: _selectAllRecipes,
+  Widget build(BuildContext context) => BackgroundWrapper(
+    child: Scaffold(
+      appBar: AppBar(
+        backgroundColor: MealTimeOrderHelper.getMealAppBarColor(widget.meal),
+        foregroundColor: Colors.white,
+        title: Text(
+          '${tr('you_can_make')} - ${MealTimeOrderHelper.getMealName(widget.meal)}',
+          style: TextStyle(
+            fontSize: AppSizes.textM,
+            fontWeight: FontWeight.w600,
           ),
-          if (_selectedRecipeTitles.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: tr('delete'),
-              onPressed: _deleteSelectedRecipes,
-            ),
-        ],
-        IconButton(
-          icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
-          tooltip: _isSelectionMode ? tr('cancel') : tr('select_recipes'),
-          onPressed: _toggleSelectionMode,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-      ],
+        actions: <Widget>[
+          if (_isSelectionMode) ...<Widget>[
+            IconButton(
+              icon: Icon(
+                _selectedRecipeTitles.length == _recipes.length
+                    ? Icons.deselect
+                    : Icons.select_all,
+              ),
+              tooltip: _selectedRecipeTitles.length == _recipes.length
+                  ? tr('deselect_all')
+                  : tr('select_all'),
+              onPressed: _selectAllRecipes,
+            ),
+            if (_selectedRecipeTitles.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: tr('delete'),
+                onPressed: _deleteSelectedRecipes,
+              ),
+          ],
+          IconButton(
+            icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
+            tooltip: _isSelectionMode ? tr('cancel') : tr('select_recipes'),
+            onPressed: _toggleSelectionMode,
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? GridView.builder(
+              padding: EdgeInsets.all(AppSizes.padding),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: ResponsiveGrid.getCrossAxisCount(context),
+                crossAxisSpacing: AppSizes.spacingS,
+                mainAxisSpacing: AppSizes.verticalSpacingS,
+                childAspectRatio: ResponsiveGrid.getChildAspectRatio(context),
+              ),
+              itemCount: 6, // Show 6 skeleton cards
+              itemBuilder: (BuildContext context, int index) =>
+                  const RecipeCardSkeleton(),
+            )
+          : _recipes.isEmpty
+          ? const EmptyState(
+              messageKey: 'no_recipes_yet',
+              lottieAsset: 'assets/animations/Recipe_Book.json',
+            )
+          : GridView.builder(
+              controller: _scrollController,
+              padding: EdgeInsets.all(AppSizes.padding),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: ResponsiveGrid.getCrossAxisCount(context),
+                crossAxisSpacing: AppSizes.spacingS,
+                mainAxisSpacing: AppSizes.verticalSpacingS,
+                childAspectRatio: ResponsiveGrid.getChildAspectRatio(context),
+              ),
+              itemCount: _recipes.length,
+              itemBuilder: (BuildContext context, int index) =>
+                  RepaintBoundary(child: _buildRecipeCard(_recipes[index])),
+            ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : BlocBuilder<AuthCubit, AuthState>(
+              builder: (BuildContext context, AuthState state) => state.when(
+                initial: () => const SizedBox.shrink(),
+                loading: () => const SizedBox.shrink(),
+                error: (_) => const SizedBox.shrink(),
+                unauthenticated: () => const SizedBox.shrink(),
+                authenticated: (domain.User user) =>
+                    FloatingActionButton.extended(
+                      onPressed: () => _showGetSuggestionsDialog(context),
+                      icon: const Icon(Icons.lightbulb),
+                      label: Text(tr('get_suggestions')),
+                    ),
+              ),
+            ),
     ),
-    body: _isLoading
-        ? GridView.builder(
-            padding: EdgeInsets.all(AppSizes.padding),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: ResponsiveGrid.getCrossAxisCount(context),
-              crossAxisSpacing: AppSizes.spacingS,
-              mainAxisSpacing: AppSizes.verticalSpacingS,
-              childAspectRatio: ResponsiveGrid.getChildAspectRatio(context),
-            ),
-            itemCount: 6, // Show 6 skeleton cards
-            itemBuilder: (BuildContext context, int index) =>
-                const RecipeCardSkeleton(),
-          )
-        : _recipes.isEmpty
-        ? const EmptyState(
-            messageKey: 'no_recipes_yet',
-            lottieAsset: 'assets/animations/Recipe_Book.json',
-          )
-        : GridView.builder(
-            controller: _scrollController,
-            padding: EdgeInsets.all(AppSizes.padding),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: ResponsiveGrid.getCrossAxisCount(context),
-              crossAxisSpacing: AppSizes.spacingS,
-              mainAxisSpacing: AppSizes.verticalSpacingS,
-              childAspectRatio: ResponsiveGrid.getChildAspectRatio(context),
-            ),
-            itemCount: _recipes.length,
-            itemBuilder: (BuildContext context, int index) =>
-                _buildRecipeCard(_recipes[index]),
-          ),
-    floatingActionButton: _isSelectionMode
-        ? null
-        : BlocBuilder<AuthCubit, AuthState>(
-            builder: (BuildContext context, AuthState state) => state.when(
-              initial: () => const SizedBox.shrink(),
-              loading: () => const SizedBox.shrink(),
-              error: (_) => const SizedBox.shrink(),
-              unauthenticated: () => const SizedBox.shrink(),
-              authenticated: (domain.User user) =>
-                  FloatingActionButton.extended(
-                    onPressed: () => _showGetSuggestionsDialog(context),
-                    icon: const Icon(Icons.lightbulb),
-                    label: Text(tr('get_suggestions')),
-                  ),
-            ),
-          ),
   );
 }

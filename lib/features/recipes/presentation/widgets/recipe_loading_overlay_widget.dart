@@ -152,7 +152,6 @@ class _RecipeLoadingOverlayWidgetState
               ],
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.max,
               children: <Widget>[
                 // Loading animation
                 CustomLoadingIndicator(

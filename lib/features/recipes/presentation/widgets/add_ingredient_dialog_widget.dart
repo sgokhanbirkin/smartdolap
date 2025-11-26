@@ -82,8 +82,7 @@ class _AddIngredientDialogWidgetState extends State<AddIngredientDialogWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: Text(tr('add_ingredient')),
       content: SingleChildScrollView(
         child: Column(
@@ -136,6 +135,5 @@ class _AddIngredientDialogWidgetState extends State<AddIngredientDialogWidget> {
         ),
       ],
     );
-  }
 }
 

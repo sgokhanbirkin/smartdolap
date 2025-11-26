@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/pantry_categories.dart';
+import 'package:smartdolap/core/widgets/cached_image_widget.dart';
 
 /// Widget for the name field with camera button,
 /// image preview, and category chip
@@ -143,18 +144,11 @@ class PantryItemNameFieldWidget extends StatelessWidget {
           else if (imageUrl != null)
             Padding(
               padding: EdgeInsets.only(top: AppSizes.spacingS),
-              child: ClipRRect(
+              child: CachedImageWidget(
+                imageUrl: imageUrl,
+                height: AppSizes.verticalSpacingXL * 1.5,
+                width: double.infinity,
                 borderRadius: BorderRadius.circular(AppSizes.radius),
-                child: Image.network(
-                  imageUrl!,
-                  height: AppSizes.verticalSpacingXL * 1.5,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, Object error, StackTrace? stackTrace) {
-                    debugPrint('Resim yüklenemedi: $imageUrl - $error');
-                    return const SizedBox.shrink();
-                  },
-                ),
               ),
             ),
         ],

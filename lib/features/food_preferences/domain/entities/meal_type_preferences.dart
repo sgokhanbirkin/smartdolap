@@ -8,6 +8,27 @@ class MealTypePreferences {
     this.snack = const <String>[],
   });
 
+  /// Create from JSON
+  factory MealTypePreferences.fromJson(Map<String, dynamic> json) =>
+      MealTypePreferences(
+        breakfast: (json['breakfast'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const <String>[],
+        lunch: (json['lunch'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const <String>[],
+        dinner: (json['dinner'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const <String>[],
+        snack: (json['snack'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const <String>[],
+      );
+
   /// Breakfast products (product names)
   final List<String> breakfast;
 
@@ -19,27 +40,6 @@ class MealTypePreferences {
 
   /// Snack products (product names)
   final List<String> snack;
-
-  /// Create from JSON
-  factory MealTypePreferences.fromJson(Map<String, dynamic> json) =>
-      MealTypePreferences(
-        breakfast: (json['breakfast'] as List<dynamic>?)
-                ?.map((dynamic e) => e as String)
-                .toList() ??
-            const <String>[],
-        lunch: (json['lunch'] as List<dynamic>?)
-                ?.map((dynamic e) => e as String)
-                .toList() ??
-            const <String>[],
-        dinner: (json['dinner'] as List<dynamic>?)
-                ?.map((dynamic e) => e as String)
-                .toList() ??
-            const <String>[],
-        snack: (json['snack'] as List<dynamic>?)
-                ?.map((dynamic e) => e as String)
-                .toList() ??
-            const <String>[],
-      );
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -64,11 +64,11 @@ class MealTypePreferences {
       );
 
   /// Get all products as a flat list
-  List<String> get allProducts => <String>[
+  List<String> get allProducts => <String>{
         ...breakfast,
         ...lunch,
         ...dinner,
         ...snack,
-      ].toSet().toList(); // Remove duplicates
+      }.toList(); // Remove duplicates
 }
 

@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe_comment.dart';
+import 'package:smartdolap/features/recipes/presentation/view/all_comments_page.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/comment_cubit.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/comment_state.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/comment_item_widget.dart';
@@ -48,6 +49,7 @@ class CommentSectionWidget extends StatefulWidget {
 class _CommentSectionWidgetState extends State<CommentSectionWidget> {
   final TextEditingController _commentController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  int? _selectedRating;
 
   @override
   void initState() {
@@ -84,9 +86,13 @@ class _CommentSectionWidgetState extends State<CommentSectionWidget> {
         avatarId: widget.currentAvatarId,
         householdId: widget.householdId,
         isHouseholdOnly: widget.isHouseholdOnly,
+        rating: _selectedRating,
       );
 
       _commentController.clear();
+      setState(() {
+        _selectedRating = null;
+      });
       _focusNode.unfocus();
     } catch (e) {
       if (!mounted) {
@@ -163,8 +169,7 @@ class _CommentSectionWidgetState extends State<CommentSectionWidget> {
     final bool isTablet = context.isTablet;
 
     return BlocBuilder<CommentCubit, CommentState>(
-      builder: (BuildContext context, CommentState state) {
-        return Column(
+      builder: (BuildContext context, CommentState state) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             // Section title
@@ -181,8 +186,7 @@ class _CommentSectionWidgetState extends State<CommentSectionWidget> {
               ),
             ),
             // Comments list
-            Expanded(
-              child: state.when(
+            state.when(
                 initial: () => const SizedBox.shrink(),
                 loading: () => Center(
                   child: Padding(
@@ -209,46 +213,71 @@ class _CommentSectionWidgetState extends State<CommentSectionWidget> {
                 ),
                 loaded: (List<RecipeComment> comments) {
                   if (comments.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(AppSizes.spacingL),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Icon(
-                              Icons.comment_outlined,
-                              size: (isTablet ? 64.0 : 48.0).sp,
-                              color: Theme.of(context).colorScheme.outline,
+                    // Compact empty state
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: AppSizes.spacingM,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Icon(
+                            Icons.comment_outlined,
+                            size: 20.sp,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          SizedBox(width: AppSizes.spacingXS),
+                          Text(
+                            tr('no_comments'),
+                            style: TextStyle(
+                              fontSize: AppSizes.textS,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
-                            SizedBox(height: AppSizes.spacingM),
-                            Text(
-                              tr('no_comments'),
-                              style: TextStyle(
-                                fontSize: isTablet
-                                    ? AppSizes.textM
-                                    : AppSizes.textS,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     );
                   }
-                  return ListView.builder(
-                    padding: EdgeInsets.only(bottom: AppSizes.spacingL),
-                    itemCount: comments.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final RecipeComment comment = comments[index];
-                      return CommentItemWidget(
-                        comment: comment,
-                        currentUserId: widget.currentUserId,
-                        onDelete: () => _deleteComment(comment.id),
-                      );
-                    },
+
+                  // Show first 2-3 comments
+                  const int maxCommentsToShow = 3;
+                  final List<RecipeComment> commentsToShow =
+                      comments.take(maxCommentsToShow).toList();
+                  final bool hasMoreComments = comments.length > maxCommentsToShow;
+
+                  return Column(
+                    children: <Widget>[
+                      // Comments list (first 2-3)
+                      ...commentsToShow.map((RecipeComment comment) => CommentItemWidget(
+                          comment: comment,
+                          currentUserId: widget.currentUserId,
+                          onDelete: () => _deleteComment(comment.id),
+                        )),
+                      // "View All" button if there are more comments
+                      if (hasMoreComments)
+                        Padding(
+                          padding: EdgeInsets.only(top: AppSizes.spacingS),
+                          child: TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (BuildContext context) =>
+                                      AllCommentsPage(
+                                    recipeId: widget.recipeId,
+                                    currentUserId: widget.currentUserId,
+                                    isHouseholdOnly: widget.isHouseholdOnly,
+                                    householdId: widget.householdId,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.arrow_forward),
+                            label: Text(tr('view_all_comments')),
+                          ),
+                        ),
+                    ],
                   );
                 },
                 error: (String message) => Center(
@@ -291,6 +320,54 @@ class _CommentSectionWidgetState extends State<CommentSectionWidget> {
                     ),
                   ),
                 ),
+            ),
+            // Rating selector
+            Padding(
+              padding: EdgeInsets.only(bottom: AppSizes.spacingS),
+              child: Row(
+                children: <Widget>[
+                  Text(
+                    tr('rate_recipe'),
+                    style: TextStyle(
+                      fontSize: AppSizes.textS,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.spacingS),
+                  ...List<Widget>.generate(5, (int index) => GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedRating = index + 1;
+                        });
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 4.w),
+                        child: Icon(
+                          _selectedRating != null && index < _selectedRating!
+                              ? Icons.star
+                              : Icons.star_border,
+                          size: 24.sp,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    )),
+                  if (_selectedRating != null)
+                    Padding(
+                      padding: EdgeInsets.only(left: AppSizes.spacingXS),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedRating = null;
+                          });
+                        },
+                        child: Icon(
+                          Icons.close,
+                          size: 16.sp,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             // Comment input
@@ -330,8 +407,7 @@ class _CommentSectionWidgetState extends State<CommentSectionWidget> {
               ),
             ),
           ],
-        );
-      },
+        ),
     );
   }
 }

@@ -194,7 +194,7 @@ class HouseholdRepositoryImpl implements IHouseholdRepository {
         .delete();
 
     // Update user's householdId to null
-    await updateUserHouseholdId(userId: userId, householdId: null);
+    await updateUserHouseholdId(userId: userId);
   }
 
   @override

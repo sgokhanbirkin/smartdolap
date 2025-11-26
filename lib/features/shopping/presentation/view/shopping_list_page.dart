@@ -1,4 +1,4 @@
-// ignore_for_file: directives_ordering, prefer_const_constructors, lines_longer_than_80_chars
+// ignore_for_file: directives_ordering, prefer_const_constructors, lines_longer_than_80_chars, use_build_context_synchronously
 
 import 'dart:async';
 
@@ -11,6 +11,7 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/pantry_categories.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
 import 'package:smartdolap/core/widgets/avatar_widget.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
@@ -37,9 +38,9 @@ class ShoppingListPage extends StatefulWidget {
 
 class _ShoppingListPageState extends State<ShoppingListPage> {
   @override
-  Widget build(BuildContext context) => BlocBuilder<AuthCubit, AuthState>(
-    builder: (BuildContext context, AuthState state) {
-      return state.when(
+  Widget build(BuildContext context) => BackgroundWrapper(
+    child: BlocBuilder<AuthCubit, AuthState>(
+      builder: (BuildContext context, AuthState state) => state.when(
         initial: () => Scaffold(
           appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
           body: const SizedBox.shrink(),
@@ -61,7 +62,10 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
         authenticated: (domain.User user) {
           if (user.householdId == null) {
             return Scaffold(
-              appBar: AppBar(title: Text(tr('shopping_list.title')), elevation: 0),
+              appBar: AppBar(
+                title: Text(tr('shopping_list.title')),
+                elevation: 0,
+              ),
               body: SafeArea(
                 child: Center(
                   child: Padding(
@@ -122,7 +126,9 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
                           icon: const Icon(Icons.shopping_cart_checkout),
                           label: Text(tr('shopping_list.shopping_done')),
                           style: TextButton.styleFrom(
-                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onPrimary,
                           ),
                         ),
                       );
@@ -191,36 +197,40 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
                 ),
               ),
               floatingActionButton: BlocBuilder<AuthCubit, AuthState>(
-                builder: (BuildContext authContext, AuthState authState) {
-                  return authState.maybeWhen(
-                    authenticated: (domain.User authUser) {
-                      if (authUser.householdId == null) {
-                        return const SizedBox.shrink();
-                      }
-                      return BlocBuilder<ShoppingListCubit, ShoppingListState>(
-                        builder: (BuildContext shoppingContext, ShoppingListState s) {
-                          return FloatingActionButton(
-                            onPressed: () => _showAddItemDialog(
-                              shoppingContext,
-                              authUser.householdId!,
-                              authUser.id,
-                              authUser.avatarId,
-                              shoppingContext.read<ShoppingListCubit>(),
-                            ),
-                            child: const Icon(Icons.add),
-                          );
-                        },
-                      );
-                    },
-                    orElse: () => const SizedBox.shrink(),
-                  );
-                },
+                builder: (BuildContext authContext, AuthState authState) =>
+                    authState.maybeWhen(
+                      authenticated: (domain.User authUser) {
+                        if (authUser.householdId == null) {
+                          return const SizedBox.shrink();
+                        }
+                        return BlocBuilder<
+                          ShoppingListCubit,
+                          ShoppingListState
+                        >(
+                          builder:
+                              (
+                                BuildContext shoppingContext,
+                                ShoppingListState s,
+                              ) => FloatingActionButton(
+                                onPressed: () => _showAddItemDialog(
+                                  shoppingContext,
+                                  authUser.householdId!,
+                                  authUser.id,
+                                  authUser.avatarId,
+                                  shoppingContext.read<ShoppingListCubit>(),
+                                ),
+                                child: const Icon(Icons.add),
+                              ),
+                        );
+                      },
+                      orElse: () => const SizedBox.shrink(),
+                    ),
               ),
             ),
           );
         },
-      );
-    },
+      ),
+    ),
   );
 
   Widget _buildShoppingListItem(
@@ -247,11 +257,7 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
             } else {
               await context.read<ShoppingListCubit>().update(
                 householdId,
-                item.copyWith(
-                  isCompleted: false,
-                  completedAt: null,
-                  completedByUserId: null,
-                ),
+                item.copyWith(isCompleted: false),
               );
             }
           },
@@ -341,10 +347,12 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
     String? avatarId,
   ) async {
     final IShoppingListService shoppingListService = sl<IShoppingListService>();
-    
+
     try {
       // Show loading indicator
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -365,23 +373,30 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
       // Complete all completed items and add to pantry
       final int addedCount = await shoppingListService
           .completeAllCompletedAndAddToPantry(
-        householdId: householdId,
-        userId: userId,
-        avatarId: avatarId,
-      );
+            householdId: householdId,
+            userId: userId,
+            avatarId: avatarId,
+          );
 
       // Refresh the shopping list
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       await context.read<ShoppingListCubit>().refresh(householdId);
 
       // Show success message
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             addedCount > 0
-                ? tr('shopping_list.shopping_done_message', args: <String>[addedCount.toString()])
+                ? tr(
+                    'shopping_list.shopping_done_message',
+                    args: <String>[addedCount.toString()],
+                  )
                 : tr('shopping_list.shopping_done_no_items'),
           ),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -389,7 +404,9 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
         ),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -441,20 +458,17 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
       category = PantryCategoryHelper.normalize(quickGuess);
 
       // AI category suggestion
-      categoryDebounce = Timer(
-        const Duration(milliseconds: 600),
-        () async {
-          try {
-            final String cat = await sl<IOpenAIService>().categorizeItem(name);
-            if (nameController.text.trim() != name) {
-              return;
-            }
-            category = PantryCategoryHelper.normalize(cat);
-          } on Exception catch (_) {
-            // Ignore errors, keep quick guess
+      categoryDebounce = Timer(const Duration(milliseconds: 600), () async {
+        try {
+          final String cat = await sl<IOpenAIService>().categorizeItem(name);
+          if (nameController.text.trim() != name) {
+            return;
           }
-        },
-      );
+          category = PantryCategoryHelper.normalize(cat);
+        } on Exception catch (_) {
+          // Ignore errors, keep quick guess
+        }
+      });
     }
 
     final bool? result = await showDialog<bool>(
@@ -565,22 +579,28 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
     String householdId,
     String userId,
     String? avatarId,
-  ) {
-    return ListView.separated(
-      padding: EdgeInsets.all(AppSizes.padding),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => SizedBox(height: AppSizes.verticalSpacingS),
-      itemBuilder: (BuildContext _, int index) {
-        return _buildShoppingListItem(
+  ) => ListView.builder(
+    padding: EdgeInsets.all(AppSizes.padding),
+    itemCount: items.length * 2 - 1, // Items + separators
+    // Optimize: Add itemExtent for fixed-height items (approximately 80px ListTile + 8px separator)
+    itemExtent: 88,
+    itemBuilder: (BuildContext _, int i) {
+      // Even indices are items, odd indices are separators
+      if (i.isOdd) {
+        return SizedBox(height: AppSizes.verticalSpacingS);
+      }
+      final int index = i ~/ 2;
+      return RepaintBoundary(
+        child: _buildShoppingListItem(
           context,
           items[index],
           householdId,
           userId,
           avatarId,
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
 
   Widget _buildTabletLayout(
     BuildContext context,
@@ -589,24 +609,32 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
     String userId,
     String? avatarId,
   ) {
+    // Use responsive grid helper for consistent column count
+    final int crossAxisCount = context.responsiveInt(
+      phone: 2, // Should not be used in tablet layout, but fallback
+      tablet: 2, // Tablet: 2 columns
+      desktop: 3, // Desktop: 3 columns
+      largeDesktop: 4, // Large desktop: 4 columns
+    );
+
     return GridView.builder(
       padding: EdgeInsets.all(AppSizes.padding),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: context.isMediumScreen ? 2 : 3,
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: AppSizes.spacingM,
         mainAxisSpacing: AppSizes.spacingM,
         childAspectRatio: 2.5,
       ),
       itemCount: items.length,
-      itemBuilder: (BuildContext context, int index) {
-        return _buildShoppingListItem(
+      itemBuilder: (BuildContext context, int index) => RepaintBoundary(
+        child: _buildShoppingListItem(
           context,
           items[index],
           householdId,
           userId,
           avatarId,
-        );
-      },
+        ),
+      ),
     );
   }
 }

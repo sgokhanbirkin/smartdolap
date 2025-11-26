@@ -2,14 +2,12 @@
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
+import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
-
-import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
 
 /// Service for managing expiry date notifications
 /// Follows Single Responsibility Principle - only handles notification scheduling and cancellation
@@ -23,6 +21,7 @@ class ExpiryNotificationService implements IExpiryNotificationService {
   bool? _permissionGranted;
 
   /// Initialize notification service
+  @override
   Future<void> initialize() async {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -82,6 +81,7 @@ class ExpiryNotificationService implements IExpiryNotificationService {
   }
 
   /// Get permission status (for UI feedback)
+  @override
   bool? get permissionGranted => _permissionGranted;
 
   void _onNotificationTapped(NotificationResponse response) {
@@ -94,6 +94,7 @@ class ExpiryNotificationService implements IExpiryNotificationService {
   /// Schedule notifications for pantry items
   /// Cancels existing notifications for each item before scheduling new ones
   /// Optimized to avoid redundant scheduling
+  @override
   Future<void> scheduleNotifications(List<PantryItem> items) async {
     if (!_permissionChecked) {
       await _checkAndRequestPermissions();
@@ -140,6 +141,7 @@ class ExpiryNotificationService implements IExpiryNotificationService {
 
   /// Schedule notifications for a single pantry item
   /// Handles 3 days before, 1 day before, and same day notifications
+  @override
   Future<void> schedulePerItem(PantryItem item) async {
     if (item.expiryDate == null) {
       return;
@@ -325,6 +327,7 @@ class ExpiryNotificationService implements IExpiryNotificationService {
 
   /// Cancel notification for a specific item
   /// Cancels all 4 notification IDs associated with the item
+  @override
   Future<void> cancelItemNotifications(String itemId) async {
     try {
       final int baseId = itemId.hashCode;

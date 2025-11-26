@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Profil resmi yüklemek ve tarif görselleri seçmek için galeri erişimi gereklidir.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Profil resmi çekmek ve tarif fotoğrafı eklemek için kamera erişimi gereklidir.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Video çekimi için mikrofon erişimi gereklidir.</string>
 </dict>
 </plist>

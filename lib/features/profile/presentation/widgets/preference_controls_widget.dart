@@ -1,10 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
-import 'package:smartdolap/features/profile/presentation/widgets/chip_group_widget.dart';
 import 'package:smartdolap/features/profile/presentation/view/recipe_advanced_settings_page.dart';
+import 'package:smartdolap/features/profile/presentation/widgets/chip_group_widget.dart';
 
 /// Preference controls widget
 class PreferenceControlsWidget extends StatefulWidget {

@@ -10,24 +10,6 @@ class IngredientUsage {
     required this.lastUsed,
   });
 
-  /// Ingredient name
-  final String ingredientName;
-
-  /// Total times used
-  final int totalUsed;
-
-  /// Average daily usage (calculated from usageDates)
-  final double averageDailyUsage;
-
-  /// List of dates when ingredient was used
-  final List<DateTime> usageDates;
-
-  /// Usage count by meal type
-  final Map<String, int> usageByMeal;
-
-  /// Last time ingredient was used
-  final DateTime lastUsed;
-
   /// Create from JSON
   factory IngredientUsage.fromJson(Map<String, dynamic> json) =>
       IngredientUsage(
@@ -50,12 +32,30 @@ class IngredientUsage {
             : DateTime.now(),
       );
 
+  /// Ingredient name
+  final String ingredientName;
+
+  /// Total times used
+  final int totalUsed;
+
+  /// Average daily usage (calculated from usageDates)
+  final double averageDailyUsage;
+
+  /// List of dates when ingredient was used
+  final List<DateTime> usageDates;
+
+  /// Usage count by meal type
+  final Map<String, int> usageByMeal;
+
+  /// Last time ingredient was used
+  final DateTime lastUsed;
+
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
     'ingredientName': ingredientName,
     'totalUsed': totalUsed,
     'averageDailyUsage': averageDailyUsage,
-    'usageDates': usageDates.map((e) => e.toIso8601String()).toList(),
+    'usageDates': usageDates.map((DateTime e) => e.toIso8601String()).toList(),
     'usageByMeal': usageByMeal,
     'lastUsed': lastUsed.toIso8601String(),
   };

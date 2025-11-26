@@ -30,8 +30,7 @@ class RecipesSearchBarWidget extends StatelessWidget {
   final Future<void> Function()? onGetSuggestions;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: EdgeInsets.all(AppSizes.padding),
       child: Row(
         children: <Widget>[
@@ -115,6 +114,5 @@ class RecipesSearchBarWidget extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 

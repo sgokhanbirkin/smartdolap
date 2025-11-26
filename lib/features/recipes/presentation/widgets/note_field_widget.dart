@@ -14,8 +14,7 @@ class NoteFieldWidget extends StatelessWidget {
   final TextEditingController controller;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
@@ -35,6 +34,5 @@ class NoteFieldWidget extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 

@@ -9,7 +9,5 @@ class WatchGlobalCommentsUseCase {
   final ICommentRepository _repository;
 
   /// Execute watching global comments
-  Stream<List<RecipeComment>> call(String recipeId) {
-    return _repository.watchGlobalComments(recipeId);
-  }
+  Stream<List<RecipeComment>> call(String recipeId) => _repository.watchGlobalComments(recipeId);
 }

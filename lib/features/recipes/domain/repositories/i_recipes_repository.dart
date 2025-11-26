@@ -11,10 +11,7 @@ abstract class IRecipesRepository {
   /// Returns combined list of Firestore recipes + newly generated recipes
   Future<List<Recipe>> getRecipesFromFirestoreFirst({
     required String userId,
-    String? meal,
-    required List<Ingredient> ingredients,
-    required String prompt,
-    required int targetCount,
+    required List<Ingredient> ingredients, required String prompt, required int targetCount, String? meal,
     List<String> excludeTitles = const <String>[],
   });
 }

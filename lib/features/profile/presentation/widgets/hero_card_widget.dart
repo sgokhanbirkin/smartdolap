@@ -56,7 +56,6 @@ class HeroCardWidget extends StatelessWidget {
                   ).colorScheme.shadow.withValues(alpha: 0.08),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
-                  spreadRadius: 0,
                 ),
               ],
             ),
@@ -246,7 +245,6 @@ class HeroStatBadgeWidget extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppSizes.radius),
       border: Border.all(
         color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-        width: 1,
       ),
     ),
     child: Row(

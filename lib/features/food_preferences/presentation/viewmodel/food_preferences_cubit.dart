@@ -52,7 +52,7 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
   /// Toggle food selection
   void toggleFoodSelection(String foodId) {
     state.maybeWhen(
-      loaded: (allFoodPreferences, selectedFoodIds, currentPreferences) {
+      loaded: (List<FoodPreference> allFoodPreferences, List<String> selectedFoodIds, UserFoodPreferences? currentPreferences) {
         if (_selectedFoodIds.contains(foodId)) {
           _selectedFoodIds.remove(foodId);
         } else {

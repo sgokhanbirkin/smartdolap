@@ -460,7 +460,7 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
 
       // Method 3: Look for base64 encoded images in data URLs (less reliable)
       final RegExp base64Pattern = RegExp(
-        r'data:image/[^;]+;base64,[A-Za-z0-9+/=]+',
+        'data:image/[^;]+;base64,[A-Za-z0-9+/=]+',
       );
       final RegExpMatch? base64Match = base64Pattern.firstMatch(html);
       if (base64Match != null) {

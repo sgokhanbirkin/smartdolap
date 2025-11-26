@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
@@ -43,10 +44,9 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
   }
 
   @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AuthCubit, AuthState>(
-      builder: (BuildContext context, AuthState authState) {
-        return authState.maybeWhen(
+  Widget build(BuildContext context) => BackgroundWrapper(
+    child: BlocBuilder<AuthCubit, AuthState>(
+      builder: (BuildContext context, AuthState authState) => authState.maybeWhen(
           authenticated: (domain.User user) {
             if (user.householdId == null) {
               return Scaffold(
@@ -103,7 +103,6 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
               create: (_) => sl<HouseholdCubit>(),
               child: Builder(
                 builder: (BuildContext scaffoldContext) => Scaffold(
-                  backgroundColor: Colors.white,
                   appBar: AppBar(
                     title: Text(tr('share_title')),
                     actions: <Widget>[
@@ -135,21 +134,21 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
                       controller: _tabController,
                       tabs: <Widget>[
                         Tab(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.message_outlined,
                             color: Colors.white,
                           ),
                           text: tr('messages'),
                         ),
                         Tab(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.share_outlined,
                             color: Colors.white,
                           ),
                           text: tr('shared_recipes'),
                         ),
                         Tab(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.analytics_outlined,
                             color: Colors.white,
                           ),
@@ -159,12 +158,10 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
                     ),
                   ),
                   body: Container(
-                    color: Colors.white,
                     child: BlocProvider<ShareCubit>(
                       create: (_) => sl<ShareCubit>()..watchShare(user.householdId!),
                       child: BlocBuilder<ShareCubit, ShareState>(
-                        builder: (BuildContext context, ShareState state) {
-                          return state.when(
+                        builder: (BuildContext context, ShareState state) => state.when(
                             initial: () => const Center(
                               child: CircularProgressIndicator(),
                             ),
@@ -192,8 +189,7 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
                             error: (String message) => Center(
                               child: Text(message),
                             ),
-                          );
-                        },
+                          ),
                       ),
                     ),
                   ),
@@ -207,10 +203,9 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
             ),
             body: const SizedBox.shrink(),
           ),
-        );
-      },
-    );
-  }
+        ),
+    ),
+  );
 
   Future<void> _showInviteDialog(
     BuildContext context,

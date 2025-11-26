@@ -30,8 +30,7 @@ class GetSuggestionsActionButtonsWidget extends StatelessWidget {
   final VoidCallback onConfirm;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: EdgeInsets.all(AppSizes.padding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -48,10 +47,14 @@ class GetSuggestionsActionButtonsWidget extends StatelessWidget {
           Expanded(
             child: OutlinedButton(
               onPressed: isLoading ? null : onToggleSelectAll,
-              child: Text(
-                selectedCount == totalCount
-                    ? tr('deselect_all')
-                    : tr('select_all'),
+              child: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  selectedCount == totalCount
+                      ? tr('deselect_all')
+                      : tr('select_all'),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ),
@@ -77,6 +80,5 @@ class GetSuggestionsActionButtonsWidget extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 

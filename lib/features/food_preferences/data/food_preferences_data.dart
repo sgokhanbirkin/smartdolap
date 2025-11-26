@@ -4,8 +4,7 @@ import 'package:smartdolap/features/food_preferences/domain/entities/food_prefer
 /// This can be moved to Firestore later for easier updates
 class FoodPreferencesData {
   /// Get all available food preferences
-  static List<FoodPreference> getAllFoodPreferences() {
-    return <FoodPreference>[
+  static List<FoodPreference> getAllFoodPreferences() => <FoodPreference>[
       // Turkish Cuisine
       const FoodPreference(
         id: 'manti',
@@ -195,21 +194,16 @@ class FoodPreferencesData {
         category: 'vegetarian',
       ),
     ];
-  }
 
   /// Get food preferences by category
-  static List<FoodPreference> getFoodPreferencesByCategory(String category) {
-    return getAllFoodPreferences()
+  static List<FoodPreference> getFoodPreferencesByCategory(String category) => getAllFoodPreferences()
         .where((FoodPreference food) => food.category == category)
         .toList();
-  }
 
   /// Get all categories
-  static List<String> getAllCategories() {
-    return getAllFoodPreferences()
+  static List<String> getAllCategories() => getAllFoodPreferences()
         .map((FoodPreference food) => food.category)
         .toSet()
         .toList();
-  }
 }
 

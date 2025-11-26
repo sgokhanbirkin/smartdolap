@@ -13,12 +13,10 @@ class AddToPantryFromShoppingListUseCase {
     required String itemId,
     required String userId,
     String? avatarId,
-  }) async {
-    return _service.addToPantryFromShoppingList(
+  }) async => _service.addToPantryFromShoppingList(
       householdId: householdId,
       itemId: itemId,
       userId: userId,
       avatarId: avatarId,
     );
-  }
 }

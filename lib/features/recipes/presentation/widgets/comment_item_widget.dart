@@ -2,8 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
-import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
+import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe_comment.dart';
 
 /// Comment item widget - displays a single comment
@@ -86,6 +86,19 @@ class CommentItemWidget extends StatelessWidget {
                   ],
                 ),
                 SizedBox(height: 4.h),
+                // Rating stars (if available)
+                if (comment.rating != null) ...<Widget>[
+                  Row(
+                    children: List<Widget>.generate(5, (int index) => Icon(
+                        index < comment.rating!
+                            ? Icons.star
+                            : Icons.star_border,
+                        size: (isTablet ? 16.0 : 14.0).sp,
+                        color: Colors.amber,
+                      )),
+                  ),
+                  SizedBox(height: 4.h),
+                ],
                 // Comment text
                 Text(
                   comment.text,

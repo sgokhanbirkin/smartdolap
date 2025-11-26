@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smartdolap/core/utils/logger.dart';
+import 'package:smartdolap/core/utils/pantry_categories.dart';
 import 'package:smartdolap/features/analytics/domain/entities/ingredient_usage.dart';
 import 'package:smartdolap/features/analytics/domain/entities/meal_consumption.dart';
 import 'package:smartdolap/features/analytics/domain/entities/user_analytics.dart';
 import 'package:smartdolap/features/analytics/domain/repositories/i_analytics_repository.dart';
 import 'package:smartdolap/features/analytics/domain/repositories/i_meal_consumption_repository.dart';
+import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
-import 'package:smartdolap/core/utils/pantry_categories.dart';
 
 /// Firestore implementation for analytics repository
 class AnalyticsRepositoryImpl implements IAnalyticsRepository {
@@ -121,12 +122,12 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
       final List<String> allIngredients = ingredientUsage.keys.toList();
 
       // Get pantry items to match categories
-      final pantryItems = await _pantryRepository.getItems(
+      final List<PantryItem> pantryItems = await _pantryRepository.getItems(
         householdId: householdId,
       );
       final Map<String, String> ingredientToCategory = <String, String>{};
 
-      for (final pantryItem in pantryItems) {
+      for (final PantryItem pantryItem in pantryItems) {
         final String normalizedName = pantryItem.name.toLowerCase().trim();
         if (pantryItem.category != null) {
           ingredientToCategory[normalizedName] = pantryItem.category!;
@@ -227,8 +228,7 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
   Stream<UserAnalytics> watchAnalytics({
     required String userId,
     required String householdId,
-  }) {
-    return _doc(userId).snapshots().map((
+  }) => _doc(userId).snapshots().map((
       DocumentSnapshot<Map<String, dynamic>> snapshot,
     ) {
       if (!snapshot.exists || snapshot.data() == null) {
@@ -247,5 +247,4 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
 
       return UserAnalytics.fromJson(snapshot.data()!);
     });
-  }
 }

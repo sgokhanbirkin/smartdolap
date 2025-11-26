@@ -70,7 +70,8 @@ class CategoryGroupWidget extends StatelessWidget {
                   SizedBox(width: AppSizes.spacingS),
                   Expanded(
                     child: Text(
-                      category,
+                      PantryCategoryHelper.getLocalizedCategoryName(category),
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: AppSizes.textM,
                         fontWeight: FontWeight.w600,
@@ -107,7 +108,7 @@ class CategoryGroupWidget extends StatelessWidget {
               ),
             ),
           ),
-          if (isExpanded) ...[
+          if (isExpanded) ...<Widget>[
             SizedBox(height: AppSizes.spacingS),
             Wrap(
               spacing: AppSizes.spacingS,

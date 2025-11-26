@@ -3,9 +3,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/quantity_formatter.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/unit_dropdown_widget.dart';
@@ -60,104 +60,106 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(widget.item.name),
-      actions: <Widget>[
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          color: Theme.of(context).colorScheme.error,
-          onPressed: () => _showDeleteDialog(context),
-        ),
-      ],
-    ),
-    body: SafeArea(
-      child: Padding(
-        padding: EdgeInsets.all(AppSizes.padding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(AppSizes.padding * 0.75),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(
-                      widget.item.name,
-                      style: TextStyle(
-                        fontSize: AppSizes.textL,
-                        fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) => BackgroundWrapper(
+    child: Scaffold(
+      appBar: AppBar(
+        title: Text(widget.item.name),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            color: Theme.of(context).colorScheme.error,
+            onPressed: () => _showDeleteDialog(context),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(AppSizes.padding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.padding * 0.75),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        widget.item.name,
+                        style: TextStyle(
+                          fontSize: AppSizes.textL,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: AppSizes.verticalSpacingM),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: TextFormField(
-                            controller: _qtyController,
-                            keyboardType: TextInputType.number,
-                            style: TextStyle(fontSize: AppSizes.textM),
-                            decoration: InputDecoration(
-                              labelText: tr('quantity'),
-                              labelStyle: TextStyle(fontSize: AppSizes.textM),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radius,
-                                ),
-                              ),
-                              contentPadding: EdgeInsets.all(
-                                AppSizes.padding * 0.75,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.spacingM),
-                        Expanded(
-                          child: UnitDropdownWidget(
-                            unitController: _unitController,
-                            unitOptions: _unitOptions,
-                            wrapInCard: false,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (widget.item.expiryDate != null) ...<Widget>[
                       SizedBox(height: AppSizes.verticalSpacingM),
                       Row(
                         children: <Widget>[
-                          Icon(Icons.calendar_today, size: AppSizes.iconS),
-                          SizedBox(width: AppSizes.spacingS),
-                          Text(
-                            '${tr('expiry_date')}: '
-                            '${_formatDate(widget.item.expiryDate!)}',
-                            style: TextStyle(fontSize: AppSizes.textS),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _qtyController,
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(fontSize: AppSizes.textM),
+                              decoration: InputDecoration(
+                                labelText: tr('quantity'),
+                                labelStyle: TextStyle(fontSize: AppSizes.textM),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radius,
+                                  ),
+                                ),
+                                contentPadding: EdgeInsets.all(
+                                  AppSizes.padding * 0.75,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: AppSizes.spacingM),
+                          Expanded(
+                            child: UnitDropdownWidget(
+                              unitController: _unitController,
+                              unitOptions: _unitOptions,
+                              wrapInCard: false,
+                            ),
                           ),
                         ],
                       ),
+                      if (widget.item.expiryDate != null) ...<Widget>[
+                        SizedBox(height: AppSizes.verticalSpacingM),
+                        Row(
+                          children: <Widget>[
+                            Icon(Icons.calendar_today, size: AppSizes.iconS),
+                            SizedBox(width: AppSizes.spacingS),
+                            Text(
+                              '${tr('expiry_date')}: '
+                              '${_formatDate(widget.item.expiryDate!)}',
+                              style: TextStyle(fontSize: AppSizes.textS),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: AppSizes.verticalSpacingL),
-            ElevatedButton.icon(
-              onPressed: _saveChanges,
-              icon: const Icon(Icons.save),
-              label: Text(tr('save')),
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, AppSizes.buttonHeight),
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.buttonPaddingH,
-                  vertical: AppSizes.buttonPaddingV,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radius),
+              SizedBox(height: AppSizes.verticalSpacingL),
+              ElevatedButton.icon(
+                onPressed: _saveChanges,
+                icon: const Icon(Icons.save),
+                label: Text(tr('save')),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, AppSizes.buttonHeight),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSizes.buttonPaddingH,
+                    vertical: AppSizes.buttonPaddingV,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radius),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -184,7 +186,10 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
       quantity: roundedQty,
       unit: _unitController.text.trim(),
     );
-    await context.read<PantryCubit>().update(widget.userId, updated); // userId is householdId here
+    await context.read<PantryCubit>().update(
+      widget.userId,
+      updated,
+    ); // userId is householdId here
     if (mounted) {
       Navigator.of(context).pop(true);
     }
@@ -218,7 +223,10 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
     );
     if (confirm == true && mounted) {
       final PantryCubit cubit = navigatorContext.read<PantryCubit>();
-      await cubit.remove(widget.userId, widget.item.id); // userId is householdId here
+      await cubit.remove(
+        widget.userId,
+        widget.item.id,
+      ); // userId is householdId here
       if (mounted) {
         Navigator.of(navigatorContext).pop(true);
       }

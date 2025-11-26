@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:smartdolap/core/utils/logger.dart';
+import 'package:smartdolap/features/analytics/domain/entities/meal_consumption.dart';
 import 'package:smartdolap/features/analytics/domain/repositories/i_meal_consumption_repository.dart';
 import 'package:smartdolap/features/analytics/domain/services/i_smart_notification_service.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
@@ -34,7 +35,7 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
       final DateTime endDate = DateTime.now();
       final DateTime startDate = endDate.subtract(const Duration(days: 7));
 
-      final consumptions = await _mealConsumptionRepository.getConsumptions(
+      final List<MealConsumption> consumptions = await _mealConsumptionRepository.getConsumptions(
         householdId: householdId,
         userId: userId,
         startDate: startDate,
@@ -47,7 +48,7 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
 
       // Group by ingredient
       final Map<String, int> ingredientCounts = <String, int>{};
-      for (final consumption in consumptions) {
+      for (final MealConsumption consumption in consumptions) {
         for (final String ingredient in consumption.ingredients) {
           final String normalized = ingredient.toLowerCase().trim();
           ingredientCounts[normalized] =
@@ -57,8 +58,8 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
 
       // Find ingredients used 3+ times in last 7 days
       final List<MapEntry<String, int>> frequentIngredients =
-          ingredientCounts.entries.where((entry) => entry.value >= 3).toList()
-            ..sort((a, b) => b.value.compareTo(a.value));
+          ingredientCounts.entries.where((MapEntry<String, int> entry) => entry.value >= 3).toList()
+            ..sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
 
       if (frequentIngredients.isEmpty) {
         return;
@@ -67,12 +68,12 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
       // Check if user consumed this ingredient today
       final DateTime today = DateTime.now();
       final bool consumedToday = consumptions.any(
-        (c) =>
+        (MealConsumption c) =>
             c.consumedAt.year == today.year &&
             c.consumedAt.month == today.month &&
             c.consumedAt.day == today.day &&
             c.ingredients.any(
-              (ing) =>
+              (String ing) =>
                   ing.toLowerCase().trim() == frequentIngredients.first.key,
             ),
       );
@@ -81,8 +82,8 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
         final String ingredient = frequentIngredients.first.key;
         final String? lastRecipe = consumptions
             .where(
-              (c) => c.ingredients.any(
-                (ing) => ing.toLowerCase().trim() == ingredient,
+              (MealConsumption c) => c.ingredients.any(
+                (String ing) => ing.toLowerCase().trim() == ingredient,
               ),
             )
             .lastOrNull

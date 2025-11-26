@@ -67,7 +67,6 @@ class _RecipesPageState extends State<RecipesPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.white,
     body: BlocBuilder<AuthCubit, AuthState>(
       builder: (BuildContext context, AuthState state) => state.when(
         initial: () => const SizedBox.shrink(),
@@ -80,8 +79,7 @@ class _RecipesPageState extends State<RecipesPage> {
         error: (_) => const EmptyState(messageKey: 'recipes_empty_message'),
         unauthenticated: () =>
             const EmptyState(messageKey: 'recipes_empty_message'),
-        authenticated: (domain.User user) {
-          return MultiBlocProvider(
+        authenticated: (domain.User user) => MultiBlocProvider(
             providers: <BlocProvider<dynamic>>[
               BlocProvider<RecipesCubit>(
                 create: (BuildContext _) => sl<RecipesCubit>(),
@@ -107,30 +105,25 @@ class _RecipesPageState extends State<RecipesPage> {
 
                 return SafeArea(
                   child: BlocBuilder<RecipesCubit, RecipesState>(
-                    builder: (BuildContext context, RecipesState recipesState) {
-                      return ValueListenableBuilder<String>(
+                    builder: (BuildContext context, RecipesState recipesState) => ValueListenableBuilder<String>(
                         valueListenable: _searchQuery,
                         builder:
                             (
                               BuildContext context,
                               String query,
                               Widget? child,
-                            ) {
-                              return _buildContent(
+                            ) => _buildContent(
                                 context,
                                 recipesState,
                                 query,
                                 user,
-                              );
-                            },
-                      );
-                    },
+                              ),
+                      ),
                   ),
                 );
               },
             ),
-          );
-        },
+          ),
       ),
     ),
   );

@@ -15,8 +15,7 @@ class SharedRecipeRepositoryImpl implements ISharedRecipeRepository {
   static const Uuid _uuid = Uuid();
 
   @override
-  Stream<List<SharedRecipe>> watchSharedRecipes(String householdId) {
-    return _firestore
+  Stream<List<SharedRecipe>> watchSharedRecipes(String householdId) => _firestore
         .collection(_households)
         .doc(householdId)
         .collection(_sharedRecipes)
@@ -30,7 +29,6 @@ class SharedRecipeRepositoryImpl implements ISharedRecipeRepository {
               )
               .toList(),
         );
-  }
 
   @override
   Future<SharedRecipe> shareRecipe({

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/product/router/app_router.dart';
@@ -24,7 +25,7 @@ mixin AuthGuard {
   static String? getUserId(BuildContext context) {
     final AuthState state = context.read<AuthCubit>().state;
     return state.maybeWhen(
-      authenticated: (user) => user.id,
+      authenticated: (User user) => user.id,
       orElse: () => null,
     );
   }
@@ -94,8 +95,7 @@ class _AuthGuardWidgetState extends State<AuthGuardWidget> {
         );
         return wasAuthenticated != isAuthenticated;
       },
-      builder: (BuildContext context, AuthState state) {
-        return state.when(
+      builder: (BuildContext context, AuthState state) => state.when(
           initial: () => const SizedBox.shrink(),
           loading: () => const Center(
             child: CircularProgressIndicator(),
@@ -103,8 +103,7 @@ class _AuthGuardWidgetState extends State<AuthGuardWidget> {
           authenticated: (_) => widget.child,
           unauthenticated: () => const SizedBox.shrink(),
           error: (_) => const SizedBox.shrink(),
-        );
-      },
+        ),
     ),
   );
 }

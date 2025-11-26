@@ -14,6 +14,28 @@ class MealConsumption {
     required this.createdAt,
   });
 
+  /// Create from Firestore document
+  factory MealConsumption.fromJson(Map<String, dynamic> json) =>
+      MealConsumption(
+        id: json['id'] as String,
+        householdId: json['householdId'] as String,
+        userId: json['userId'] as String,
+        recipeId: json['recipeId'] as String,
+        recipeTitle: json['recipeTitle'] as String,
+        ingredients:
+            (json['ingredients'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            <String>[],
+        meal: json['meal'] as String,
+        consumedAt: json['consumedAt'] != null
+            ? DateTime.tryParse(json['consumedAt'] as String) ?? DateTime.now()
+            : DateTime.now(),
+        createdAt: json['createdAt'] != null
+            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+            : DateTime.now(),
+      );
+
   /// Unique identifier
   final String id;
 
@@ -40,28 +62,6 @@ class MealConsumption {
 
   /// When the record was created
   final DateTime createdAt;
-
-  /// Create from Firestore document
-  factory MealConsumption.fromJson(Map<String, dynamic> json) =>
-      MealConsumption(
-        id: json['id'] as String,
-        householdId: json['householdId'] as String,
-        userId: json['userId'] as String,
-        recipeId: json['recipeId'] as String,
-        recipeTitle: json['recipeTitle'] as String,
-        ingredients:
-            (json['ingredients'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            <String>[],
-        meal: json['meal'] as String,
-        consumedAt: json['consumedAt'] != null
-            ? DateTime.tryParse(json['consumedAt'] as String) ?? DateTime.now()
-            : DateTime.now(),
-        createdAt: json['createdAt'] != null
-            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-            : DateTime.now(),
-      );
 
   /// Convert to Firestore document
   Map<String, dynamic> toJson() => <String, dynamic>{

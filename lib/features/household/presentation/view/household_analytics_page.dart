@@ -4,13 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
+import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/analytics/domain/entities/meal_consumption.dart';
 import 'package:smartdolap/features/analytics/domain/repositories/i_meal_consumption_repository.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
-import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/features/household/domain/entities/household.dart';
 import 'package:smartdolap/features/household/domain/repositories/i_household_repository.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
@@ -26,14 +26,10 @@ class HouseholdAnalyticsPage extends StatelessWidget {
   final String householdId;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
+  Widget build(BuildContext context) => Container(
       child: BlocBuilder<AuthCubit, AuthState>(
-        builder: (BuildContext context, AuthState authState) {
-          return authState.maybeWhen(
-            authenticated: (domain.User user) {
-              return StreamBuilder<List<MealConsumption>>(
+        builder: (BuildContext context, AuthState authState) => authState.maybeWhen(
+            authenticated: (domain.User user) => StreamBuilder<List<MealConsumption>>(
               stream: sl<IMealConsumptionRepository>().watchConsumptions(
                 householdId: householdId,
                 startDate: DateTime.now().subtract(const Duration(days: 30)),
@@ -41,8 +37,7 @@ class HouseholdAnalyticsPage extends StatelessWidget {
               builder: (
                 BuildContext context,
                 AsyncSnapshot<List<MealConsumption>> snapshot,
-              ) {
-                return StreamBuilder<Household?>(
+              ) => StreamBuilder<Household?>(
                   stream: sl<IHouseholdRepository>().watchHousehold(householdId),
                   builder: (
                     BuildContext context,
@@ -77,7 +72,7 @@ class HouseholdAnalyticsPage extends StatelessWidget {
                     }
 
                     if (consumptions.isEmpty) {
-                      return EmptyState(
+                      return const EmptyState(
                         messageKey: 'household_analytics_no_data',
                         icon: Icons.analytics_outlined,
                       );
@@ -146,7 +141,9 @@ class HouseholdAnalyticsPage extends StatelessWidget {
                             final String userId = entry.key;
                             final HouseholdMember? member = membersMap[userId];
                             final String userName = member?.userName ??
-                                userConsumptions.firstOrNull?.recipeTitle ??
+                                (userConsumptions.isNotEmpty
+                                    ? userConsumptions.first.recipeTitle
+                                    : null) ??
                                 userId;
                             final Map<String, int> mealStats =
                                 userMealStats[userId] ?? <String, int>{};
@@ -216,36 +213,30 @@ class HouseholdAnalyticsPage extends StatelessWidget {
                                         runSpacing: 8.h,
                                         children: mealStats.entries.map((
                                           MapEntry<String, int> mealEntry,
-                                        ) {
-                                          return Chip(
+                                        ) => Chip(
                                             label: Text(
                                               '${tr(mealEntry.key)}: ${mealEntry.value}',
                                             ),
                                             backgroundColor: Theme.of(context)
                                                 .colorScheme
                                                 .primaryContainer,
-                                          );
-                                        }).toList(),
+                                          )).toList(),
                                       ),
                                     ],
                                   ],
                                 ),
                               ),
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     );
                   },
-                );
-              },
-            );
-          },
+                ),
+            ),
           orElse: () => const SizedBox.shrink(),
-        );
-      },
+        ),
       ),
     );
-  }
 }
 

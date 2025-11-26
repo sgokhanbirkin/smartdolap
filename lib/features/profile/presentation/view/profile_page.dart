@@ -5,21 +5,23 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
-import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
-import 'package:smartdolap/features/profile/presentation/mixins/profile_actions_mixin.dart';
-import 'package:smartdolap/features/profile/presentation/viewmodel/profile_cubit.dart';
-import 'package:smartdolap/features/profile/presentation/viewmodel/profile_state.dart';
 import 'package:smartdolap/features/profile/domain/entities/badge.dart'
     as domain;
+import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
+import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
+import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
+import 'package:smartdolap/features/profile/presentation/mixins/profile_actions_mixin.dart';
 import 'package:smartdolap/features/profile/presentation/utils/badge_progress_helper.dart';
+import 'package:smartdolap/features/profile/presentation/viewmodel/profile_cubit.dart';
+import 'package:smartdolap/features/profile/presentation/viewmodel/profile_state.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/badge_grid_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/badge_preview_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/hero_card_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/household_management_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/preference_controls_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/prompt_preview_card_widget.dart';
-import 'package:smartdolap/features/profile/presentation/widgets/stats_tables_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/settings_menu_widget.dart';
+import 'package:smartdolap/features/profile/presentation/widgets/stats_tables_widget.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
 /// Profile page - User profile and settings
@@ -64,7 +66,6 @@ class _ProfilePageState extends State<ProfilePage>
       BlocProvider<ProfileCubit>(create: (_) => sl<ProfileCubit>()),
     ],
     child: Scaffold(
-      backgroundColor: Colors.white,
       body: BlocBuilder<ProfileCubit, ProfileState>(
         builder: (BuildContext context, ProfileState state) => state.when(
           initial: () => const Center(
@@ -79,7 +80,7 @@ class _ProfilePageState extends State<ProfilePage>
               size: 50,
             ),
           ).animate().fadeIn(duration: 300.ms),
-          loaded: (preferences, stats, badges, userRecipes, favoritesCount) =>
+          loaded: (PromptPreferences preferences, ProfileStats stats, List<domain.Badge> badges, List<UserRecipe> userRecipes, int favoritesCount) =>
               CustomScrollView(
                 slivers: <Widget>[
                   SliverToBoxAdapter(

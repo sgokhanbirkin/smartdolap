@@ -28,8 +28,7 @@ class RecipeRowWidget extends StatelessWidget {
   final bool isLoading;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       margin: EdgeInsets.only(bottom: AppSizes.verticalSpacingM),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -72,7 +71,7 @@ class RecipeRowWidget extends StatelessWidget {
                     textColor: Theme.of(context).colorScheme.onSurface,
                     delay: 100,
                   ),
-                if (onViewAll != null && recipes.isNotEmpty) ...[
+                if (onViewAll != null && recipes.isNotEmpty) ...<Widget>[
                   SizedBox(width: AppSizes.spacingS),
                   TextButton.icon(
                     onPressed: onViewAll,
@@ -136,14 +135,18 @@ class RecipeRowWidget extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.symmetric(horizontal: AppSizes.spacingM),
                 itemCount: recipes.length,
+                // Optimize: Add itemExtent for fixed-width items
+                itemExtent: MediaQuery.of(context).size.width * 0.45 + AppSizes.spacingS,
                 itemBuilder: (BuildContext context, int index) {
                   final Recipe recipe = recipes[index];
-                  return Container(
-                    width: MediaQuery.of(context).size.width * 0.45,
-                    margin: EdgeInsets.only(right: AppSizes.spacingS),
-                    child: CompactRecipeCardWidget(
-                      recipe: recipe,
-                      onTap: () => onRecipeTap(recipe),
+                  return RepaintBoundary(
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.45,
+                      margin: EdgeInsets.only(right: AppSizes.spacingS),
+                      child: CompactRecipeCardWidget(
+                        recipe: recipe,
+                        onTap: () => onRecipeTap(recipe),
+                      ),
                     ),
                   );
                 },
@@ -153,6 +156,5 @@ class RecipeRowWidget extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 

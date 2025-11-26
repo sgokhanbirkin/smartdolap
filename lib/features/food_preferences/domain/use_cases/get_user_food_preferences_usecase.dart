@@ -9,8 +9,6 @@ class GetUserFoodPreferencesUseCase {
   final IFoodPreferenceRepository _repository;
 
   /// Execute getting user food preferences
-  Future<UserFoodPreferences?> call(String userId) async {
-    return _repository.getUserFoodPreferences(userId);
-  }
+  Future<UserFoodPreferences?> call(String userId) async => _repository.getUserFoodPreferences(userId);
 }
 

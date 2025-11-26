@@ -68,8 +68,7 @@ class ProfileDisplaySection extends StatelessWidget {
   final VoidCallback onUploadDishPhoto;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         HeroCardWidget(
@@ -135,7 +134,7 @@ class ProfileDisplaySection extends StatelessWidget {
               curve: Curves.easeOutCubic,
             ),
         // Advanced sections (optional - can be hidden)
-        if (kEnableAdvancedProfileSections) ...[
+        if (kEnableAdvancedProfileSections) ...<Widget>[
           SizedBox(height: AppSizes.verticalSpacingL),
           CollectionCardWidget(
             stats: stats,
@@ -147,6 +146,5 @@ class ProfileDisplaySection extends StatelessWidget {
         ],
       ],
     );
-  }
 }
 

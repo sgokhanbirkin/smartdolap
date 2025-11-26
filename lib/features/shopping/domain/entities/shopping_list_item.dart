@@ -17,6 +17,30 @@ class ShoppingListItem {
     this.updatedAt,
   });
 
+  /// Create from Firestore document
+  factory ShoppingListItem.fromJson(Map<String, dynamic> json) =>
+      ShoppingListItem(
+        id: json['id'] as String,
+        householdId: json['householdId'] as String,
+        name: json['name'] as String,
+        category: json['category'] as String?,
+        quantity: (json['quantity'] as num?)?.toDouble(),
+        unit: json['unit'] as String?,
+        addedByUserId: json['addedByUserId'] as String,
+        addedByAvatarId: json['addedByAvatarId'] as String?,
+        isCompleted: json['isCompleted'] as bool? ?? false,
+        completedAt: json['completedAt'] != null
+            ? DateTime.tryParse(json['completedAt'] as String)
+            : null,
+        completedByUserId: json['completedByUserId'] as String?,
+        createdAt: json['createdAt'] != null
+            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+            : DateTime.now(),
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.tryParse(json['updatedAt'] as String)
+            : null,
+      );
+
   /// Unique identifier
   final String id;
 
@@ -55,30 +79,6 @@ class ShoppingListItem {
 
   /// Last update timestamp
   final DateTime? updatedAt;
-
-  /// Create from Firestore document
-  factory ShoppingListItem.fromJson(Map<String, dynamic> json) =>
-      ShoppingListItem(
-        id: json['id'] as String,
-        householdId: json['householdId'] as String,
-        name: json['name'] as String,
-        category: json['category'] as String?,
-        quantity: (json['quantity'] as num?)?.toDouble(),
-        unit: json['unit'] as String?,
-        addedByUserId: json['addedByUserId'] as String,
-        addedByAvatarId: json['addedByAvatarId'] as String?,
-        isCompleted: json['isCompleted'] as bool? ?? false,
-        completedAt: json['completedAt'] != null
-            ? DateTime.tryParse(json['completedAt'] as String)
-            : null,
-        completedByUserId: json['completedByUserId'] as String?,
-        createdAt: json['createdAt'] != null
-            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-            : DateTime.now(),
-        updatedAt: json['updatedAt'] != null
-            ? DateTime.tryParse(json['updatedAt'] as String)
-            : null,
-      );
 
   /// Convert to Firestore document
   Map<String, dynamic> toJson() => <String, dynamic>{

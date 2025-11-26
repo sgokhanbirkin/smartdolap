@@ -16,12 +16,9 @@ class HouseholdManagementWidget extends StatelessWidget {
   const HouseholdManagementWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AuthCubit, AuthState>(
-      builder: (BuildContext context, AuthState authState) {
-        return authState.maybeWhen(
-          authenticated: (domain.User user) {
-            return Container(
+  Widget build(BuildContext context) => BlocBuilder<AuthCubit, AuthState>(
+      builder: (BuildContext context, AuthState authState) => authState.maybeWhen(
+          authenticated: (domain.User user) => Container(
               padding: EdgeInsets.all(AppSizes.padding),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -102,12 +99,9 @@ class HouseholdManagementWidget extends StatelessWidget {
                     ),
                 ],
               ),
-            );
-          },
+            ),
           orElse: () => const SizedBox.shrink(),
-        );
-      },
+        ),
     );
-  }
 }
 

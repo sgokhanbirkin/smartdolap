@@ -26,8 +26,7 @@ class MealSelectorWidget extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
@@ -54,5 +53,4 @@ class MealSelectorWidget extends StatelessWidget {
         ),
       ],
     );
-  }
 }

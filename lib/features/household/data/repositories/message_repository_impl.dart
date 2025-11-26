@@ -14,24 +14,20 @@ class MessageRepositoryImpl implements IMessageRepository {
   static const Uuid _uuid = Uuid();
 
   @override
-  Stream<List<HouseholdMessage>> watchMessages(String householdId) {
-    return _firestore
+  Stream<List<HouseholdMessage>> watchMessages(String householdId) => _firestore
         .collection(_households)
         .doc(householdId)
         .collection(_messages)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-      (QuerySnapshot<Map<String, dynamic>> snapshot) {
-        return snapshot.docs
+      (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
             .map(
               (QueryDocumentSnapshot<Map<String, dynamic>> doc) =>
                   HouseholdMessage.fromJson(doc.data()),
             )
-            .toList();
-      },
+            .toList(),
     );
-  }
 
   @override
   Future<HouseholdMessage> sendMessage({

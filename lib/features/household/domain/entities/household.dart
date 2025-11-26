@@ -9,21 +9,6 @@ class Household {
     this.members = const <HouseholdMember>[],
   });
 
-  /// Household ID
-  final String id;
-
-  /// Household name (e.g., "Evimiz", "Aile")
-  final String name;
-
-  /// Owner user ID
-  final String ownerId;
-
-  /// Creation timestamp
-  final DateTime createdAt;
-
-  /// List of household members
-  final List<HouseholdMember> members;
-
   /// Create from JSON
   factory Household.fromJson(Map<String, dynamic> json) => Household(
     id: json['id'] as String,
@@ -38,6 +23,21 @@ class Household {
             .toList() ??
         const <HouseholdMember>[],
   );
+
+  /// Household ID
+  final String id;
+
+  /// Household name (e.g., "Evimiz", "Aile")
+  final String name;
+
+  /// Owner user ID
+  final String ownerId;
+
+  /// Creation timestamp
+  final DateTime createdAt;
+
+  /// List of household members
+  final List<HouseholdMember> members;
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -74,6 +74,18 @@ class HouseholdMember {
     this.avatarId,
   });
 
+  /// Create from JSON
+  factory HouseholdMember.fromJson(Map<String, dynamic> json) =>
+      HouseholdMember(
+        userId: json['userId'] as String,
+        userName: json['userName'] as String?,
+        avatarId: json['avatarId'] as String?,
+        role: json['role'] as String,
+        joinedAt: json['joinedAt'] != null
+            ? DateTime.tryParse(json['joinedAt'] as String) ?? DateTime.now()
+            : DateTime.now(),
+      );
+
   /// User ID
   final String userId;
 
@@ -88,18 +100,6 @@ class HouseholdMember {
 
   /// Join timestamp
   final DateTime joinedAt;
-
-  /// Create from JSON
-  factory HouseholdMember.fromJson(Map<String, dynamic> json) =>
-      HouseholdMember(
-        userId: json['userId'] as String,
-        userName: json['userName'] as String?,
-        avatarId: json['avatarId'] as String?,
-        role: json['role'] as String,
-        joinedAt: json['joinedAt'] != null
-            ? DateTime.tryParse(json['joinedAt'] as String) ?? DateTime.now()
-            : DateTime.now(),
-      );
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{

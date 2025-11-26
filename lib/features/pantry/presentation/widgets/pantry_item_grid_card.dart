@@ -7,6 +7,7 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/category_colors.dart';
 import 'package:smartdolap/core/utils/quantity_formatter.dart';
 import 'package:smartdolap/core/widgets/avatar_widget.dart';
+import 'package:smartdolap/core/widgets/cached_image_widget.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 
 /// Compact grid card for pantry items
@@ -149,7 +150,6 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
                 color: categoryColor.withValues(alpha: 0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
-                spreadRadius: 0,
               ),
             ],
           ),
@@ -160,20 +160,17 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 // Icon/Image at top
-                ClipRRect(
+                CachedImageWidget(
+                  imageUrl: _isValidUrl(widget.item.imageUrl)
+                      ? widget.item.imageUrl
+                      : null,
+                  width: 32.w,
+                  height: 32.w,
                   borderRadius: BorderRadius.circular(AppSizes.radius * 0.5),
-                  child: _isValidUrl(widget.item.imageUrl)
-                      ? Image.network(
-                          widget.item.imageUrl!,
-                          width: 32.w,
-                          height: 32.w,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _fallbackIcon(context),
-                        )
-                      : _fallbackIcon(context),
+                  placeholderIcon: Icons.shopping_basket,
+                  errorIcon: Icons.shopping_basket,
                 ),
                 SizedBox(height: AppSizes.spacingXS * 0.3),
                 // Product name
@@ -264,7 +261,7 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
                         ),
                       ),
                     // Expiry date if exists
-                    if (widget.item.expiryDate != null) ...[
+                    if (widget.item.expiryDate != null) ...<Widget>[
                       Icon(
                         Icons.calendar_today,
                         size: AppSizes.iconXS * 0.6,
@@ -298,20 +295,6 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
       '${date.day.toString().padLeft(2, '0')}.'
       '${date.month.toString().padLeft(2, '0')}.'
       '${date.year}';
-
-  Widget _fallbackIcon(BuildContext context) => Container(
-    width: 32.w,
-    height: 32.w,
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(AppSizes.radius * 0.5),
-    ),
-    child: Icon(
-      Icons.shopping_basket_outlined,
-      size: AppSizes.iconXS * 0.9,
-      color: Theme.of(context).colorScheme.onPrimaryContainer,
-    ),
-  );
 
   bool _isValidUrl(String? url) {
     if (url == null || url.isEmpty) {

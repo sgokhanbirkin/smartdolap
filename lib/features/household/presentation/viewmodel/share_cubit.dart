@@ -40,7 +40,7 @@ class ShareCubit extends Cubit<ShareState> {
         .watchMessages(householdId)
         .listen((List<HouseholdMessage> messages) {
       state.maybeWhen(
-        loaded: (currentMessages, currentRecipes) {
+        loaded: (List<HouseholdMessage> currentMessages, List<SharedRecipe> currentRecipes) {
           emit(ShareState.loaded(
             messages: messages,
             sharedRecipes: currentRecipes,
@@ -59,7 +59,7 @@ class ShareCubit extends Cubit<ShareState> {
         .watchSharedRecipes(householdId)
         .listen((List<SharedRecipe> recipes) {
       state.maybeWhen(
-        loaded: (currentMessages, currentRecipes) {
+        loaded: (List<HouseholdMessage> currentMessages, List<SharedRecipe> currentRecipes) {
           emit(ShareState.loaded(
             messages: currentMessages,
             sharedRecipes: recipes,

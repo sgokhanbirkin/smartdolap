@@ -8,6 +8,7 @@ import 'package:fl_chart/fl_chart.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/core/widgets/custom_loading_indicator.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/analytics/domain/entities/ingredient_usage.dart';
@@ -27,103 +28,105 @@ class AnalyticsPage extends StatelessWidget {
   const AnalyticsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr('analytics.title')), elevation: 0),
-    body: SafeArea(
-      child: BlocBuilder<AuthCubit, AuthState>(
-        builder: (BuildContext context, AuthState state) => state.when(
-          initial: () => const SizedBox.shrink(),
-          loading: () => Center(
-            child: CustomLoadingIndicator(type: LoadingType.wave, size: 50),
-          ),
-          error: (_) => EmptyState(messageKey: 'auth_error'),
-          unauthenticated: () => EmptyState(messageKey: 'auth_error'),
-          authenticated: (domain.User user) {
-            if (user.householdId == null) {
-              return Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSizes.padding),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Icon(
-                        Icons.analytics_outlined,
-                        size: 64.w,
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        tr('join_household'),
-                        style: TextStyle(
-                          fontSize: AppSizes.textL,
-                          fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) => BackgroundWrapper(
+    child: Scaffold(
+      appBar: AppBar(title: Text(tr('analytics.title')), elevation: 0),
+      body: SafeArea(
+        child: BlocBuilder<AuthCubit, AuthState>(
+          builder: (BuildContext context, AuthState state) => state.when(
+            initial: () => const SizedBox.shrink(),
+            loading: () => Center(
+              child: CustomLoadingIndicator(type: LoadingType.wave, size: 50),
+            ),
+            error: (_) => EmptyState(messageKey: 'auth_error'),
+            unauthenticated: () => EmptyState(messageKey: 'auth_error'),
+            authenticated: (domain.User user) {
+              if (user.householdId == null) {
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSizes.padding),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(
+                          Icons.analytics_outlined,
+                          size: 64.w,
+                          color: Theme.of(context).colorScheme.outline,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                        SizedBox(height: 16.h),
+                        Text(
+                          tr('join_household'),
+                          style: TextStyle(
+                            fontSize: AppSizes.textL,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
+                );
+              }
+              return BlocProvider<AnalyticsCubit>(
+                create: (BuildContext _) => sl<AnalyticsCubit>()
+                  ..loadAnalytics(
+                    userId: user.id,
+                    householdId: user.householdId!,
+                  ),
+                child: BlocBuilder<AnalyticsCubit, AnalyticsState>(
+                  builder: (BuildContext context, AnalyticsState s) {
+                    if (s is AnalyticsLoading || s is AnalyticsInitial) {
+                      return Center(
+                        child: CustomLoadingIndicator(
+                          type: LoadingType.wave,
+                          size: 50,
+                        ),
+                      );
+                    }
+                    if (s is AnalyticsFailure) {
+                      return ErrorState(
+                        messageKey: 'analytics.no_data',
+                        onRetry: () => context.read<AnalyticsCubit>().refresh(
+                          userId: user.id,
+                          householdId: user.householdId!,
+                        ),
+                      );
+                    }
+                    final AnalyticsLoaded loaded = s as AnalyticsLoaded;
+                    final UserAnalytics analytics = loaded.analytics;
+
+                    // Check if there's any data
+                    final bool hasData =
+                        analytics.mealTypeDistribution.isNotEmpty ||
+                        analytics.ingredientUsage.isNotEmpty ||
+                        analytics.categoryUsage.isNotEmpty;
+
+                    if (!hasData) {
+                      return EmptyState(
+                        messageKey: 'analytics.no_consumptions',
+                        lottieAsset: 'assets/animations/Recipe_Book.json',
+                      );
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        await context.read<AnalyticsCubit>().refresh(
+                          userId: user.id,
+                          householdId: user.householdId!,
+                        );
+                      },
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.all(AppSizes.padding),
+                        child: context.isTablet
+                            ? _buildTabletLayout(context, analytics)
+                            : _buildPhoneLayout(context, analytics),
+                      ),
+                    );
+                  },
                 ),
               );
-            }
-            return BlocProvider<AnalyticsCubit>(
-              create: (BuildContext _) => sl<AnalyticsCubit>()
-                ..loadAnalytics(
-                  userId: user.id,
-                  householdId: user.householdId!,
-                ),
-              child: BlocBuilder<AnalyticsCubit, AnalyticsState>(
-                builder: (BuildContext context, AnalyticsState s) {
-                  if (s is AnalyticsLoading || s is AnalyticsInitial) {
-                    return Center(
-                      child: CustomLoadingIndicator(
-                        type: LoadingType.wave,
-                        size: 50,
-                      ),
-                    );
-                  }
-                  if (s is AnalyticsFailure) {
-                    return ErrorState(
-                      messageKey: 'analytics.no_data',
-                      onRetry: () => context.read<AnalyticsCubit>().refresh(
-                        userId: user.id,
-                        householdId: user.householdId!,
-                      ),
-                    );
-                  }
-                  final AnalyticsLoaded loaded = s as AnalyticsLoaded;
-                  final UserAnalytics analytics = loaded.analytics;
-
-                  // Check if there's any data
-                  final bool hasData =
-                      analytics.mealTypeDistribution.isNotEmpty ||
-                      analytics.ingredientUsage.isNotEmpty ||
-                      analytics.categoryUsage.isNotEmpty;
-
-                  if (!hasData) {
-                    return EmptyState(
-                      messageKey: 'analytics.no_consumptions',
-                      lottieAsset: 'assets/animations/Recipe_Book.json',
-                    );
-                  }
-
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      await context.read<AnalyticsCubit>().refresh(
-                        userId: user.id,
-                        householdId: user.householdId!,
-                      );
-                    },
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.all(AppSizes.padding),
-                      child: context.isTablet
-                          ? _buildTabletLayout(context, analytics)
-                          : _buildPhoneLayout(context, analytics),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
+            },
+          ),
         ),
       ),
     ),
@@ -137,7 +140,9 @@ class AnalyticsPage extends StatelessWidget {
         .map((MapEntry<String, int> entry) {
           final double percentage =
               entry.value /
-              analytics.mealTypeDistribution.values.reduce((a, b) => a + b) *
+              analytics.mealTypeDistribution.values.reduce(
+                (int a, int b) => a + b,
+              ) *
               100;
           return PieChartSectionData(
             value: entry.value.toDouble(),
@@ -222,8 +227,12 @@ class AnalyticsPage extends StatelessWidget {
   ) {
     final bool isTablet = context.isTablet;
     final List<MapEntry<String, IngredientUsage>> topIngredients =
-        analytics.ingredientUsage.entries.toList()
-          ..sort((a, b) => b.value.totalUsed.compareTo(a.value.totalUsed));
+        analytics.ingredientUsage.entries.toList()..sort(
+          (
+            MapEntry<String, IngredientUsage> a,
+            MapEntry<String, IngredientUsage> b,
+          ) => b.value.totalUsed.compareTo(a.value.totalUsed),
+        );
     final List<MapEntry<String, IngredientUsage>> top5 = topIngredients
         .take(5)
         .toList();
@@ -256,7 +265,6 @@ class AnalyticsPage extends StatelessWidget {
                   maxY: maxValue * 1.2,
                   barTouchData: BarTouchData(enabled: false),
                   titlesData: FlTitlesData(
-                    show: true,
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -294,16 +302,14 @@ class AnalyticsPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
+                    topTitles: const AxisTitles(),
+                    rightTitles: const AxisTitles(),
                   ),
                   gridData: FlGridData(show: false),
                   borderData: FlBorderData(show: false),
-                  barGroups: top5.asMap().entries.map((entry) {
+                  barGroups: top5.asMap().entries.map((
+                    MapEntry<int, MapEntry<String, IngredientUsage>> entry,
+                  ) {
                     final int index = entry.key;
                     final IngredientUsage usage = entry.value.value;
                     return BarChartGroupData(
@@ -333,8 +339,10 @@ class AnalyticsPage extends StatelessWidget {
   ) {
     final bool isTablet = context.isTablet;
     final List<MapEntry<String, int>> sortedCategories =
-        analytics.categoryUsage.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+        analytics.categoryUsage.entries.toList()..sort(
+          (MapEntry<String, int> a, MapEntry<String, int> b) =>
+              b.value.compareTo(a.value),
+        );
 
     if (sortedCategories.isEmpty) {
       return const SizedBox.shrink();
@@ -364,7 +372,6 @@ class AnalyticsPage extends StatelessWidget {
                   maxY: maxValue * 1.2,
                   barTouchData: BarTouchData(enabled: false),
                   titlesData: FlTitlesData(
-                    show: true,
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -403,16 +410,14 @@ class AnalyticsPage extends StatelessWidget {
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
+                    topTitles: const AxisTitles(),
+                    rightTitles: const AxisTitles(),
                   ),
                   gridData: FlGridData(show: false),
                   borderData: FlBorderData(show: false),
-                  barGroups: sortedCategories.asMap().entries.map((entry) {
+                  barGroups: sortedCategories.asMap().entries.map((
+                    MapEntry<int, MapEntry<String, int>> entry,
+                  ) {
                     final int index = entry.key;
                     final int usage = entry.value.value;
                     return BarChartGroupData(
@@ -490,41 +495,39 @@ class AnalyticsPage extends StatelessWidget {
     double value,
     Color color,
     bool isTablet,
-  ) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.verticalSpacingM),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
-                ),
+  ) => Padding(
+    padding: EdgeInsets.only(bottom: AppSizes.verticalSpacingM),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
               ),
-              Text(
-                '${(value * 100).toStringAsFixed(0)}%',
-                style: TextStyle(
-                  fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            Text(
+              '${(value * 100).toStringAsFixed(0)}%',
+              style: TextStyle(
+                fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
-          SizedBox(height: AppSizes.verticalSpacingS),
-          LinearProgressIndicator(
-            value: value,
-            backgroundColor: color.withValues(alpha: 0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: isTablet ? 12.h : 8.h,
-          ),
-        ],
-      ),
-    );
-  }
+            ),
+          ],
+        ),
+        SizedBox(height: AppSizes.verticalSpacingS),
+        LinearProgressIndicator(
+          value: value,
+          backgroundColor: color.withValues(alpha: 0.2),
+          valueColor: AlwaysStoppedAnimation<Color>(color),
+          minHeight: isTablet ? 12.h : 8.h,
+        ),
+      ],
+    ),
+  );
 
   Color _getMealColor(String meal) {
     switch (meal.toLowerCase()) {
@@ -556,57 +559,55 @@ class AnalyticsPage extends StatelessWidget {
     }
   }
 
-  Widget _buildPhoneLayout(BuildContext context, UserAnalytics analytics) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        if (analytics.mealTypeDistribution.isNotEmpty)
-          _buildMealTypeChart(context, analytics),
-        SizedBox(height: AppSizes.verticalSpacingL),
-        if (analytics.ingredientUsage.isNotEmpty)
-          _buildTopIngredientsChart(context, analytics),
-        SizedBox(height: AppSizes.verticalSpacingL),
-        if (analytics.categoryUsage.isNotEmpty)
-          _buildCategoryUsageChart(context, analytics),
-        SizedBox(height: AppSizes.verticalSpacingL),
-        if (analytics.dietaryPattern.isNotEmpty)
-          _buildDietaryPattern(context, analytics),
-      ],
-    );
-  }
-
-  Widget _buildTabletLayout(BuildContext context, UserAnalytics analytics) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (analytics.mealTypeDistribution.isNotEmpty)
-              Expanded(child: _buildMealTypeChart(context, analytics)),
-            if (analytics.mealTypeDistribution.isNotEmpty &&
-                analytics.ingredientUsage.isNotEmpty)
-              SizedBox(width: AppSizes.spacingL),
-            if (analytics.ingredientUsage.isNotEmpty)
-              Expanded(child: _buildTopIngredientsChart(context, analytics)),
-          ],
-        ),
-        if (analytics.categoryUsage.isNotEmpty ||
-            analytics.dietaryPattern.isNotEmpty)
+  Widget _buildPhoneLayout(BuildContext context, UserAnalytics analytics) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (analytics.mealTypeDistribution.isNotEmpty)
+            _buildMealTypeChart(context, analytics),
           SizedBox(height: AppSizes.verticalSpacingL),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (analytics.categoryUsage.isNotEmpty)
-              Expanded(child: _buildCategoryUsageChart(context, analytics)),
-            if (analytics.categoryUsage.isNotEmpty &&
-                analytics.dietaryPattern.isNotEmpty)
-              SizedBox(width: AppSizes.spacingL),
-            if (analytics.dietaryPattern.isNotEmpty)
-              Expanded(child: _buildDietaryPattern(context, analytics)),
-          ],
-        ),
-      ],
-    );
-  }
+          if (analytics.ingredientUsage.isNotEmpty)
+            _buildTopIngredientsChart(context, analytics),
+          SizedBox(height: AppSizes.verticalSpacingL),
+          if (analytics.categoryUsage.isNotEmpty)
+            _buildCategoryUsageChart(context, analytics),
+          SizedBox(height: AppSizes.verticalSpacingL),
+          if (analytics.dietaryPattern.isNotEmpty)
+            _buildDietaryPattern(context, analytics),
+        ],
+      );
+
+  Widget _buildTabletLayout(BuildContext context, UserAnalytics analytics) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (analytics.mealTypeDistribution.isNotEmpty)
+                Expanded(child: _buildMealTypeChart(context, analytics)),
+              if (analytics.mealTypeDistribution.isNotEmpty &&
+                  analytics.ingredientUsage.isNotEmpty)
+                SizedBox(width: AppSizes.spacingL),
+              if (analytics.ingredientUsage.isNotEmpty)
+                Expanded(child: _buildTopIngredientsChart(context, analytics)),
+            ],
+          ),
+          if (analytics.categoryUsage.isNotEmpty ||
+              analytics.dietaryPattern.isNotEmpty)
+            SizedBox(height: AppSizes.verticalSpacingL),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (analytics.categoryUsage.isNotEmpty)
+                Expanded(child: _buildCategoryUsageChart(context, analytics)),
+              if (analytics.categoryUsage.isNotEmpty &&
+                  analytics.dietaryPattern.isNotEmpty)
+                SizedBox(width: AppSizes.spacingL),
+              if (analytics.dietaryPattern.isNotEmpty)
+                Expanded(child: _buildDietaryPattern(context, analytics)),
+            ],
+          ),
+        ],
+      );
 }

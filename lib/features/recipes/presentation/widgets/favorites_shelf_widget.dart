@@ -70,7 +70,7 @@ class _FavoritesShelfWidgetState extends State<FavoritesShelfWidget>
       final Box<dynamic> favoritesBox = snapshot.data!;
       final List<Recipe> favorites = favoritesBox.values
           .map<Recipe>(
-            (dynamic value) => Recipe.fromMap(value as Map<dynamic, dynamic>),
+            (value) => Recipe.fromMap(value as Map<dynamic, dynamic>),
           )
           .toList();
 
@@ -109,7 +109,7 @@ class _FavoritesShelfWidgetState extends State<FavoritesShelfWidget>
         builder: (BuildContext context, Box<dynamic> box, Widget? child) {
           final List<Recipe> updatedFavorites = box.values
               .map<Recipe>(
-                (dynamic value) =>
+                (value) =>
                     Recipe.fromMap(value as Map<dynamic, dynamic>),
               )
               .toList();

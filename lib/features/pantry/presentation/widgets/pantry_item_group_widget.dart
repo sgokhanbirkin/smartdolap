@@ -12,8 +12,7 @@ class PantryItemGroupWidget extends StatefulWidget {
     required this.items,
     required this.userId,
     required this.onItemTap,
-    this.onQuantityChanged,
-    required this.buildDismissibleCard,
+    required this.buildDismissibleCard, this.onQuantityChanged,
     super.key,
   });
 

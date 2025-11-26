@@ -28,6 +28,7 @@ class SyncService implements ISyncService {
 
   /// Syncs all user data from Firestore to Hive
   /// Called after login/register to ensure local cache is up-to-date
+  @override
   Future<void> syncUserData({required String userId}) async {
     try {
       Logger.info('[SyncService] Starting sync for user: $userId');

@@ -5,6 +5,7 @@ import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/category_colors.dart';
 import 'package:smartdolap/core/utils/quantity_formatter.dart';
+import 'package:smartdolap/core/widgets/cached_image_widget.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 
 class PantryItemCard extends StatefulWidget {
@@ -166,7 +167,6 @@ class _PantryItemCardState extends State<PantryItemCard>
                       .withValues(alpha: 0.2),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
-                  spreadRadius: 0,
                 ),
               ],
             ),
@@ -181,27 +181,15 @@ class _PantryItemCardState extends State<PantryItemCard>
                   child: Row(
                     children: <Widget>[
                       // Image / Icon
-                      ClipRRect(
+                      CachedImageWidget(
+                        imageUrl: _isValidUrl(widget.item.imageUrl)
+                            ? widget.item.imageUrl
+                            : null,
+                        width: AppSizes.iconXXL,
+                        height: AppSizes.iconXXL,
                         borderRadius: BorderRadius.circular(AppSizes.radius),
-                        child: _isValidUrl(widget.item.imageUrl)
-                            ? Image.network(
-                                widget.item.imageUrl!,
-                                width: AppSizes.iconXXL,
-                                height: AppSizes.iconXXL,
-                                fit: BoxFit.cover,
-                                errorBuilder: (
-                                  _,
-                                  Object error,
-                                  StackTrace? stackTrace,
-                                ) {
-                                  debugPrint(
-                                    'Resim yüklenemedi: '
-                                    '${widget.item.imageUrl} - $error',
-                                  );
-                                  return _fallbackIcon(context);
-                                },
-                              )
-                            : _fallbackIcon(context),
+                        placeholderIcon: Icons.shopping_basket,
+                        errorIcon: Icons.shopping_basket,
                       ),
                       SizedBox(width: AppSizes.spacingS),
                       // Content
@@ -342,20 +330,6 @@ class _PantryItemCardState extends State<PantryItemCard>
       '${date.day.toString().padLeft(2, '0')}.'
       '${date.month.toString().padLeft(2, '0')}.'
       '${date.year}';
-
-  Widget _fallbackIcon(BuildContext context) => Container(
-    width: AppSizes.iconXXL,
-    height: AppSizes.iconXXL,
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(AppSizes.radius),
-    ),
-    child: Icon(
-      Icons.shopping_basket_outlined,
-      size: AppSizes.icon,
-      color: Theme.of(context).colorScheme.onPrimaryContainer,
-    ),
-  );
 
   bool _isValidUrl(String? url) {
     if (url == null || url.isEmpty) {

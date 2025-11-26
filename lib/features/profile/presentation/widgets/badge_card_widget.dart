@@ -64,8 +64,7 @@ class _BadgeCardWidgetState extends State<BadgeCardWidget>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
+  Widget build(BuildContext context) => ScaleTransition(
       scale: _scaleAnimation,
       child: Card(
         elevation: 0.5,
@@ -175,7 +174,6 @@ class _BadgeCardWidgetState extends State<BadgeCardWidget>
           delay: (widget.index * 50).ms,
           curve: Curves.easeOutBack,
         );
-  }
 
   /// Converts icon string to IconData
   IconData _getIconData(String iconName) {

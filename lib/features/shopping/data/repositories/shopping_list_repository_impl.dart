@@ -20,20 +20,16 @@ class ShoppingListRepositoryImpl implements IShoppingListRepository {
           .collection(_shoppingList);
 
   @override
-  Stream<List<ShoppingListItem>> watchItems({required String householdId}) {
-    return _col(householdId)
+  Stream<List<ShoppingListItem>> watchItems({required String householdId}) => _col(householdId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((QuerySnapshot<Map<String, dynamic>> snapshot) {
-          return snapshot.docs.map((
+        .map((QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs.map((
             QueryDocumentSnapshot<Map<String, dynamic>> doc,
           ) {
             final Map<String, dynamic> data = doc.data();
             data['id'] = doc.id;
             return ShoppingListItem.fromJson(data);
-          }).toList();
-        });
-  }
+          }).toList());
 
   @override
   Future<List<ShoppingListItem>> getItems({required String householdId}) async {

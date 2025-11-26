@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
+import 'package:smartdolap/core/widgets/cached_image_widget.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 
 /// Compact recipe card widget for favorites shelf
@@ -67,7 +68,6 @@ class _CompactRecipeCardWidgetState extends State<CompactRecipeCardWidget> {
       onTap: widget.onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           // Category chip
           if (widget.recipe.category != null)
@@ -76,6 +76,7 @@ class _CompactRecipeCardWidgetState extends State<CompactRecipeCardWidget> {
                 left: AppSizes.spacingS,
                 right: AppSizes.spacingS,
                 top: AppSizes.spacingS,
+                bottom: AppSizes.spacingXS,
               ),
               child: Chip(
                 label: Text(
@@ -86,70 +87,46 @@ class _CompactRecipeCardWidgetState extends State<CompactRecipeCardWidget> {
                 padding: EdgeInsets.zero,
               ),
             ),
-          // Image area with favorite - Expanded ile düzgün height
+          // Image area with favorite
           Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                if (widget.recipe.imageUrl != null &&
-                    widget.recipe.imageUrl!.isNotEmpty)
-                  Image.network(
-                    widget.recipe.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (
-                      _,
-                      Object error,
-                      StackTrace? stackTrace,
-                    ) {
-                      debugPrint(
-                        'Resim yüklenemedi: '
-                        '${widget.recipe.imageUrl} - $error',
-                      );
-                      return Container(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        child: Icon(
-                          Icons.restaurant_menu,
-                          size: AppSizes.icon,
+            child: ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: widget.recipe.category != null
+                    ? Radius.circular(AppSizes.radiusS)
+                    : Radius.circular(AppSizes.cardRadius),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  CachedImageWidget(
+                    imageUrl: widget.recipe.imageUrl,
+                    placeholderIcon: Icons.restaurant_menu,
+                    errorIcon: Icons.restaurant_menu,
+                  ),
+                  Positioned(
+                    right: AppSizes.spacingXS,
+                    top: AppSizes.spacingXS,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black45,
+                        minimumSize: Size(
+                          AppSizes.iconS * 1.4,
+                          AppSizes.iconS * 1.4,
                         ),
-                      );
-                    },
-                  ),
-                if (widget.recipe.imageUrl == null ||
-                    widget.recipe.imageUrl!.isEmpty)
-                  Container(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Icons.restaurant_menu,
-                      size: AppSizes.icon,
-                    ),
-                  ),
-                Positioned(
-                  right: AppSizes.spacingXS,
-                  top: AppSizes.spacingXS,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black45,
-                      minimumSize: Size(
-                        AppSizes.iconS * 1.4,
-                        AppSizes.iconS * 1.4,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: _toggleFav,
-                    icon: Icon(
-                      _fav ? Icons.star : Icons.star_border,
-                      size: AppSizes.iconXS,
-                      color: _fav ? Colors.amber : Colors.white,
+                      onPressed: _toggleFav,
+                      icon: Icon(
+                        _fav ? Icons.star : Icons.star_border,
+                        size: AppSizes.iconXS,
+                        color: _fav ? Colors.amber : Colors.white,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           // Title and ingredients - Fixed padding

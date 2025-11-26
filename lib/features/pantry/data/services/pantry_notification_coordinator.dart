@@ -12,6 +12,7 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
   final IExpiryNotificationService _notificationService;
 
   /// Handle notification scheduling when a new item is added
+  @override
   Future<void> handleItemAdded(PantryItem item) async {
     if (item.expiryDate != null) {
       try {
@@ -26,6 +27,7 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
   }
 
   /// Handle notification updates when an item is updated
+  @override
   Future<void> handleItemUpdated(PantryItem oldItem, PantryItem newItem) async {
     final bool expiryDateChanged = oldItem.expiryDate != newItem.expiryDate;
     if (expiryDateChanged) {
@@ -46,6 +48,7 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
   }
 
   /// Handle notification cancellation when an item is deleted
+  @override
   Future<void> handleItemDeleted(String itemId) async {
     try {
       await _notificationService.cancelItemNotifications(itemId);
@@ -57,6 +60,7 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
   }
 
   /// Schedule notifications for a list of items (used when pantry is loaded)
+  @override
   Future<void> scheduleForItems(List<PantryItem> items) async {
     try {
       await _notificationService.scheduleNotifications(items);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.dart';
 import 'package:smartdolap/features/recipes/data/services/recipes_page_data_service.dart';
@@ -35,27 +36,27 @@ class RecipesPageController {
   final String userId;
 
   // Data holders
-  final ValueNotifier<List<Recipe>> favorites = ValueNotifier<List<Recipe>>([]);
+  final ValueNotifier<List<Recipe>> favorites = ValueNotifier<List<Recipe>>(<Recipe>[]);
   final ValueNotifier<List<Recipe>> breakfastRecipes =
-      ValueNotifier<List<Recipe>>([]);
+      ValueNotifier<List<Recipe>>(<Recipe>[]);
   final ValueNotifier<List<Recipe>> snackRecipes = ValueNotifier<List<Recipe>>(
-    [],
+    <Recipe>[],
   );
   final ValueNotifier<List<Recipe>> lunchRecipes = ValueNotifier<List<Recipe>>(
-    [],
+    <Recipe>[],
   );
   final ValueNotifier<List<Recipe>> dinnerRecipes = ValueNotifier<List<Recipe>>(
-    [],
+    <Recipe>[],
   );
   final ValueNotifier<List<Recipe>> madeRecipes = ValueNotifier<List<Recipe>>(
-    [],
+    <Recipe>[],
   );
   final ValueNotifier<List<Recipe>> allCachedRecipes =
-      ValueNotifier<List<Recipe>>([]);
+      ValueNotifier<List<Recipe>>(<Recipe>[]);
 
   // Loading states
   final ValueNotifier<Map<String, bool>> loadingStates =
-      ValueNotifier<Map<String, bool>>({
+      ValueNotifier<Map<String, bool>>(<String, bool>{
         'breakfast': false,
         'snack': false,
         'lunch': false,
@@ -66,7 +67,7 @@ class RecipesPageController {
 
   // Combined data notifier for easier listening
   final ValueNotifier<Map<String, dynamic>> allDataNotifier =
-      ValueNotifier<Map<String, dynamic>>({
+      ValueNotifier<Map<String, dynamic>>(<String, dynamic>{
         'favorites': <Recipe>[],
         'breakfast': <Recipe>[],
         'snack': <Recipe>[],
@@ -335,7 +336,7 @@ class RecipesPageController {
 
       if (pantryState is PantryLoaded && pantryState.items.isNotEmpty) {
         final List<String> currentItems = pantryState.items
-            .map((item) => '${item.id}_${item.name}')
+            .map((PantryItem item) => '${item.id}_${item.name}')
             .toList();
 
         if (_lastPantryItems.isEmpty) {
@@ -345,7 +346,7 @@ class RecipesPageController {
 
         final bool itemsChanged =
             _lastPantryItems.length != currentItems.length ||
-            !_lastPantryItems.every((item) => currentItems.contains(item));
+            !_lastPantryItems.every(currentItems.contains);
 
         if (!itemsChanged) {
           return;

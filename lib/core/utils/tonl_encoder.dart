@@ -5,7 +5,7 @@ class TONLEncoder {
   TONLEncoder._();
 
   /// Encode a Map or List to TONL format
-  static String encode(dynamic data, {bool includeTypes = false}) {
+  static String encode(data, {bool includeTypes = false}) {
     if (data is Map<String, dynamic>) {
       return _encodeMap(data, includeTypes: includeTypes);
     } else if (data is List) {
@@ -17,9 +17,7 @@ class TONLEncoder {
 
   /// Decode TONL format to Map or List
   static dynamic decode(String tonl) {
-    final List<String> lines = tonl.split('\n').where((String line) {
-      return line.trim().isNotEmpty && !line.trim().startsWith('#');
-    }).toList();
+    final List<String> lines = tonl.split('\n').where((String line) => line.trim().isNotEmpty && !line.trim().startsWith('#')).toList();
 
     if (lines.isEmpty) {
       return <String, dynamic>{};
@@ -91,9 +89,7 @@ class TONLEncoder {
 
       for (final dynamic item in list) {
         if (item is Map<String, dynamic>) {
-          final List<String> values = keys.map((String key) {
-            return _encodeValue(item[key]);
-          }).toList();
+          final List<String> values = keys.map((String key) => _encodeValue(item[key])).toList();
           buffer.writeln('  ${values.join(', ')}');
         }
       }
@@ -128,9 +124,7 @@ class TONLEncoder {
 
       for (final dynamic item in list) {
         if (item is Map<String, dynamic>) {
-          final List<String> values = fields.map((String field) {
-            return _encodeValue(item[field]);
-          }).toList();
+          final List<String> values = fields.map((String field) => _encodeValue(item[field])).toList();
           buffer.writeln('  ${values.join(', ')}');
         }
       }
@@ -155,14 +149,12 @@ class TONLEncoder {
     final List<String> fields = map.keys.toList();
     final StringBuffer buffer = StringBuffer();
     buffer.writeln('$key{${fields.join(',')}}:');
-    final List<String> values = fields.map((String field) {
-      return _encodeValue(map[field]);
-    }).toList();
+    final List<String> values = fields.map((String field) => _encodeValue(map[field])).toList();
     buffer.writeln('  ${values.join(', ')}');
     return buffer.toString();
   }
 
-  static String _encodeValue(dynamic value) {
+  static String _encodeValue(value) {
     if (value == null) {
       return 'null';
     } else if (value is String) {
@@ -176,9 +168,9 @@ class TONLEncoder {
     } else if (value is bool) {
       return value.toString();
     } else if (value is List) {
-      return '[${value.map((dynamic e) => _encodeValue(e)).join(',')}]';
+      return '[${value.map(_encodeValue).join(',')}]';
     } else if (value is Map) {
-      return '{${value.entries.map((dynamic e) => '${_encodeValue(e.key)}:${_encodeValue(e.value)}').join(',')}}';
+      return '{${value.entries.map((MapEntry e) => '${_encodeValue(e.key)}:${_encodeValue(e.value)}').join(',')}}';
     } else {
       return value.toString();
     }

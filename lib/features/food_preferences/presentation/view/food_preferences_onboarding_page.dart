@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/responsive_extensions.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
+import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/food_preferences/domain/entities/food_preference.dart';
@@ -65,7 +67,7 @@ class _FoodPreferencesOnboardingPageState
   void _loadFoodPreferences() {
     final AuthState authState = context.read<AuthCubit>().state;
     authState.whenOrNull(
-      authenticated: (user) {
+      authenticated: (User user) {
         context.read<FoodPreferencesCubit>().loadFoodPreferences(user.id);
       },
     );
@@ -127,7 +129,7 @@ class _FoodPreferencesOnboardingPageState
     }
 
     await authState.whenOrNull(
-      authenticated: (user) async {
+      authenticated: (User user) async {
         if (user.householdId == null) {
           return;
         }
@@ -173,22 +175,21 @@ class _FoodPreferencesOnboardingPageState
           },
         );
       },
-      child: Scaffold(
+      child: BackgroundWrapper(
+        child: Scaffold(
         appBar: AppBar(
           title: Text(tr('food_preferences_onboarding_title')),
         ),
         resizeToAvoidBottomInset: true,
         body: BlocBuilder<FoodPreferencesCubit, FoodPreferencesState>(
-          builder: (BuildContext context, FoodPreferencesState state) {
-            return state.when(
+          builder: (BuildContext context, FoodPreferencesState state) => state.when(
               initial: () => const Center(child: CircularProgressIndicator()),
               loading: () => const Center(child: CircularProgressIndicator()),
               loaded: (
                 List<FoodPreference> allFoodPreferences,
                 List<String> selectedFoodIds,
                 _,
-              ) {
-                return SingleChildScrollView(
+              ) => SingleChildScrollView(
                   padding: EdgeInsets.all(AppSizes.padding),
                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
@@ -219,16 +220,15 @@ class _FoodPreferencesOnboardingPageState
                       _buildContinueButton(context, selectedFoodIds.length),
                     ],
                   ),
-                );
-              },
+                ),
               saving: () => const Center(child: CircularProgressIndicator()),
               saved: () => const SizedBox.shrink(),
               error: (String message) => Center(
                 child: Text(message),
               ),
-            );
-          },
+            ),
         ),
+      ),
       ),
     );
   }
@@ -309,8 +309,7 @@ class _FoodPreferencesOnboardingPageState
     );
   }
 
-  Widget _buildMealTypeProductsSection(BuildContext context, bool isTablet) {
-    return Column(
+  Widget _buildMealTypeProductsSection(BuildContext context, bool isTablet) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
@@ -354,15 +353,13 @@ class _FoodPreferencesOnboardingPageState
         ),
       ],
     );
-  }
 
   Widget _buildMealTypeProductInput(
     BuildContext context,
     String mealType,
     String mealTypeLabel,
     bool isTablet,
-  ) {
-    return Column(
+  ) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
@@ -380,11 +377,9 @@ class _FoodPreferencesOnboardingPageState
                 controller: _productControllers[mealType],
                 focusNode: _productFocusNodes[mealType],
                 enabled: true,
-                readOnly: false,
                 enableInteractiveSelection: true,
                 keyboardType: TextInputType.text,
                 textInputAction: TextInputAction.done,
-                autofocus: false,
                 decoration: InputDecoration(
                   hintText: tr('meal_type_product_placeholder'),
                   border: OutlineInputBorder(
@@ -406,7 +401,7 @@ class _FoodPreferencesOnboardingPageState
             ),
           ],
         ),
-        if (_mealTypeProducts[mealType]!.isNotEmpty) ...[
+        if (_mealTypeProducts[mealType]!.isNotEmpty) ...<Widget>[
           SizedBox(height: AppSizes.verticalSpacingS / 2),
           Wrap(
             spacing: AppSizes.spacingS,
@@ -421,7 +416,6 @@ class _FoodPreferencesOnboardingPageState
         ],
       ],
     );
-  }
 
   Widget _buildContinueButton(BuildContext context, int selectedCount) {
     final bool canContinue = selectedCount >= 3;

@@ -12,11 +12,9 @@ class UpdateShoppingListItemUseCase {
   Future<ShoppingListItem> call({
     required String householdId,
     required ShoppingListItem item,
-  }) async {
-    return _repository.updateItem(
+  }) async => _repository.updateItem(
       householdId: householdId,
       item: item,
     );
-  }
 }
 

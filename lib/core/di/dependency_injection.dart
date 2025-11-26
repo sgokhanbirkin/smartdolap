@@ -6,21 +6,35 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:smartdolap/core/services/feedback/feedback_service.dart';
 import 'package:smartdolap/core/services/household_setup_service.dart';
 import 'package:smartdolap/core/services/i_household_setup_service.dart';
 import 'package:smartdolap/core/services/i_onboarding_service.dart';
 import 'package:smartdolap/core/services/i_sync_service.dart';
 import 'package:smartdolap/core/services/onboarding_service.dart';
 import 'package:smartdolap/core/services/sync_service.dart';
+import 'package:smartdolap/features/analytics/data/repositories/analytics_repository_impl.dart';
+import 'package:smartdolap/features/analytics/data/repositories/meal_consumption_repository_impl.dart';
+import 'package:smartdolap/features/analytics/data/services/analytics_service_impl.dart';
+import 'package:smartdolap/features/analytics/data/services/smart_notification_service_impl.dart';
+import 'package:smartdolap/features/analytics/domain/repositories/i_analytics_repository.dart';
+import 'package:smartdolap/features/analytics/domain/repositories/i_meal_consumption_repository.dart';
+import 'package:smartdolap/features/analytics/domain/services/i_analytics_service.dart';
+import 'package:smartdolap/features/analytics/domain/services/i_smart_notification_service.dart';
 import 'package:smartdolap/features/analytics/domain/use_cases/get_user_analytics_usecase.dart';
 import 'package:smartdolap/features/analytics/presentation/viewmodel/analytics_cubit.dart';
 import 'package:smartdolap/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:smartdolap/features/profile/presentation/viewmodel/profile_cubit.dart';
 import 'package:smartdolap/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/register_usecase.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/food_preferences/data/repositories/food_preference_repository_impl.dart';
+import 'package:smartdolap/features/food_preferences/domain/repositories/i_food_preference_repository.dart';
+import 'package:smartdolap/features/food_preferences/domain/use_cases/get_all_food_preferences_usecase.dart';
+import 'package:smartdolap/features/food_preferences/domain/use_cases/get_user_food_preferences_usecase.dart';
+import 'package:smartdolap/features/food_preferences/domain/use_cases/save_user_food_preferences_usecase.dart';
+import 'package:smartdolap/features/food_preferences/presentation/viewmodel/food_preferences_cubit.dart';
 import 'package:smartdolap/features/household/data/repositories/household_repository_impl.dart';
 import 'package:smartdolap/features/household/data/repositories/message_repository_impl.dart';
 import 'package:smartdolap/features/household/data/repositories/shared_recipe_repository_impl.dart';
@@ -36,29 +50,12 @@ import 'package:smartdolap/features/household/domain/use_cases/send_message_usec
 import 'package:smartdolap/features/household/domain/use_cases/share_recipe_usecase.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/share_cubit.dart';
-import 'package:smartdolap/features/analytics/data/repositories/analytics_repository_impl.dart';
-import 'package:smartdolap/features/analytics/data/repositories/meal_consumption_repository_impl.dart';
-import 'package:smartdolap/features/analytics/data/services/analytics_service_impl.dart';
-import 'package:smartdolap/features/analytics/data/services/smart_notification_service_impl.dart';
-import 'package:smartdolap/features/analytics/domain/repositories/i_analytics_repository.dart';
-import 'package:smartdolap/features/analytics/domain/repositories/i_meal_consumption_repository.dart';
-import 'package:smartdolap/features/analytics/domain/services/i_analytics_service.dart';
-import 'package:smartdolap/features/analytics/domain/services/i_smart_notification_service.dart';
 import 'package:smartdolap/features/pantry/data/repositories/pantry_repository_impl.dart';
 import 'package:smartdolap/features/pantry/data/services/pantry_notification_coordinator.dart';
 import 'package:smartdolap/features/pantry/data/services/pantry_notification_scheduler.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_notification_coordinator.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
 import 'package:smartdolap/features/pantry/domain/services/i_pantry_notification_scheduler.dart';
-import 'package:smartdolap/features/shopping/data/repositories/shopping_list_repository_impl.dart';
-import 'package:smartdolap/features/shopping/data/services/shopping_list_service_impl.dart';
-import 'package:smartdolap/features/shopping/domain/repositories/i_shopping_list_repository.dart';
-import 'package:smartdolap/features/shopping/domain/services/i_shopping_list_service.dart';
-import 'package:smartdolap/features/shopping/domain/use_cases/add_shopping_list_item_usecase.dart';
-import 'package:smartdolap/features/shopping/domain/use_cases/complete_shopping_list_item_usecase.dart';
-import 'package:smartdolap/features/shopping/domain/use_cases/delete_shopping_list_item_usecase.dart';
-import 'package:smartdolap/features/shopping/domain/use_cases/update_shopping_list_item_usecase.dart';
-import 'package:smartdolap/features/shopping/presentation/viewmodel/shopping_list_cubit.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
@@ -71,33 +68,46 @@ import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_repository.dart';
+import 'package:smartdolap/features/profile/presentation/viewmodel/profile_cubit.dart';
+import 'package:smartdolap/features/rate_limiting/data/repositories/api_usage_repository_impl.dart';
+import 'package:smartdolap/features/rate_limiting/data/services/rate_limit_service_impl.dart';
+import 'package:smartdolap/features/rate_limiting/domain/repositories/i_api_usage_repository.dart';
+import 'package:smartdolap/features/rate_limiting/domain/services/i_rate_limit_service.dart';
+import 'package:smartdolap/features/rate_limiting/presentation/cubit/rate_limit_cubit.dart';
+import 'package:smartdolap/features/recipes/data/repositories/comment_repository_impl.dart';
 import 'package:smartdolap/features/recipes/data/repositories/recipes_repository_impl.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_comment_repository.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
-import 'package:smartdolap/features/recipes/domain/use_cases/get_recipe_detail.dart';
-import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
-import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
-import 'package:smartdolap/features/recipes/data/repositories/comment_repository_impl.dart';
-import 'package:smartdolap/features/recipes/domain/repositories/i_comment_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/add_comment_usecase.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/delete_comment_usecase.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/get_recipe_detail.dart';
+import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/watch_global_comments_usecase.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/watch_household_comments_usecase.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/comment_cubit.dart';
-import 'package:smartdolap/features/food_preferences/data/repositories/food_preference_repository_impl.dart';
-import 'package:smartdolap/features/food_preferences/domain/repositories/i_food_preference_repository.dart';
-import 'package:smartdolap/features/food_preferences/domain/use_cases/get_all_food_preferences_usecase.dart';
-import 'package:smartdolap/features/food_preferences/domain/use_cases/get_user_food_preferences_usecase.dart';
-import 'package:smartdolap/features/food_preferences/domain/use_cases/save_user_food_preferences_usecase.dart';
-import 'package:smartdolap/features/food_preferences/presentation/viewmodel/food_preferences_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/sync/data/services/sync_queue_service.dart';
+import 'package:smartdolap/features/sync/domain/services/i_sync_queue_service.dart';
+import 'package:smartdolap/features/sync/presentation/cubit/sync_worker_cubit.dart';
+import 'package:smartdolap/features/shopping/data/repositories/shopping_list_repository_impl.dart';
+import 'package:smartdolap/features/shopping/data/services/shopping_list_service_impl.dart';
+import 'package:smartdolap/features/shopping/domain/repositories/i_shopping_list_repository.dart';
+import 'package:smartdolap/features/shopping/domain/services/i_shopping_list_service.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/add_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/complete_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/delete_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/domain/use_cases/update_shopping_list_item_usecase.dart';
+import 'package:smartdolap/features/shopping/presentation/viewmodel/shopping_list_cubit.dart';
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
 import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart'
     show
         DuckDuckGoImageSearchService,
+        GoogleImageSearchService,
         GoogleImagesHtmlScrapingService,
         IImageLookupService,
         MultiImageSearchService,
@@ -122,6 +132,7 @@ Future<void> setupLocator() async {
   await Hive.openBox<dynamic>('pantry_box');
   await Hive.openBox<dynamic>('profile_box');
   await Hive.openBox<dynamic>('profile_stats_box');
+  await Hive.openBox<dynamic>('sync_queue');
   await Hive.openBox<dynamic>('app_settings');
   if (!sl.isRegistered<Box<dynamic>>(instanceName: 'pantryBox')) {
     sl.registerLazySingleton<Box<dynamic>>(
@@ -168,6 +179,20 @@ Future<void> setupLocator() async {
   if (!sl.isRegistered<IUserRecipeRepository>()) {
     sl.registerLazySingleton<IUserRecipeRepository>(
       () => sl<UserRecipeService>(),
+    );
+  }
+
+  // Sync queue service - stores pending writes for Firestore
+  if (!sl.isRegistered<ISyncQueueService>()) {
+    sl.registerLazySingleton<ISyncQueueService>(
+      () => SyncQueueService(Hive.box<dynamic>('sync_queue')),
+    );
+  }
+
+  // Sync worker cubit
+  if (!sl.isRegistered<SyncWorkerCubit>()) {
+    sl.registerLazySingleton<SyncWorkerCubit>(
+      () => SyncWorkerCubit(queueService: sl<ISyncQueueService>()),
     );
   }
   // Recipe services - DIP: Register via interfaces
@@ -250,16 +275,13 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<IImageLookupService>(() {
     final List<IImageLookupService> services = <IImageLookupService>[];
 
-    // Try Google Images HTML scraping FIRST (free, unlimited, user's phone)
-    services.add(GoogleImagesHtmlScrapingService(Dio()));
-
-    // Try Pexels API second (free, 200 requests/hour, requires API key)
+    // ✅ ÖNCE PEXELS API (En iyi ücretsiz seçenek - 200 requests/hour)
     final String? pexelsApiKey = dotenv.env['PEXELS_API_KEY'];
     if (pexelsApiKey != null && pexelsApiKey.isNotEmpty) {
       services.add(PexelsImageSearchService(dio: Dio(), apiKey: pexelsApiKey));
     }
 
-    // Try Unsplash API third (free, 50 requests/hour, requires API key)
+    // ✅ İKİNCİ UNSplash API (50 requests/hour)
     final String? unsplashAccessKey = dotenv.env['UNSPLASH_ACCESS_KEY'];
     if (unsplashAccessKey != null && unsplashAccessKey.isNotEmpty) {
       services.add(
@@ -267,7 +289,26 @@ Future<void> setupLocator() async {
       );
     }
 
-    // Fallback to DuckDuckGo (always available, but unreliable)
+    // ✅ ÜÇÜNCÜ Google Custom Search API (100 requests/day, yasal)
+    final String? googleApiKey = dotenv.env['GOOGLE_CUSTOM_SEARCH_API_KEY'];
+    final String? googleEngineId = dotenv.env['GOOGLE_CUSTOM_SEARCH_ENGINE_ID'];
+    if (googleApiKey != null &&
+        googleApiKey.isNotEmpty &&
+        googleEngineId != null &&
+        googleEngineId.isNotEmpty) {
+      services.add(
+        GoogleImageSearchService(
+          dio: Dio(),
+          apiKey: googleApiKey,
+          searchEngineId: googleEngineId,
+        ),
+      );
+    }
+
+    // Fallback: Google Images HTML scraping (ToS riski var, son çare)
+    services.add(GoogleImagesHtmlScrapingService(Dio()));
+
+    // Son fallback: DuckDuckGo (always available, but unreliable)
     services.add(DuckDuckGoImageSearchService(Dio()));
 
     return MultiImageSearchService(services: services);
@@ -279,8 +320,27 @@ Future<void> setupLocator() async {
     () => DuckDuckGoImageSearchService(Dio()),
   );
 
+  // Feedback Service
+  sl.registerLazySingleton<IFeedbackService>(() => const FeedbackService());
+
+  // Rate Limiting
+  sl.registerLazySingleton<IApiUsageRepository>(
+    () => ApiUsageRepositoryImpl(sl<FirebaseFirestore>()),
+  );
+  sl.registerLazySingleton<IRateLimitService>(
+    () => RateLimitServiceImpl(sl<IApiUsageRepository>()),
+  );
+  sl.registerFactory<RateLimitCubit>(
+    () => RateLimitCubit(sl<IRateLimitService>()),
+  );
+
   // OpenAI
-  sl.registerLazySingleton<IOpenAIService>(() => OpenAIService(dio: sl()));
+  sl.registerLazySingleton<IOpenAIService>(
+    () => OpenAIService(
+      dio: sl(),
+      rateLimitService: sl<IRateLimitService>(),
+    ),
+  );
 
   // Storage
   sl.registerLazySingleton<IStorageService>(
@@ -432,6 +492,7 @@ Future<void> setupLocator() async {
       sl<IPromptPreferenceService>(),
       sl<IRecipeImageService>(),
       sl<IRecipeCacheService>(),
+      sl<ISyncQueueService>(),
     ),
   );
   sl.registerFactory(() => SuggestRecipesFromPantry(sl()));

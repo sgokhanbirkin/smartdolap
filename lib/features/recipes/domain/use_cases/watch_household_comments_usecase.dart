@@ -9,7 +9,5 @@ class WatchHouseholdCommentsUseCase {
   final ICommentRepository _repository;
 
   /// Execute watching household comments
-  Stream<List<RecipeComment>> call(String recipeId, String householdId) {
-    return _repository.watchHouseholdComments(recipeId, householdId);
-  }
+  Stream<List<RecipeComment>> call(String recipeId, String householdId) => _repository.watchHouseholdComments(recipeId, householdId);
 }

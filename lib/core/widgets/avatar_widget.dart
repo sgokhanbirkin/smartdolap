@@ -6,8 +6,7 @@ import 'package:smartdolap/core/services/avatar_service.dart';
 class AvatarWidget extends StatelessWidget {
   /// Avatar widget constructor
   const AvatarWidget({
-    super.key,
-    required this.avatarId,
+    required this.avatarId, super.key,
     this.size,
     this.onTap,
   });
@@ -62,9 +61,7 @@ class AvatarWidget extends StatelessWidget {
 class AvatarSelectorWidget extends StatelessWidget {
   /// Avatar selector widget constructor
   const AvatarSelectorWidget({
-    super.key,
-    required this.selectedAvatarId,
-    required this.onAvatarSelected,
+    required this.selectedAvatarId, required this.onAvatarSelected, super.key,
   });
 
   /// Currently selected avatar ID
@@ -74,15 +71,13 @@ class AvatarSelectorWidget extends StatelessWidget {
   final ValueChanged<String> onAvatarSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
+  Widget build(BuildContext context) => GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         crossAxisSpacing: 16.w,
         mainAxisSpacing: 16.h,
-        childAspectRatio: 1,
       ),
       itemCount: AvatarService.availableAvatars.length,
       itemBuilder: (BuildContext context, int index) {
@@ -114,6 +109,5 @@ class AvatarSelectorWidget extends StatelessWidget {
         );
       },
     );
-  }
 }
 

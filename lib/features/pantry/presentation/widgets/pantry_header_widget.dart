@@ -40,8 +40,7 @@ class PantryHeaderWidget extends StatelessWidget {
             ),
           ),
           BlocBuilder<AuthCubit, AuthState>(
-            builder: (BuildContext context, AuthState authState) {
-              return authState.whenOrNull(
+            builder: (BuildContext context, AuthState authState) => authState.whenOrNull(
                 authenticated: (domain.User user) {
                   if (user.householdId == null) {
                     return const SizedBox.shrink();
@@ -81,8 +80,7 @@ class PantryHeaderWidget extends StatelessWidget {
                     ],
                   );
                 },
-              ) ?? const SizedBox.shrink();
-            },
+              ) ?? const SizedBox.shrink(),
           ),
         ],
       ),

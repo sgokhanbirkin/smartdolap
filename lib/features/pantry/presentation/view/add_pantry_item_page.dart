@@ -1,6 +1,5 @@
 // ignore_for_file: lines_longer_than_80_chars, public_member_api_docs, use_build_context_synchronously, always_put_control_body_on_new_line
 import 'dart:async';
-import 'dart:math';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -9,11 +8,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/utils/pantry_categories.dart';
 import 'package:smartdolap/core/utils/quantity_formatter.dart';
+import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
@@ -22,7 +21,6 @@ import 'package:smartdolap/features/pantry/presentation/widgets/category_selecto
 import 'package:smartdolap/features/pantry/presentation/widgets/expiry_date_picker_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_name_field_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/pantry_item_quantity_unit_widget.dart';
-import 'package:smartdolap/product/services/image_lookup_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/storage/i_storage_service.dart';
 
@@ -64,7 +62,7 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
   bool _isCategorizing = false;
   String? _suggestedCategory;
   Timer? _categoryDebounce;
-  final IImageLookupService _imageLookup = sl<IImageLookupService>();
+  // final IImageLookupService _imageLookup = sl<IImageLookupService>();
   String? _imageUrl;
   bool _isImageLoading = false;
   Timer? _imageDebounce;
@@ -227,6 +225,8 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
     });
 
     _imageDebounce?.cancel();
+    /* 
+    // Image arama devre dışı bırakıldı (User request)
     _imageDebounce = Timer(const Duration(milliseconds: 700), () async {
       setState(() => _isImageLoading = true);
       // Create more varied search queries for better image diversity
@@ -239,7 +239,8 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
       ];
       // Use a random query from the list for variety
       final Random random = Random();
-      final String searchQuery = searchQueries[random.nextInt(searchQueries.length)];
+      final String searchQuery =
+          searchQueries[random.nextInt(searchQueries.length)];
       final String? url = await _imageLookup.search(searchQuery);
       if (!mounted || _name.text.trim() != name) {
         return;
@@ -251,6 +252,7 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
         }
       });
     });
+    */
   }
 
   InputDecoration _fieldDecoration(BuildContext context, {String? hint}) =>
@@ -269,86 +271,96 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
       );
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr('add_item')), elevation: 0),
-    body: SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.padding),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              PantryItemNameFieldWidget(
-                nameController: _name,
-                category: _category,
-                isProcessingPhoto: _isProcessingPhoto,
-                isImageLoading: _isImageLoading,
-                imageUrl: _imageUrl,
-                onCameraPressed: _pickImageFromCamera,
-                fieldDecoration: _fieldDecoration,
-              ),
-              SizedBox(height: AppSizes.verticalSpacingM),
-              CategorySelectorWidget(
-                selectedCategory: _category,
-                isCategorizing: _isCategorizing,
-                suggestedCategory: _suggestedCategory,
-                onCategorySelected: _onCategorySelected,
-              ),
-              SizedBox(height: AppSizes.verticalSpacingM),
-              PantryItemQuantityUnitWidget(
-                quantityController: _qty,
-                unitController: _unit,
-                unitOptions: _unitOptions,
-                fieldDecoration: _fieldDecoration,
-              ),
-              SizedBox(height: AppSizes.verticalSpacingM),
-              ExpiryDatePickerWidget(
-                expiryDate: _expiry,
-                onDateSelected: (DateTime? date) =>
-                    setState(() => _expiry = date),
-              ),
-              SizedBox(height: AppSizes.verticalSpacingXL),
-              // Save button
-              ElevatedButton(
-                onPressed: () async {
-                  if (!_formKey.currentState!.validate()) return;
-                  final double qty =
-                      double.tryParse(_qty.text.replaceAll(',', '.')) ?? 1.0;
-                  // Floating-point precision sorununu önlemek için yuvarlama
-                  final double roundedQty = QuantityFormatter.roundQuantity(qty, _unit.text.trim());
-                  final String? normalizedCategory = _category == null
-                      ? null
-                      : PantryCategoryHelper.normalize(_category);
-                  final PantryItem item = PantryItem(
-                    id: '',
-                    name: _name.text.trim(),
-                    quantity: roundedQty,
-                    unit: _unit.text.trim(),
-                    expiryDate: _expiry,
-                    category: normalizedCategory,
-                    imageUrl: _imageUrl,
-                    addedByUserId: widget.userId,
-                    addedByAvatarId: widget.avatarId,
-                  );
-                  await context.read<PantryCubit>().add(widget.householdId, item);
-                  if (mounted) Navigator.of(context).pop(true);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: AppSizes.spacingM),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radius * 1.5),
+  Widget build(BuildContext context) => BackgroundWrapper(
+    child: Scaffold(
+      appBar: AppBar(title: Text(tr('add_item')), elevation: 0),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(AppSizes.padding),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                PantryItemNameFieldWidget(
+                  nameController: _name,
+                  category: _category,
+                  isProcessingPhoto: _isProcessingPhoto,
+                  isImageLoading: _isImageLoading,
+                  imageUrl: _imageUrl,
+                  onCameraPressed: _pickImageFromCamera,
+                  fieldDecoration: _fieldDecoration,
+                ),
+                SizedBox(height: AppSizes.verticalSpacingM),
+                CategorySelectorWidget(
+                  selectedCategory: _category,
+                  isCategorizing: _isCategorizing,
+                  suggestedCategory: _suggestedCategory,
+                  onCategorySelected: _onCategorySelected,
+                ),
+                SizedBox(height: AppSizes.verticalSpacingM),
+                PantryItemQuantityUnitWidget(
+                  quantityController: _qty,
+                  unitController: _unit,
+                  unitOptions: _unitOptions,
+                  fieldDecoration: _fieldDecoration,
+                ),
+                SizedBox(height: AppSizes.verticalSpacingM),
+                ExpiryDatePickerWidget(
+                  expiryDate: _expiry,
+                  onDateSelected: (DateTime? date) =>
+                      setState(() => _expiry = date),
+                ),
+                SizedBox(height: AppSizes.verticalSpacingXL),
+                // Save button
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!_formKey.currentState!.validate()) return;
+                    final double qty =
+                        double.tryParse(_qty.text.replaceAll(',', '.')) ?? 1.0;
+                    // Floating-point precision sorununu önlemek için yuvarlama
+                    final double roundedQty = QuantityFormatter.roundQuantity(
+                      qty,
+                      _unit.text.trim(),
+                    );
+                    final String? normalizedCategory = _category == null
+                        ? null
+                        : PantryCategoryHelper.normalize(_category);
+                    final PantryItem item = PantryItem(
+                      id: '',
+                      name: _name.text.trim(),
+                      quantity: roundedQty,
+                      unit: _unit.text.trim(),
+                      expiryDate: _expiry,
+                      category: normalizedCategory,
+                      imageUrl: _imageUrl,
+                      addedByUserId: widget.userId,
+                      addedByAvatarId: widget.avatarId,
+                    );
+                    await context.read<PantryCubit>().add(
+                      widget.householdId,
+                      item,
+                    );
+                    if (mounted) Navigator.of(context).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.spacingM),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppSizes.radius * 1.5,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    tr('save'),
+                    style: TextStyle(
+                      fontSize: AppSizes.textM,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                child: Text(
-                  tr('save'),
-                  style: TextStyle(
-                    fontSize: AppSizes.textM,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

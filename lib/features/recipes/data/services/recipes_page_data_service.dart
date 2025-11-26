@@ -6,6 +6,7 @@ import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/domain/entities/recipe_step.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 
 /// Service for loading recipes page data - SRP: Single responsibility for data loading
@@ -27,15 +28,13 @@ class RecipesPageDataService {
 
     return favoritesBox.values
         .map<Recipe>(
-          (dynamic value) => Recipe.fromMap(value as Map<dynamic, dynamic>),
+          (value) => Recipe.fromMap(value as Map<dynamic, dynamic>),
         )
         .toList();
   }
 
   /// Load recipes for a specific meal
-  Future<List<Recipe>> loadMealRecipes(String userId, String meal) async {
-    return recipesCubit.loadMeal(userId, meal);
-  }
+  Future<List<Recipe>> loadMealRecipes(String userId, String meal) async => recipesCubit.loadMeal(userId, meal);
 
   /// Load made recipes (recipes marked as made - with or without photo)
   Future<List<Recipe>> loadMadeRecipes() async {
@@ -54,14 +53,21 @@ class RecipesPageDataService {
 
     return madeUserRecipes
         .map<Recipe>(
-          (UserRecipe ur) => Recipe(
-            id: ur.id,
-            title: ur.title,
-            ingredients: ur.ingredients,
-            steps: ur.steps,
-            imageUrl: ur.imagePath,
-            category: ur.tags.isNotEmpty ? ur.tags.first : null,
-          ),
+          (UserRecipe ur) {
+            // Convert String steps to RecipeStep list
+            final List<RecipeStep> recipeSteps = ur.steps
+                .map(RecipeStep.fromString)
+                .toList();
+            
+            return Recipe(
+              id: ur.id,
+              title: ur.title,
+              ingredients: ur.ingredients,
+              steps: recipeSteps,
+              imageUrl: ur.imagePath,
+              category: ur.tags.isNotEmpty ? ur.tags.first : null,
+            );
+          },
         )
         .toList();
   }

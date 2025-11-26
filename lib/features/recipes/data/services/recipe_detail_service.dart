@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/profile/data/badge_service.dart';
-import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/product/services/storage/i_storage_service.dart';
 
@@ -62,7 +62,7 @@ class RecipeDetailService {
       await _userRecipeService.createManual(
         title: recipe.title,
         ingredients: recipe.ingredients,
-        steps: recipe.steps,
+        steps: recipe.stepsAsStrings, // Convert RecipeStep list to String list
         description: recipe.category ?? '',
         tags: <String>[
           if (recipe.category != null) recipe.category!,

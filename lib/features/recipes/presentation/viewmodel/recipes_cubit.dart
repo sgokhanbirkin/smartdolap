@@ -1,22 +1,25 @@
+import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/utils/logger.dart';
+import 'package:smartdolap/core/utils/request_cancellation_helper.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
-import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_repository.dart';
 import 'package:smartdolap/features/recipes/data/services/meal_name_mapper.dart';
-import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_service.dart';
-import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_filter_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_mapper.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
+import 'package:smartdolap/features/recipes/domain/entities/recipe_step.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_service.dart';
+import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_repository.dart';
 import 'package:smartdolap/features/recipes/domain/use_cases/suggest_recipes_from_pantry.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
@@ -61,6 +64,9 @@ class RecipesCubit extends Cubit<RecipesState> {
   bool isFetchingMore = false;
   String _currentCategory = 'suggestions';
   String? _selectedMeal;
+  
+  // Request cancellation helper for API calls
+  final RequestCancellationHelper _cancellationHelper = RequestCancellationHelper();
 
   // ============================================================================
   // MEVCUT AKIŞ ANALİZİ - TARİF YÜKLEME VE KAYDETME SÜRECİ
@@ -191,9 +197,8 @@ class RecipesCubit extends Cubit<RecipesState> {
           final UserRecipe userRecipe = UserRecipe(
             id: const Uuid().v4(),
             title: recipe.title,
-            description: '',
             ingredients: recipe.ingredients,
-            steps: recipe.steps,
+            steps: recipe.stepsAsStrings, // Convert RecipeStep list to String list
             imagePath: recipe.imageUrl,
             tags: recipe.category != null
                 ? <String>[recipe.category!]
@@ -230,26 +235,41 @@ class RecipesCubit extends Cubit<RecipesState> {
           .where((String s) => s.isNotEmpty)
           .map((String s) => Ingredient(name: s))
           .toList();
+      // Get cancellation token for this request
+      final CancelToken cancelToken = _cancellationHelper.getToken('loadWithSelection');
+      
       final List<RecipeSuggestion> suggestions = await openAI.suggestRecipes(
         ings,
         servings: prefs.servings,
         query: prefs.composePrompt(tr('free_input_list')),
+        cancelToken: cancelToken,
       );
       if (isClosed) {
         return;
       }
       final List<Recipe> recipes = await Future.wait(
         suggestions.map(
-          (RecipeSuggestion e) async => Recipe(
-            id: '',
-            title: e.title,
-            ingredients: e.ingredients,
-            steps: e.steps,
-            calories: e.calories,
-            durationMinutes: e.durationMinutes,
-            difficulty: e.difficulty,
-            imageUrl: await imageService.fixImageUrl(e.imageUrl, e.title),
-          ),
+          (RecipeSuggestion e) async {
+            // Convert String steps to RecipeStep list
+            final List<RecipeStep> recipeSteps = e.steps
+                .map(RecipeStep.fromString)
+                .toList();
+            
+            return Recipe(
+              id: '',
+              title: e.title,
+              ingredients: e.ingredients,
+              steps: recipeSteps,
+              calories: e.calories,
+              durationMinutes: e.durationMinutes,
+              difficulty: e.difficulty,
+              imageUrl: await imageService.fixImageUrl(
+                e.imageUrl,
+                e.title,
+                imageSearchQuery: e.imageSearchQuery,
+              ),
+            );
+          },
         ),
       );
       await promptPreferences.incrementGenerated(recipes.length);
@@ -328,7 +348,7 @@ class RecipesCubit extends Cubit<RecipesState> {
           id: '',
           title: '',
           ingredients: <String>[],
-          steps: <String>[],
+          steps: <RecipeStep>[],
         );
       }
       return Recipe.fromMap(map);
@@ -377,7 +397,7 @@ class RecipesCubit extends Cubit<RecipesState> {
 
     if (cachedRecipes != null && cachedRecipes.isNotEmpty) {
       debugPrint(
-        '[RecipesCubit] Cache\'den ${cachedRecipes.length} tarif bulundu (meal: $meal)',
+        "[RecipesCubit] Cache'den ${cachedRecipes.length} tarif bulundu (meal: $meal)",
       );
 
       // Cache'den okunan tarifleri Recipe'e dönüştür
@@ -408,7 +428,7 @@ class RecipesCubit extends Cubit<RecipesState> {
       // Cache'den yeterli tarif varsa direkt döndür, API çağrısı yapma
       if (recipesWithImages.length >= 3) {
         debugPrint(
-          '[RecipesCubit] Cache\'den yeterli tarif var (${recipesWithImages.length}), API çağrısı yapılmıyor',
+          "[RecipesCubit] Cache'den yeterli tarif var (${recipesWithImages.length}), API çağrısı yapılmıyor",
         );
         // Arka planda sync yapma - cache yeterli, gereksiz API çağrısı yapma
         // Sadece kullanıcı açıkça "daha fazla yükle" derse sync yapılabilir
@@ -417,7 +437,7 @@ class RecipesCubit extends Cubit<RecipesState> {
 
       // Cache'de az tarif varsa Firestore → AI akışına devam et
       debugPrint(
-        '[RecipesCubit] Cache\'de yetersiz tarif var (${recipesWithImages.length}/3), Firestore → AI akışına devam ediliyor',
+        "[RecipesCubit] Cache'de yetersiz tarif var (${recipesWithImages.length}/3), Firestore → AI akışına devam ediliyor",
       );
     }
 
@@ -482,7 +502,7 @@ class RecipesCubit extends Cubit<RecipesState> {
                 id: const Uuid().v4(),
                 title: recipe.title,
                 ingredients: recipe.ingredients,
-                steps: recipe.steps,
+                steps: recipe.stepsAsStrings, // Convert RecipeStep list to String list
                 imagePath: recipe.imageUrl,
                 tags: <String>[meal],
                 isAIRecommendation: true,
@@ -560,7 +580,7 @@ class RecipesCubit extends Cubit<RecipesState> {
       // Mevcut tariflerin başlıklarını excludeTitles'a ekle
       final List<String> allExcludeTitles = <String>[
         ...excludeTitles,
-        ..._seenTitles.toList(),
+        ..._seenTitles,
       ];
 
       // 🔄 YENİ AKIŞ: Firestore-önce, sonra OpenAI mantığı
@@ -598,9 +618,8 @@ class RecipesCubit extends Cubit<RecipesState> {
           final UserRecipe userRecipe = UserRecipe(
             id: const Uuid().v4(),
             title: recipe.title,
-            description: '',
             ingredients: recipe.ingredients,
-            steps: recipe.steps,
+            steps: recipe.stepsAsStrings, // Convert RecipeStep list to String list
             imagePath: recipe.imageUrl,
             tags: recipe.category != null
                 ? <String>[recipe.category!]
@@ -613,7 +632,7 @@ class RecipesCubit extends Cubit<RecipesState> {
         }
       } on Exception catch (e) {
         debugPrint(
-          '[RecipesCubit] UserRecipeRepository\'e kaydetme hatası: $e',
+          "[RecipesCubit] UserRecipeRepository'e kaydetme hatası: $e",
         );
         // Hata olsa bile devam et
       }
@@ -639,14 +658,21 @@ class RecipesCubit extends Cubit<RecipesState> {
 
     final List<Recipe> recipes = userRecipes
         .map<Recipe>(
-          (UserRecipe ur) => Recipe(
-            id: ur.id,
-            title: ur.title,
-            ingredients: ur.ingredients,
-            steps: ur.steps,
-            imageUrl: ur.imagePath,
-            category: ur.tags.isNotEmpty ? ur.tags.first : null,
-          ),
+          (UserRecipe ur) {
+            // Convert String steps to RecipeStep list
+            final List<RecipeStep> recipeSteps = ur.steps
+                .map(RecipeStep.fromString)
+                .toList();
+            
+            return Recipe(
+              id: ur.id,
+              title: ur.title,
+              ingredients: ur.ingredients,
+              steps: recipeSteps,
+              imageUrl: ur.imagePath,
+              category: ur.tags.isNotEmpty ? ur.tags.first : null,
+            );
+          },
         )
         .toList();
 
@@ -663,14 +689,21 @@ class RecipesCubit extends Cubit<RecipesState> {
 
     final List<Recipe> recipes = userRecipes
         .map<Recipe>(
-          (UserRecipe ur) => Recipe(
-            id: ur.id,
-            title: ur.title,
-            ingredients: ur.ingredients,
-            steps: ur.steps,
-            imageUrl: ur.imagePath,
-            category: ur.tags.isNotEmpty ? ur.tags.first : null,
-          ),
+          (UserRecipe ur) {
+            // Convert String steps to RecipeStep list
+            final List<RecipeStep> recipeSteps = ur.steps
+                .map(RecipeStep.fromString)
+                .toList();
+            
+            return Recipe(
+              id: ur.id,
+              title: ur.title,
+              ingredients: ur.ingredients,
+              steps: recipeSteps,
+              imageUrl: ur.imagePath,
+              category: ur.tags.isNotEmpty ? ur.tags.first : null,
+            );
+          },
         )
         .toList();
 
@@ -711,20 +744,16 @@ class RecipesCubit extends Cubit<RecipesState> {
 
     // Apply ingredient filter manually (not yet in filter service)
     if (ingredients != null && ingredients.isNotEmpty) {
-      filtered = filtered.where((Recipe r) {
-        return ingredients.every(
+      filtered = filtered.where((Recipe r) => ingredients.every(
           (String name) => r.ingredients
               .map((String e) => e.toLowerCase())
               .contains(name.toLowerCase()),
-        );
-      }).toList();
+        )).toList();
     }
 
     // Apply meal filter manually (not yet in filter service)
     if (meal != null && meal.isNotEmpty) {
-      filtered = filtered.where((Recipe r) {
-        return (r.category ?? '').toLowerCase() == meal.toLowerCase();
-      }).toList();
+      filtered = filtered.where((Recipe r) => (r.category ?? '').toLowerCase() == meal.toLowerCase()).toList();
     }
 
     emit(
@@ -776,18 +805,30 @@ class RecipesCubit extends Cubit<RecipesState> {
           query: prefs.composePrompt(query),
           excludeTitles: _seenTitles.toList(),
           servings: prefs.servings,
+          cancelToken: _cancellationHelper.getToken('discoverMore'),
         )).map(
-          (RecipeSuggestion e) async => Recipe(
-            id: '',
-            title: e.title,
-            ingredients: e.ingredients,
-            steps: e.steps,
-            calories: e.calories,
-            durationMinutes: e.durationMinutes,
-            difficulty: e.difficulty,
-            imageUrl: await imageService.fixImageUrl(e.imageUrl, e.title),
-            category: e.category,
-          ),
+          (RecipeSuggestion e) async {
+            // Convert String steps to RecipeStep list
+            final List<RecipeStep> recipeSteps = e.steps
+                .map(RecipeStep.fromString)
+                .toList();
+            
+            return Recipe(
+              id: '',
+              title: e.title,
+              ingredients: e.ingredients,
+              steps: recipeSteps,
+              calories: e.calories,
+              durationMinutes: e.durationMinutes,
+              difficulty: e.difficulty,
+              imageUrl: await imageService.fixImageUrl(
+                e.imageUrl,
+                e.title,
+                imageSearchQuery: e.imageSearchQuery,
+              ),
+              category: e.category,
+            );
+          },
         ),
       );
       _seenTitles.addAll(newOnes.map((Recipe e) => e.title));
@@ -824,20 +865,32 @@ class RecipesCubit extends Cubit<RecipesState> {
         servings: prefs.servings,
         query: prefs.composePrompt(tr('free_discovery')),
         excludeTitles: _seenTitles.toList(),
+        cancelToken: _cancellationHelper.getToken('loadMoreFromPantry'),
       );
       final List<Recipe> mapped = await Future.wait(
         more.map(
-          (RecipeSuggestion e) async => Recipe(
-            id: '',
-            title: e.title,
-            ingredients: e.ingredients,
-            steps: e.steps,
-            calories: e.calories,
-            durationMinutes: e.durationMinutes,
-            difficulty: e.difficulty,
-            imageUrl: await imageService.fixImageUrl(e.imageUrl, e.title),
-            category: e.category,
-          ),
+          (RecipeSuggestion e) async {
+            // Convert String steps to RecipeStep list
+            final List<RecipeStep> recipeSteps = e.steps
+                .map(RecipeStep.fromString)
+                .toList();
+            
+            return Recipe(
+              id: '',
+              title: e.title,
+              ingredients: e.ingredients,
+              steps: recipeSteps,
+              calories: e.calories,
+              durationMinutes: e.durationMinutes,
+              difficulty: e.difficulty,
+              imageUrl: await imageService.fixImageUrl(
+                e.imageUrl,
+                e.title,
+                imageSearchQuery: e.imageSearchQuery,
+              ),
+              category: e.category,
+            );
+          },
         ),
       );
       _seenTitles.addAll(mapped.map((Recipe e) => e.title));
@@ -861,6 +914,13 @@ class RecipesCubit extends Cubit<RecipesState> {
         debugPrint('[RecipesCubit] Load more finished.');
       }
     }
+  }
+
+  @override
+  Future<void> close() {
+    // Cancel all active requests when cubit is disposed
+    _cancellationHelper.dispose();
+    return super.close();
   }
 
   /// Deletes recipes from cache by their titles

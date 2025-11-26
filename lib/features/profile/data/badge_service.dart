@@ -1,8 +1,8 @@
 import 'package:smartdolap/features/profile/data/badge_definitions.dart';
-import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/domain/entities/badge.dart';
 import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
+import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 
 /// Service for managing badge awards and unlocks
 class BadgeService {

@@ -6,11 +6,25 @@ class HouseholdMessage {
     required this.householdId,
     required this.userId,
     required this.userName,
-    this.recipeId,
+    required this.createdAt, this.recipeId,
     this.text,
     this.avatarId,
-    required this.createdAt,
   });
+
+  /// Create from JSON
+  factory HouseholdMessage.fromJson(Map<String, dynamic> json) =>
+      HouseholdMessage(
+        id: json['id'] as String,
+        householdId: json['householdId'] as String,
+        userId: json['userId'] as String,
+        userName: json['userName'] as String,
+        avatarId: json['avatarId'] as String?,
+        text: json['text'] as String?,
+        recipeId: json['recipeId'] as String?,
+        createdAt: json['createdAt'] != null
+            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+            : DateTime.now(),
+      );
 
   /// Message ID
   final String id;
@@ -35,21 +49,6 @@ class HouseholdMessage {
 
   /// Creation timestamp
   final DateTime createdAt;
-
-  /// Create from JSON
-  factory HouseholdMessage.fromJson(Map<String, dynamic> json) =>
-      HouseholdMessage(
-        id: json['id'] as String,
-        householdId: json['householdId'] as String,
-        userId: json['userId'] as String,
-        userName: json['userName'] as String,
-        avatarId: json['avatarId'] as String?,
-        text: json['text'] as String?,
-        recipeId: json['recipeId'] as String?,
-        createdAt: json['createdAt'] != null
-            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-            : DateTime.now(),
-      );
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{

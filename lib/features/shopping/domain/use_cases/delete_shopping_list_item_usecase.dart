@@ -11,7 +11,5 @@ class DeleteShoppingListItemUseCase {
   Future<void> call({
     required String householdId,
     required String itemId,
-  }) async {
-    return _repository.deleteItem(householdId: householdId, itemId: itemId);
-  }
+  }) async => _repository.deleteItem(householdId: householdId, itemId: itemId);
 }

@@ -12,7 +12,24 @@ class RecipeComment {
     required this.isHouseholdOnly,
     this.avatarId,
     this.householdId,
+    this.rating,
   });
+
+  /// Create from JSON
+  factory RecipeComment.fromJson(Map<String, dynamic> json) => RecipeComment(
+    id: json['id'] as String,
+    recipeId: json['recipeId'] as String,
+    userId: json['userId'] as String,
+    userName: json['userName'] as String,
+    avatarId: json['avatarId'] as String?,
+    text: json['text'] as String,
+    createdAt: json['createdAt'] != null
+        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+        : DateTime.now(),
+    isHouseholdOnly: json['isHouseholdOnly'] as bool? ?? false,
+    householdId: json['householdId'] as String?,
+    rating: json['rating'] as int?,
+  );
 
   /// Comment ID
   final String id;
@@ -41,20 +58,8 @@ class RecipeComment {
   /// Household ID (only set if isHouseholdOnly is true)
   final String? householdId;
 
-  /// Create from JSON
-  factory RecipeComment.fromJson(Map<String, dynamic> json) => RecipeComment(
-    id: json['id'] as String,
-    recipeId: json['recipeId'] as String,
-    userId: json['userId'] as String,
-    userName: json['userName'] as String,
-    avatarId: json['avatarId'] as String?,
-    text: json['text'] as String,
-    createdAt: json['createdAt'] != null
-        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-        : DateTime.now(),
-    isHouseholdOnly: json['isHouseholdOnly'] as bool? ?? false,
-    householdId: json['householdId'] as String?,
-  );
+  /// Rating (1-5 stars, null if not rated)
+  final int? rating;
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -67,6 +72,7 @@ class RecipeComment {
     'createdAt': createdAt.toIso8601String(),
     'isHouseholdOnly': isHouseholdOnly,
     if (householdId != null) 'householdId': householdId,
+    if (rating != null) 'rating': rating,
   };
 
   /// Create a copy with modified fields
@@ -80,6 +86,7 @@ class RecipeComment {
     DateTime? createdAt,
     bool? isHouseholdOnly,
     String? householdId,
+    int? rating,
   }) => RecipeComment(
     id: id ?? this.id,
     recipeId: recipeId ?? this.recipeId,
@@ -90,5 +97,6 @@ class RecipeComment {
     createdAt: createdAt ?? this.createdAt,
     isHouseholdOnly: isHouseholdOnly ?? this.isHouseholdOnly,
     householdId: householdId ?? this.householdId,
+    rating: rating ?? this.rating,
   );
 }
