@@ -18,34 +18,21 @@ class UserAnalytics {
   factory UserAnalytics.fromJson(Map<String, dynamic> json) => UserAnalytics(
     userId: json['userId'] as String,
     householdId: json['householdId'] as String,
-    mealTimeDistribution:
-        (json['mealTimeDistribution'] as Map<dynamic, dynamic>?)?.map(
-          (key, value) => MapEntry(key as String, value as int),
-        ) ??
-        <String, int>{},
-    mealTypeDistribution:
-        (json['mealTypeDistribution'] as Map<dynamic, dynamic>?)?.map(
-          (key, value) => MapEntry(key as String, value as int),
-        ) ??
-        <String, int>{},
-    ingredientUsage:
-        (json['ingredientUsage'] as Map<dynamic, dynamic>?)?.map(
-          (key, value) => MapEntry(
-            key as String,
-            IngredientUsage.fromJson(value as Map<String, dynamic>),
-          ),
-        ) ??
-        <String, IngredientUsage>{},
-    categoryUsage:
-        (json['categoryUsage'] as Map<dynamic, dynamic>?)?.map(
-          (key, value) => MapEntry(key as String, value as int),
-        ) ??
-        <String, int>{},
-    dietaryPattern:
-        (json['dietaryPattern'] as Map<dynamic, dynamic>?)?.map(
-          (key, value) => MapEntry(key as String, (value as num).toDouble()),
-        ) ??
-        <String, double>{},
+    mealTimeDistribution: _mapToIntDistribution(
+      json['mealTimeDistribution'] as Map<dynamic, dynamic>?,
+    ),
+    mealTypeDistribution: _mapToIntDistribution(
+      json['mealTypeDistribution'] as Map<dynamic, dynamic>?,
+    ),
+    ingredientUsage: _mapToIngredientUsage(
+      json['ingredientUsage'] as Map<dynamic, dynamic>?,
+    ),
+    categoryUsage: _mapToIntDistribution(
+      json['categoryUsage'] as Map<dynamic, dynamic>?,
+    ),
+    dietaryPattern: _mapToDoubleDistribution(
+      json['dietaryPattern'] as Map<dynamic, dynamic>?,
+    ),
     lastUpdated: json['lastUpdated'] != null
         ? DateTime.tryParse(json['lastUpdated'] as String) ?? DateTime.now()
         : DateTime.now(),
@@ -82,7 +69,8 @@ class UserAnalytics {
     'mealTimeDistribution': mealTimeDistribution,
     'mealTypeDistribution': mealTypeDistribution,
     'ingredientUsage': ingredientUsage.map(
-      (String key, IngredientUsage value) => MapEntry(key, value.toJson()),
+      (String key, IngredientUsage value) =>
+          MapEntry<String, Map<String, dynamic>>(key, value.toJson()),
     ),
     'categoryUsage': categoryUsage,
     'dietaryPattern': dietaryPattern,
@@ -108,4 +96,45 @@ class UserAnalytics {
     dietaryPattern: dietaryPattern ?? this.dietaryPattern,
     lastUpdated: lastUpdated ?? this.lastUpdated,
   );
+}
+
+Map<String, int> _mapToIntDistribution(Map<dynamic, dynamic>? source) {
+  if (source == null) {
+    return <String, int>{};
+  }
+  final Map<String, int> result = <String, int>{};
+  source.forEach((Object? key, Object? value) {
+    if (key is String && value is num) {
+      result[key] = value.toInt();
+    }
+  });
+  return result;
+}
+
+Map<String, double> _mapToDoubleDistribution(Map<dynamic, dynamic>? source) {
+  if (source == null) {
+    return <String, double>{};
+  }
+  final Map<String, double> result = <String, double>{};
+  source.forEach((Object? key, Object? value) {
+    if (key is String && value is num) {
+      result[key] = value.toDouble();
+    }
+  });
+  return result;
+}
+
+Map<String, IngredientUsage> _mapToIngredientUsage(
+  Map<dynamic, dynamic>? source,
+) {
+  if (source == null) {
+    return <String, IngredientUsage>{};
+  }
+  final Map<String, IngredientUsage> result = <String, IngredientUsage>{};
+  source.forEach((Object? key, Object? value) {
+    if (key is String && value is Map<dynamic, dynamic>) {
+      result[key] = IngredientUsage.fromJson(Map<String, dynamic>.from(value));
+    }
+  });
+  return result;
 }

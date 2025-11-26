@@ -403,14 +403,14 @@ class _ShoppingListPageState extends State<ShoppingListPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } catch (e) {
+    } on Object catch (error) {
       if (!mounted) {
         return;
       }
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Hata: ${e.toString()}'),
+          content: Text('Hata: ${error.toString()}'),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
           behavior: SnackBarBehavior.floating,
         ),

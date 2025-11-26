@@ -17,10 +17,10 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
     if (item.expiryDate != null) {
       try {
         await _notificationService.schedulePerItem(item);
-      } catch (e) {
+      } on Object catch (error, stackTrace) {
         // Log error but don't fail the operation
         debugPrint(
-          '[PantryNotificationCoordinator] Error scheduling notification for new item: $e',
+          '[PantryNotificationCoordinator] Error scheduling notification for new item: $error\n$stackTrace',
         );
       }
     }
@@ -39,9 +39,9 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
         if (newItem.expiryDate != null) {
           await _notificationService.schedulePerItem(newItem);
         }
-      } catch (e) {
+      } on Object catch (error, stackTrace) {
         debugPrint(
-          '[PantryNotificationCoordinator] Error updating notifications: $e',
+          '[PantryNotificationCoordinator] Error updating notifications: $error\n$stackTrace',
         );
       }
     }
@@ -52,9 +52,9 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
   Future<void> handleItemDeleted(String itemId) async {
     try {
       await _notificationService.cancelItemNotifications(itemId);
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       debugPrint(
-        '[PantryNotificationCoordinator] Error cancelling notifications: $e',
+        '[PantryNotificationCoordinator] Error cancelling notifications: $error\n$stackTrace',
       );
     }
   }
@@ -64,9 +64,9 @@ class PantryNotificationCoordinator implements IPantryNotificationCoordinator {
   Future<void> scheduleForItems(List<PantryItem> items) async {
     try {
       await _notificationService.scheduleNotifications(items);
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       debugPrint(
-        '[PantryNotificationCoordinator] Error scheduling notifications: $e',
+        '[PantryNotificationCoordinator] Error scheduling notifications: $error\n$stackTrace',
       );
     }
   }

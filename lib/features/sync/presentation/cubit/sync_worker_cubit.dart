@@ -12,11 +12,12 @@ class SyncWorkerCubit extends Cubit<SyncWorkerState> {
     required ISyncQueueService queueService,
     ProcessSyncQueueUseCase? processUseCase,
     Duration interval = const Duration(minutes: 5),
-  })  : _queueService = queueService,
-        _processUseCase =
-            processUseCase ?? ProcessSyncQueueUseCase(queueService: queueService),
-        _interval = interval,
-        super(const SyncWorkerState.idle());
+  }) : _queueService = queueService,
+       _processUseCase =
+           processUseCase ??
+           ProcessSyncQueueUseCase(queueService: queueService),
+       _interval = interval,
+       super(const SyncWorkerState.idle());
 
   final ISyncQueueService _queueService;
   final ProcessSyncQueueUseCase _processUseCase;
@@ -36,7 +37,7 @@ class SyncWorkerCubit extends Cubit<SyncWorkerState> {
     }
     final int pending = _queueService.getPendingTasks().length;
     if (pending == 0) {
-      emit(SyncWorkerState.idle());
+      emit(const SyncWorkerState.idle());
       return;
     }
 
@@ -47,8 +48,8 @@ class SyncWorkerCubit extends Cubit<SyncWorkerState> {
       await _processUseCase();
       final int left = _queueService.getPendingTasks().length;
       emit(SyncWorkerState.success(left));
-    } catch (e) {
-      emit(SyncWorkerState.failure(e.toString()));
+    } on Object catch (error) {
+      emit(SyncWorkerState.failure(error.toString()));
     } finally {
       _isRunning = false;
     }
@@ -60,4 +61,3 @@ class SyncWorkerCubit extends Cubit<SyncWorkerState> {
     return super.close();
   }
 }
-

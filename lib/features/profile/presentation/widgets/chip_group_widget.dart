@@ -107,11 +107,13 @@ class _ChipGroupWidgetState extends State<ChipGroupWidget> {
       if (translated != translationKey) {
         return translated;
       }
-    } catch (e) {
+    } on Exception {
       // Translation not found, use original option
     }
     // Capitalize first letter if no translation found
-    if (option.isEmpty) return option;
+    if (option.isEmpty) {
+      return option;
+    }
     return option[0].toUpperCase() + option.substring(1);
   }
 

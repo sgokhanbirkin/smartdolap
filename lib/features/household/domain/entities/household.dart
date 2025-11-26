@@ -17,11 +17,7 @@ class Household {
     createdAt: json['createdAt'] != null
         ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
         : DateTime.now(),
-    members:
-        (json['members'] as List<dynamic>?)
-            ?.map((e) => HouseholdMember.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        const <HouseholdMember>[],
+    members: _parseMembers(json['members'] as List<dynamic>?),
   );
 
   /// Household ID
@@ -61,6 +57,16 @@ class Household {
     createdAt: createdAt ?? this.createdAt,
     members: members ?? this.members,
   );
+}
+
+List<HouseholdMember> _parseMembers(List<dynamic>? raw) {
+  if (raw == null) {
+    return const <HouseholdMember>[];
+  }
+  return raw
+      .whereType<Map<String, dynamic>>()
+      .map(HouseholdMember.fromJson)
+      .toList();
 }
 
 /// Household member entity

@@ -7,7 +7,7 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/utils/quantity_formatter.dart';
 import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
-import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/unit_dropdown_widget.dart';
 
 /// Pantry item detail page - Edit quantity and delete item
@@ -186,7 +186,7 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
       quantity: roundedQty,
       unit: _unitController.text.trim(),
     );
-    await context.read<PantryCubit>().update(
+    await context.read<PantryViewModel>().update(
       widget.userId,
       updated,
     ); // userId is householdId here
@@ -200,7 +200,8 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
       return;
     }
     final BuildContext dialogContext = context;
-    final BuildContext navigatorContext = context;
+    final PantryViewModel viewModel = context.read<PantryViewModel>();
+    final NavigatorState navigator = Navigator.of(context);
     final bool? confirm = await showDialog<bool>(
       context: dialogContext,
       builder: (BuildContext ctx) => AlertDialog(
@@ -222,13 +223,12 @@ class _PantryItemDetailPageState extends State<PantryItemDetailPage> {
       ),
     );
     if (confirm == true && mounted) {
-      final PantryCubit cubit = navigatorContext.read<PantryCubit>();
-      await cubit.remove(
+      await viewModel.remove(
         widget.userId,
         widget.item.id,
       ); // userId is householdId here
       if (mounted) {
-        Navigator.of(navigatorContext).pop(true);
+        navigator.pop(true);
       }
     }
   }

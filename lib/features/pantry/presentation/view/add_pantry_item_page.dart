@@ -15,7 +15,7 @@ import 'package:smartdolap/core/utils/quantity_formatter.dart';
 import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
-import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/camera_ingredient_dialog_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/category_selector_widget.dart';
 import 'package:smartdolap/features/pantry/presentation/widgets/expiry_date_picker_widget.dart';
@@ -337,7 +337,7 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
                       addedByUserId: widget.userId,
                       addedByAvatarId: widget.avatarId,
                     );
-                    await context.read<PantryCubit>().add(
+                    await context.read<PantryViewModel>().add(
                       widget.householdId,
                       item,
                     );

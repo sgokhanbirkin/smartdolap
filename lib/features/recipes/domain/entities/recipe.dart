@@ -18,26 +18,26 @@ class Recipe {
   });
 
   factory Recipe.fromMap(Map<dynamic, dynamic> map) {
-    final dynamic stepsData = map['steps'];
+    final Object? stepsData = map['steps'];
     List<RecipeStep> stepsList = <RecipeStep>[];
-    
-    if (stepsData != null) {
-      if (stepsData is List<dynamic>) {
-        // Check if it's a list of RecipeStep objects or strings
-        if (stepsData.isNotEmpty) {
-          final dynamic firstItem = stepsData.first;
-          if (firstItem is Map) {
-            // It's a list of RecipeStep objects
-            stepsList = stepsData
-                .map((e) => RecipeStep.fromJson(e as Map<String, dynamic>))
-                .toList();
-          } else if (firstItem is String) {
-            // It's a list of strings (backward compatibility)
-            stepsList = stepsData
-                .map((e) => RecipeStep.fromString(e as String))
-                .toList();
-          }
-        }
+
+    if (stepsData is List<dynamic> && stepsData.isNotEmpty) {
+      final Object? firstItem = stepsData.first;
+      if (firstItem is Map) {
+        // It's a list of RecipeStep objects (stored as maps)
+        stepsList = stepsData
+            .whereType<Map<dynamic, dynamic>>()
+            .map(
+              (Map<dynamic, dynamic> e) =>
+                  RecipeStep.fromJson(Map<String, dynamic>.from(e)),
+            )
+            .toList();
+      } else if (firstItem is String) {
+        // It's a list of strings (backward compatibility)
+        stepsList = stepsData
+            .whereType<String>()
+            .map(RecipeStep.fromString)
+            .toList();
       }
     }
 

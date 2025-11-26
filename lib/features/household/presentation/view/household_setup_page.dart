@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +10,8 @@ import 'package:smartdolap/core/widgets/avatar_widget.dart';
 import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:smartdolap/features/household/domain/entities/household.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
 import 'package:smartdolap/features/household/presentation/viewmodel/household_state.dart';
@@ -201,11 +205,19 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
           // Refresh user data to get updated householdId
           // Wait a bit for Firestore write to complete
           await Future<void>.delayed(const Duration(milliseconds: 500));
-          await context.read<AuthCubit>().refreshUser();
+          if (!context.mounted) {
+            return;
+          }
+          await context.read<AuthViewModel>().refreshUser();
+          if (!context.mounted) {
+            return;
+          }
           // Navigate to food preferences onboarding after successful household creation/join
-          Navigator.of(
-            context,
-          ).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
+          unawaited(
+            Navigator.of(context).pushReplacementNamed(
+              AppRouter.foodPreferencesOnboarding,
+            ),
+          );
         },
         noHousehold: () {},
         error: (String message) {
@@ -294,11 +306,19 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
           // Refresh user data to get updated householdId
           // Wait a bit for Firestore write to complete
           await Future<void>.delayed(const Duration(milliseconds: 500));
-          await context.read<AuthCubit>().refreshUser();
+          if (!context.mounted) {
+            return;
+          }
+          await context.read<AuthViewModel>().refreshUser();
+          if (!context.mounted) {
+            return;
+          }
           // Navigate to food preferences onboarding after successful household creation/join
-          Navigator.of(
-            context,
-          ).pushReplacementNamed(AppRouter.foodPreferencesOnboarding);
+          unawaited(
+            Navigator.of(context).pushReplacementNamed(
+              AppRouter.foodPreferencesOnboarding,
+            ),
+          );
         },
         noHousehold: () {},
         error: (String message) {
@@ -377,22 +397,21 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
       return;
     }
 
-    final AuthCubit authCubit = context.read<AuthCubit>();
+    final AuthState authState = context.read<AuthCubit>().state;
     final HouseholdCubit householdCubit = context.read<HouseholdCubit>();
+    final User? user = authState.maybeWhen(
+      authenticated: (User user) => user,
+      orElse: () => null,
+    );
+    if (user == null) {
+      return;
+    }
 
-    authCubit.state.when(
-      initial: () {},
-      loading: () {},
-      authenticated: (User user) async {
-        await householdCubit.createHousehold(
-          name: _nameController.text.trim(),
-          ownerId: user.id,
-          ownerName: user.displayName ?? user.email,
-          ownerAvatarId: _selectedAvatarId ?? AvatarService.getDefaultAvatar(),
-        );
-      },
-      unauthenticated: () {},
-      error: (_) {},
+    await householdCubit.createHousehold(
+      name: _nameController.text.trim(),
+      ownerId: user.id,
+      ownerName: user.displayName ?? user.email,
+      ownerAvatarId: _selectedAvatarId ?? AvatarService.getDefaultAvatar(),
     );
   }
 
@@ -405,22 +424,21 @@ class _HouseholdSetupPageState extends State<HouseholdSetupPage> {
       return;
     }
 
-    final AuthCubit authCubit = context.read<AuthCubit>();
+    final AuthState authState = context.read<AuthCubit>().state;
     final HouseholdCubit householdCubit = context.read<HouseholdCubit>();
+    final User? user = authState.maybeWhen(
+      authenticated: (User user) => user,
+      orElse: () => null,
+    );
+    if (user == null) {
+      return;
+    }
 
-    authCubit.state.when(
-      initial: () {},
-      loading: () {},
-      authenticated: (User user) async {
-        await householdCubit.joinHouseholdWithCode(
-          inviteCode: inviteCode,
-          userId: user.id,
-          userName: user.displayName ?? user.email,
-          avatarId: _selectedAvatarId ?? AvatarService.getDefaultAvatar(),
-        );
-      },
-      unauthenticated: () {},
-      error: (_) {},
+    await householdCubit.joinHouseholdWithCode(
+      inviteCode: inviteCode,
+      userId: user.id,
+      userName: user.displayName ?? user.email,
+      avatarId: _selectedAvatarId ?? AvatarService.getDefaultAvatar(),
     );
   }
 

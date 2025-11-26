@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,9 +16,15 @@ import 'package:smartdolap/features/household/presentation/view/share_page.dart'
 import 'package:smartdolap/features/household/presentation/viewmodel/household_cubit.dart';
 import 'package:smartdolap/features/onboarding/presentation/view/onboarding_page.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_notification_coordinator.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/view/add_pantry_item_page.dart';
 import 'package:smartdolap/features/pantry/presentation/view/pantry_item_detail_page.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/profile/presentation/view/badges_page.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/view/favorites_page.dart';
@@ -69,7 +77,8 @@ class AppRouter {
   static const String householdSetup = '/household/setup';
 
   /// Food preferences onboarding route path
-  static const String foodPreferencesOnboarding = '/food-preferences/onboarding';
+  static const String foodPreferencesOnboarding =
+      '/food-preferences/onboarding';
 
   /// Share route path
   static const String share = '/share';
@@ -123,15 +132,19 @@ class AppRouter {
                 ),
               );
             }
-            return BlocProvider<PantryCubit>(
-              create: (_) =>
-                  sl<PantryCubit>()..watch(args['householdId'] as String),
-              child: AddPantryItemPage(
-                householdId: args['householdId'] as String,
-                userId: args['userId'] as String,
-                avatarId: args['avatarId'] as String?,
-              ),
+            Widget child = AddPantryItemPage(
+              householdId: args['householdId'] as String,
+              userId: args['userId'] as String,
+              avatarId: args['avatarId'] as String?,
             );
+            final bool hasPantryProvider = _hasPantryProvider(context);
+            if (!hasPantryProvider) {
+              child = _PantryScopedPage(
+                householdId: args['householdId'] as String,
+                child: child,
+              );
+            }
+            return child;
           },
         );
       case pantryDetail:
@@ -156,14 +169,20 @@ class AppRouter {
           );
         }
         return MaterialPageRoute<bool>(
-          builder: (BuildContext context) => BlocProvider<PantryCubit>(
-            create: (_) =>
-                sl<PantryCubit>()..watch(args['householdId'] as String),
-            child: PantryItemDetailPage(
+          builder: (BuildContext context) {
+            Widget child = PantryItemDetailPage(
               item: args['item'] as PantryItem,
               userId: args['householdId'] as String,
-            ),
-          ),
+            );
+            final bool hasPantryProvider = _hasPantryProvider(context);
+            if (!hasPantryProvider) {
+              child = _PantryScopedPage(
+                householdId: args['householdId'] as String,
+                child: child,
+              );
+            }
+            return child;
+          },
         );
       case recipeDetail:
         final Recipe? recipe = settings.arguments as Recipe?;
@@ -221,20 +240,28 @@ class AppRouter {
           );
         }
         return MaterialPageRoute<bool>(
-          builder: (BuildContext context) => MultiBlocProvider(
-            providers: <BlocProvider<dynamic>>[
-              BlocProvider<RecipesCubit>(create: (_) => sl<RecipesCubit>()),
-              BlocProvider<PantryCubit>(
-                create: (_) =>
-                    sl<PantryCubit>()..watch(args['householdId'] as String),
-              ),
-            ],
-            child: GetSuggestionsPage(
+          builder: (BuildContext context) {
+            Widget child = GetSuggestionsPage(
               items: args['items'] as List<PantryItem>,
               meal: args['meal'] as String?,
               userId: args['householdId'] as String,
-            ),
-          ),
+            );
+            final bool hasRecipesCubit = _hasRecipesCubit(context);
+            final bool hasPantryProvider = _hasPantryProvider(context);
+            if (!hasRecipesCubit) {
+              child = BlocProvider<RecipesCubit>(
+                create: (_) => sl<RecipesCubit>(),
+                child: child,
+              );
+            }
+            if (!hasPantryProvider) {
+              child = _PantryScopedPage(
+                householdId: args['householdId'] as String,
+                child: child,
+              );
+            }
+            return child;
+          },
         );
       case badges:
         return MaterialPageRoute<dynamic>(
@@ -282,12 +309,69 @@ class AppRouter {
     BuildContext context,
     String routeName, {
     Object? arguments,
-  }) {
-    debugPrint('[AppRouter] pushNamedAndRemoveUntil: $routeName');
-    return Navigator.of(context).pushNamedAndRemoveUntil(
-      routeName,
-      (Route<dynamic> route) => false,
-      arguments: arguments,
-    );
+  }) => Navigator.of(context).pushNamedAndRemoveUntil(
+    routeName,
+    (Route<dynamic> route) => false,
+    arguments: arguments,
+  );
+
+  static PantryViewModel _buildPantryViewModel(PantryCubit cubit) =>
+      PantryViewModel(
+        cubit: cubit,
+        listPantryItems: sl<ListPantryItems>(),
+        addPantryItem: sl<AddPantryItem>(),
+        updatePantryItem: sl<UpdatePantryItem>(),
+        deletePantryItem: sl<DeletePantryItem>(),
+        notificationCoordinator: sl<IPantryNotificationCoordinator>(),
+      );
+
+  static bool _hasPantryProvider(BuildContext context) =>
+      context
+          .findAncestorWidgetOfExactType<
+            RepositoryProvider<PantryViewModel>
+          >() !=
+      null;
+
+  static bool _hasRecipesCubit(BuildContext context) =>
+      context.findAncestorWidgetOfExactType<BlocProvider<RecipesCubit>>() !=
+      null;
+}
+
+class _PantryScopedPage extends StatefulWidget {
+  const _PantryScopedPage({required this.householdId, required this.child});
+
+  final String householdId;
+  final Widget child;
+
+  @override
+  State<_PantryScopedPage> createState() => _PantryScopedPageState();
+}
+
+class _PantryScopedPageState extends State<_PantryScopedPage> {
+  late final PantryCubit _cubit = sl<PantryCubit>();
+  late final PantryViewModel _viewModel = AppRouter._buildPantryViewModel(
+    _cubit,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_viewModel.watch(widget.householdId));
   }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    _cubit.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => BlocProvider<PantryCubit>.value(
+    value: _cubit,
+    child: RepositoryProvider<PantryViewModel>.value(
+      value: _viewModel,
+      child: widget.child,
+    ),
+  );
 }

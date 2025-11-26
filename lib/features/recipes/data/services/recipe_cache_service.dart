@@ -8,7 +8,7 @@ import 'package:smartdolap/features/recipes/domain/repositories/i_recipe_cache_s
 class RecipeCacheService implements IRecipeCacheService {
   RecipeCacheService(this._cacheBox);
 
-  final Box<dynamic> _cacheBox;
+  final Box<Object?> _cacheBox;
 
   /// Get cache key for meal-specific recipes
   @override
@@ -24,8 +24,9 @@ class RecipeCacheService implements IRecipeCacheService {
       return null;
     }
 
-    return cachedRecipes.map<Map<String, Object?>>((item) {
-      final Map<dynamic, dynamic> map = item as Map<dynamic, dynamic>;
+    return cachedRecipes.map<Map<String, Object?>>((Object? item) {
+      final Map<dynamic, dynamic> map =
+          (item ?? <dynamic, dynamic>{}) as Map<dynamic, dynamic>;
       return <String, Object?>{
         'id': map['id'] as String?,
         'title': map['title'] as String?,
@@ -49,20 +50,24 @@ class RecipeCacheService implements IRecipeCacheService {
       return null;
     }
 
-    return cached.map((Map<String, Object?> map) => Recipe.fromMap(map as Map<dynamic, dynamic>)).toList();
+    return cached
+        .map(
+          (Map<String, Object?> map) =>
+              Recipe.fromMap(map as Map<dynamic, dynamic>),
+        )
+        .toList();
   }
 
   /// Save recipes to cache (replaces existing) - alias for saveRecipes
   @override
-  Future<void> putRecipes(String cacheKey, List<Recipe> recipes) async => saveRecipes(cacheKey, recipes);
+  Future<void> putRecipes(String cacheKey, List<Recipe> recipes) async =>
+      saveRecipes(cacheKey, recipes);
 
   /// Save recipes to cache (replaces existing)
   @override
   Future<void> saveRecipes(String cacheKey, List<Recipe> recipes) async {
     final List<Map<String, Object?>> cacheData = recipes
-        .map(
-          (Recipe e) => e.toMap().cast<String, Object?>(),
-        )
+        .map((Recipe e) => e.toMap().cast<String, Object?>())
         .toList();
 
     await _cacheBox.put(cacheKey, cacheData);
@@ -79,9 +84,7 @@ class RecipeCacheService implements IRecipeCacheService {
   ) async {
     final List<Map<String, Object?>>? existingCache = getRecipes(cacheKey);
     final List<Map<String, Object?>> newCacheData = newRecipes
-        .map(
-          (Recipe e) => e.toMap().cast<String, Object?>(),
-        )
+        .map((Recipe e) => e.toMap().cast<String, Object?>())
         .toList();
 
     if (existingCache != null && existingCache.isNotEmpty) {

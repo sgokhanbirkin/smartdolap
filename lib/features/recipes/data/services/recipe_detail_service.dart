@@ -3,7 +3,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smartdolap/core/di/dependency_injection.dart';
-import 'package:smartdolap/features/profile/data/badge_service.dart';
+import 'package:smartdolap/features/gamification/services/badge_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
 import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';

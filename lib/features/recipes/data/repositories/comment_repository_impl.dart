@@ -14,25 +14,24 @@ class CommentRepositoryImpl implements ICommentRepository {
   static const String _recipeComments = 'recipeComments';
 
   @override
-  Stream<List<RecipeComment>> watchGlobalComments(String recipeId) {
-    // Global comments are stored in recipes/{recipeId}/comments
-    // Note: recipes/{recipeId} document may not exist initially
-    // Firestore will return empty list if document doesn't exist (which is fine)
-    return _firestore
-        .collection(_recipes)
-        .doc(recipeId)
-        .collection(_comments)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map(
-          (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
-              .map(
-                (QueryDocumentSnapshot<Map<String, dynamic>> doc) =>
-                    RecipeComment.fromJson(doc.data()),
-              )
-              .toList(),
-        );
-  }
+  Stream<List<RecipeComment>> watchGlobalComments(String recipeId) =>
+      // Global comments are stored in recipes/{recipeId}/comments
+      // Note: recipes/{recipeId} document may not exist initially
+      // Firestore will return empty list if document doesn't exist (which is fine)
+      _firestore
+          .collection(_recipes)
+          .doc(recipeId)
+          .collection(_comments)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map(
+            (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
+                .map(
+                  (QueryDocumentSnapshot<Map<String, dynamic>> doc) =>
+                      RecipeComment.fromJson(doc.data()),
+                )
+                .toList(),
+          );
 
   @override
   Stream<List<RecipeComment>> watchHouseholdComments(

@@ -11,6 +11,7 @@ import 'package:smartdolap/features/auth/data/models/auth_failure.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
 /// Login page - Authentication view
@@ -198,7 +199,7 @@ class _LoginFormState extends State<_LoginForm> {
                           validator: Validators.passwordValidator,
                           onFieldSubmitted: (_) {
                             if (_formKey.currentState!.validate()) {
-                              context.read<AuthCubit>().login(
+                              context.read<AuthViewModel>().login(
                                     email: _emailController.text.trim(),
                                     password: _passwordController.text,
                                   );
@@ -213,7 +214,7 @@ class _LoginFormState extends State<_LoginForm> {
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      context.read<AuthCubit>().login(
+                      context.read<AuthViewModel>().login(
                             email: _emailController.text.trim(),
                             password: _passwordController.text,
                           );

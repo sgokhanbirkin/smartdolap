@@ -9,6 +9,7 @@ import 'package:smartdolap/features/auth/data/models/auth_failure.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/language_dialog_widget.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/theme_dialog_widget.dart';
 import 'package:smartdolap/product/router/app_router.dart';
@@ -178,7 +179,7 @@ class SettingsMenuWidget extends StatelessWidget {
               ),
               onTap: () {
                 debugPrint('[SettingsMenuWidget] Logout button tapped');
-                context.read<AuthCubit>().logout();
+                context.read<AuthViewModel>().logout();
               },
             ),
           ),

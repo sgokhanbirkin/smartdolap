@@ -9,6 +9,7 @@ import 'package:smartdolap/core/theme/app_theme.dart';
 import 'package:smartdolap/core/theme/theme_cubit.dart';
 import 'package:smartdolap/core/widgets/offline_indicator.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:smartdolap/features/sync/presentation/cubit/sync_worker_cubit.dart';
 import 'package:smartdolap/firebase_options.dart';
 import 'package:smartdolap/product/router/app_router.dart';
@@ -27,6 +28,9 @@ Future<void> main() async {
 
   // Setup dependency injection
   await setupLocator();
+
+  // Initialize authentication flow (stream subscriptions etc.)
+  await sl<AuthViewModel>().initialize();
 
   // Initialize notification service
   await sl<ExpiryNotificationService>().initialize();
@@ -62,26 +66,29 @@ class SmartDolapApp extends StatelessWidget {
         BlocProvider<AuthCubit>(create: (BuildContext _) => sl<AuthCubit>()),
         BlocProvider<ThemeCubit>(create: (BuildContext _) => ThemeCubit()),
       ],
-      child: Builder(
-        builder: (BuildContext innerContext) =>
-            BlocBuilder<ThemeCubit, ThemeState>(
-              builder: (BuildContext context, ThemeState themeState) =>
-                  OfflineIndicator(
-                    child: MaterialApp(
-                      onGenerateTitle: (BuildContext ctx) => tr('app_name'),
-                      debugShowCheckedModeBanner: false,
-                      theme: AppTheme.light(),
-                      darkTheme: AppTheme.dark(),
-                      themeMode: themeState.themeMode,
-                      localizationsDelegates:
-                          innerContext.localizationDelegates,
-                      supportedLocales: innerContext.supportedLocales,
-                      locale: innerContext.locale,
-                      onGenerateRoute: AppRouter.onGenerateRoute,
-                      initialRoute: AppRouter.splash,
+      child: RepositoryProvider<AuthViewModel>.value(
+        value: sl<AuthViewModel>(),
+        child: Builder(
+          builder: (BuildContext innerContext) =>
+              BlocBuilder<ThemeCubit, ThemeState>(
+                builder: (BuildContext context, ThemeState themeState) =>
+                    OfflineIndicator(
+                      child: MaterialApp(
+                        onGenerateTitle: (BuildContext ctx) => tr('app_name'),
+                        debugShowCheckedModeBanner: false,
+                        theme: AppTheme.light(),
+                        darkTheme: AppTheme.dark(),
+                        themeMode: themeState.themeMode,
+                        localizationsDelegates:
+                            innerContext.localizationDelegates,
+                        supportedLocales: innerContext.supportedLocales,
+                        locale: innerContext.locale,
+                        onGenerateRoute: AppRouter.onGenerateRoute,
+                        initialRoute: AppRouter.splash,
+                      ),
                     ),
-                  ),
-            ),
+              ),
+        ),
       ),
     ),
   );

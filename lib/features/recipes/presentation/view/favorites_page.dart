@@ -44,7 +44,6 @@ class FavoritesPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                // Content
                 Expanded(
                   child: FutureBuilder<Box<dynamic>>(
                     future: Hive.isBoxOpen('favorite_recipes')
@@ -66,11 +65,8 @@ class FavoritesPage extends StatelessWidget {
                               Widget? child,
                             ) {
                               final List<Recipe> favorites = box.values
-                                  .map<Recipe>(
-                                    (value) => Recipe.fromMap(
-                                      value as Map<dynamic, dynamic>,
-                                    ),
-                                  )
+                                  .whereType<Map<dynamic, dynamic>>()
+                                  .map<Recipe>(Recipe.fromMap)
                                   .toList();
 
                               if (favorites.isEmpty) {

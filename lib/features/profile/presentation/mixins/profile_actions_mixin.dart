@@ -1,22 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'package:smartdolap/core/constants/app_sizes.dart';
-import 'package:smartdolap/core/di/dependency_injection.dart';
-import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
-import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
-import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
-import 'package:smartdolap/features/profile/data/badge_service.dart';
-import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
-import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
-import 'package:smartdolap/features/profile/domain/entities/badge.dart' as domain;
-import 'package:smartdolap/features/profile/domain/entities/profile_stats.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
-import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
-import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_service.dart';
 import 'package:smartdolap/features/profile/presentation/view/user_recipe_form_page.dart';
+import 'package:smartdolap/features/profile/presentation/viewmodel/profile_view_model.dart';
 
 /// Profile actions mixin
 /// Handles profile-related actions (edit nickname, recipe actions, badge actions)
@@ -25,7 +15,6 @@ mixin ProfileActionsMixin<T extends StatefulWidget> on State<T> {
   /// Edit nickname
   Future<void> editNickname({
     required PromptPreferences currentPrefs,
-    required IProfileStatsService statsService,
     required Future<void> Function(PromptPreferences) onPrefsSaved,
   }) async {
     final TextEditingController controller = TextEditingController(
@@ -62,83 +51,59 @@ mixin ProfileActionsMixin<T extends StatefulWidget> on State<T> {
 
   /// Simulate AI recipe
   Future<void> simulateAiRecipe({
-    required IProfileStatsService statsService,
-    required ValueChanged<ProfileStats> onStatsUpdated,
-    required ValueChanged<List<domain.Badge>> onBadgesUpdated,
+    required ProfileViewModel viewModel,
   }) async {
-    final ProfileStats stats = await statsService.incrementAiRecipes();
-    await statsService.addXp(40);
+    final bool success = await viewModel.recordAiRecipe();
     if (!mounted) {
       return;
     }
-    onStatsUpdated(stats);
-
-    // Check for badges
-    final AuthState authState = context.read<AuthCubit>().state;
-    await authState.whenOrNull(
-      authenticated: (domain.User user) async {
-        final BadgeService badgeService = BadgeService(
-          statsService: statsService,
-          badgeRepository: sl<IBadgeRepository>(),
-          userId: user.id,
-        );
-        final List<domain.Badge> newlyUnlocked =
-            await badgeService.checkAndAwardBadges();
-        if (newlyUnlocked.isNotEmpty && mounted) {
-          final List<domain.Badge> updatedBadges =
-              await badgeService.getAllBadgesWithStatus();
-          onBadgesUpdated(updatedBadges);
-        }
-      },
-    );
-
-    if (!mounted) {
-      return;
-    }
-    HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: <Widget>[
-            Icon(
-              Icons.check_circle,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-              size: AppSizes.iconS,
-            ),
-            SizedBox(width: AppSizes.spacingS),
-            Expanded(
-              child: Text(
-                tr('profile_ai_recipe_recorded'),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w600,
+    if (success) {
+      await HapticFeedback.lightImpact();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: <Widget>[
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                size: AppSizes.iconS,
+              ),
+              SizedBox(width: AppSizes.spacingS),
+              Expanded(
+                child: Text(
+                  tr('profile_ai_recipe_recorded'),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: AppSizes.padding,
+            right: AppSizes.padding,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radius),
+          ),
+          duration: const Duration(seconds: 2),
         ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).size.height * 0.1,
-          left: AppSizes.padding,
-          right: AppSizes.padding,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.radius),
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      );
+    } else {
+      _showErrorSnack();
+    }
   }
 
   /// Create manual recipe
   Future<void> createManualRecipe({
-    required UserRecipeService userRecipeService,
-    required IProfileStatsService statsService,
-    required ValueChanged<ProfileStats> onStatsUpdated,
-    required ValueChanged<List<UserRecipe>> onRecipesUpdated,
-    required ValueChanged<List<domain.Badge>> onBadgesUpdated,
+    required ProfileViewModel viewModel,
   }) async {
     final bool? created = await Navigator.push<bool>(
       context,
@@ -152,17 +117,16 @@ mixin ProfileActionsMixin<T extends StatefulWidget> on State<T> {
             List<String>? tags,
             String? imagePath,
             String? videoPath,
-          }) async {
-            await userRecipeService.createManual(
-              title: title,
-              description: description,
-              ingredients: ingredients,
-              steps: steps,
-              tags: tags ?? <String>[],
-              imagePath: imagePath,
-              videoPath: videoPath,
-            );
-          },
+          }) =>
+              viewModel.createManualRecipe(
+            title: title,
+            ingredients: ingredients,
+            steps: steps,
+            description: description,
+            tags: tags,
+            imagePath: imagePath,
+            videoPath: videoPath,
+            ),
         ),
       ),
     );
@@ -170,74 +134,10 @@ mixin ProfileActionsMixin<T extends StatefulWidget> on State<T> {
       return;
     }
     if (created == true) {
-      final ProfileStats stats = await statsService.incrementUserRecipes();
+      await HapticFeedback.lightImpact();
       if (!mounted) {
         return;
       }
-      onStatsUpdated(stats);
-      onRecipesUpdated(userRecipeService.fetch());
-
-      // Check for badges
-      final AuthState authState = context.read<AuthCubit>().state;
-      await authState.whenOrNull(
-        authenticated: (domain.User user) async {
-          final BadgeService badgeService = BadgeService(
-            statsService: statsService,
-            badgeRepository: sl<IBadgeRepository>(),
-            userId: user.id,
-          );
-          final List<domain.Badge> newlyUnlocked =
-              await badgeService.checkAndAwardBadges();
-          if (newlyUnlocked.isNotEmpty && mounted) {
-            final List<domain.Badge> updatedBadges =
-                await badgeService.getAllBadgesWithStatus();
-            onBadgesUpdated(updatedBadges);
-          }
-        },
-      );
-    }
-  }
-
-  /// Upload dish photo
-  Future<void> uploadDishPhoto({
-    required IProfileStatsService statsService,
-    required ValueChanged<ProfileStats> onStatsUpdated,
-    required ValueChanged<List<domain.Badge>> onBadgesUpdated,
-  }) async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null && mounted) {
-      final ProfileStats stats = await statsService.incrementUserRecipes(
-        withPhoto: true,
-      );
-      if (!mounted) {
-        return;
-      }
-      onStatsUpdated(stats);
-
-      // Check for badges
-      final AuthState authState = context.read<AuthCubit>().state;
-      await authState.whenOrNull(
-        authenticated: (domain.User user) async {
-          final BadgeService badgeService = BadgeService(
-            statsService: statsService,
-            badgeRepository: sl<IBadgeRepository>(),
-            userId: user.id,
-          );
-          final List<domain.Badge> newlyUnlocked =
-              await badgeService.checkAndAwardBadges();
-          if (newlyUnlocked.isNotEmpty && mounted) {
-            final List<domain.Badge> updatedBadges =
-                await badgeService.getAllBadgesWithStatus();
-            onBadgesUpdated(updatedBadges);
-          }
-        },
-      );
-
-      if (!mounted) {
-        return;
-      }
-      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -250,7 +150,7 @@ mixin ProfileActionsMixin<T extends StatefulWidget> on State<T> {
               SizedBox(width: AppSizes.spacingS),
               Expanded(
                 child: Text(
-                  tr('profile_photo_upload_placeholder'),
+                  tr('profile_manual_recipe_created'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                     fontWeight: FontWeight.w600,
@@ -274,5 +174,84 @@ mixin ProfileActionsMixin<T extends StatefulWidget> on State<T> {
       );
     }
   }
-}
 
+  /// Upload dish photo
+  Future<void> uploadDishPhoto({
+    required ProfileViewModel viewModel,
+  }) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null && mounted) {
+      final bool success = await viewModel.recordDishPhotoUpload();
+      if (success && mounted) {
+        await HapticFeedback.lightImpact();
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  size: AppSizes.iconS,
+                ),
+                SizedBox(width: AppSizes.spacingS),
+                Expanded(
+                  child: Text(
+                    tr('profile_photo_upload_placeholder'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+              ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.1,
+              left: AppSizes.padding,
+              right: AppSizes.padding,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radius),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        _showErrorSnack();
+      }
+    }
+  }
+
+  void _showErrorSnack() {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          tr('error_generic'),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onErrorContainer,
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.1,
+          left: AppSizes.padding,
+          right: AppSizes.padding,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radius),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}

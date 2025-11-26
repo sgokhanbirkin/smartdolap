@@ -132,11 +132,15 @@ class OpenAIService implements IOpenAIService {
       }
     }
     // Convert pantry to TONL format for token optimization
-    final List<Map<String, dynamic>> pantryList = pantry.map((Ingredient e) => <String, dynamic>{
-        'name': e.name,
-        'quantity': e.quantity,
-        'unit': e.unit,
-      }).toList();
+    final List<Map<String, dynamic>> pantryList = pantry
+        .map(
+          (Ingredient e) => <String, dynamic>{
+            'name': e.name,
+            'quantity': e.quantity,
+            'unit': e.unit,
+          },
+        )
+        .toList();
     final String pantryTONL = TONLEncoder.encode(<String, dynamic>{
       'pantry': pantryList,
     });
@@ -267,14 +271,14 @@ class OpenAIService implements IOpenAIService {
           s,
         );
         throw const OpenAIParsingException('invalid_format');
-      } catch (e, s) {
+      } on Object catch (error, stackTrace) {
         final String preview = content.length > 500
             ? '${content.substring(0, 500)}...'
             : content;
         Logger.error(
           '[OpenAIService] Parse error. Content preview: $preview',
-          e,
-          s,
+          error,
+          stackTrace,
         );
         throw const OpenAIParsingException('invalid_format');
       }
@@ -344,10 +348,10 @@ class OpenAIService implements IOpenAIService {
 
           // Parse ingredients (handle both TONL string format and JSON List)
           List<String> ingredients = <String>[];
-          final dynamic ingredientsData = recipeMap['ingredients'];
+          final Object? ingredientsData = recipeMap['ingredients'];
           if (ingredientsData is List) {
             ingredients = ingredientsData
-                .map<String>((e) {
+                .map<String>((Object? e) {
                   if (e is String) {
                     return e.trim();
                   }
@@ -391,10 +395,10 @@ class OpenAIService implements IOpenAIService {
 
           // Parse steps (handle RecipeStep objects with details, or simple strings for backward compatibility)
           List<String> steps = <String>[];
-          final dynamic stepsData = recipeMap['steps'];
+          final Object? stepsData = recipeMap['steps'];
           if (stepsData is List) {
             steps = stepsData
-                .map<String>((e) {
+                .map<String>((Object? e) {
                   if (e is String) {
                     // Simple string format (backward compatibility)
                     return e.trim();
@@ -457,11 +461,11 @@ class OpenAIService implements IOpenAIService {
               imageSearchQuery: recipeMap['imageSearchQuery'] as String?,
             ),
           );
-        } catch (e, s) {
+        } on Object catch (error, stackTrace) {
           Logger.error(
             '[OpenAIService] Error parsing individual recipe: $r',
-            e,
-            s,
+            error,
+            stackTrace,
           );
           // Continue with next recipe instead of failing completely
           continue;
@@ -487,11 +491,15 @@ class OpenAIService implements IOpenAIService {
       return result;
     } on OpenAIParsingException {
       rethrow;
-    } on FormatException catch (e, s) {
-      Logger.error('[OpenAIService] JSON format error', e, s);
+    } on FormatException catch (error, stackTrace) {
+      Logger.error('[OpenAIService] JSON format error', error, stackTrace);
       throw const OpenAIParsingException('invalid_format');
-    } catch (e, s) {
-      Logger.error('[OpenAIService] Unexpected error during parsing', e, s);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[OpenAIService] Unexpected error during parsing',
+        error,
+        stackTrace,
+      );
       throw const OpenAIParsingException('unknown');
     }
   }

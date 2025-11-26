@@ -55,7 +55,7 @@ class RecipeFilterService {
   }
 
   /// Set a filter value
-  void setFilter(String key, value) {
+  void setFilter(String key, Object? value) {
     if (value == null) {
       _activeFilters.remove(key);
     } else {

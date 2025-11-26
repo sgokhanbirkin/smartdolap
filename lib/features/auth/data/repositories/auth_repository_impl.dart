@@ -129,7 +129,7 @@ class AuthRepositoryImpl implements IAuthRepository {
           householdId = data?['householdId'] as String?;
           avatarId = data?['avatarId'] as String?;
         }
-      } catch (e) {
+      } on Object {
         // Silently fail - householdId might not exist yet
       }
 
@@ -165,9 +165,9 @@ class AuthRepositoryImpl implements IAuthRepository {
             householdId = data?['householdId'] as String?;
             avatarId = data?['avatarId'] as String?;
           }
-        } catch (e) {
-          // Silently fail - householdId might not exist yet
-        }
+      } on Object {
+        // Silently fail - householdId might not exist yet
+      }
 
         return UserModel(
           id: firebaseUser.uid,

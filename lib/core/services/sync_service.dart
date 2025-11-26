@@ -25,11 +25,19 @@ class SyncService implements ISyncService {
   final IRecipesRepository recipesRepository;
   final Box<dynamic> pantryBox;
   final IRecipeCacheService recipeCacheService;
+  bool _isSyncing = false;
+
+  @override
+  bool get isSyncing => _isSyncing;
 
   /// Syncs all user data from Firestore to Hive
   /// Called after login/register to ensure local cache is up-to-date
   @override
   Future<void> syncUserData({required String userId}) async {
+    if (_isSyncing) {
+      return;
+    }
+    _isSyncing = true;
     try {
       Logger.info('[SyncService] Starting sync for user: $userId');
 
@@ -40,9 +48,11 @@ class SyncService implements ISyncService {
       await _syncRecipes(userId);
 
       Logger.info('[SyncService] Sync completed for user: $userId');
-    } catch (e, s) {
-      Logger.error('[SyncService] Sync error for user: $userId', e, s);
+    } on Object catch (error, stackTrace) {
+      Logger.error('[SyncService] Sync error for user: $userId', error, stackTrace);
       // Don't rethrow - sync should be resilient and not block login
+    } finally {
+      _isSyncing = false;
     }
   }
 
@@ -56,8 +66,8 @@ class SyncService implements ISyncService {
       await pantryRepository.getItems(householdId: userId);
 
       Logger.info('[SyncService] Pantry items synced to Hive');
-    } catch (e, s) {
-      Logger.error('[SyncService] Error syncing pantry items', e, s);
+    } on Object catch (error, stackTrace) {
+      Logger.error('[SyncService] Error syncing pantry items', error, stackTrace);
       // Don't rethrow - sync should be resilient
     }
   }
@@ -99,8 +109,8 @@ class SyncService implements ISyncService {
       Logger.info(
         '[SyncService] Synced ${recipes.length} recipes to Hive (${recipesByMeal.length} meals)',
       );
-    } catch (e, s) {
-      Logger.error('[SyncService] Error syncing recipes', e, s);
+    } on Object catch (error, stackTrace) {
+      Logger.error('[SyncService] Error syncing recipes', error, stackTrace);
       // Don't rethrow - sync should be resilient
     }
   }

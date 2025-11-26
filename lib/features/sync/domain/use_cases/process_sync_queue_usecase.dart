@@ -12,10 +12,10 @@ class ProcessSyncQueueUseCase {
     FirebaseFirestore? firestore,
     FirebaseAuth? firebaseAuth,
     Duration retryDelay = const Duration(seconds: 5),
-  })  : _queueService = queueService,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _retryDelay = retryDelay;
+  }) : _queueService = queueService,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+       _retryDelay = retryDelay;
 
   final ISyncQueueService _queueService;
   final FirebaseFirestore _firestore;
@@ -44,7 +44,6 @@ class ProcessSyncQueueUseCase {
       final SyncTask updated = task.copyWith(
         lastTriedAt: DateTime.now(),
         retryCount: task.retryCount + 1,
-        lastError: null,
       );
       await _queueService.updateTask(updated);
 
@@ -67,11 +66,11 @@ class ProcessSyncQueueUseCase {
       await _queueService.updateTask(failed);
       await Future<void>.delayed(_retryDelay);
       return false;
-    } catch (e) {
+    } on Object catch (error) {
       final SyncTask failed = task.copyWith(
         lastTriedAt: DateTime.now(),
         retryCount: task.retryCount + 1,
-        lastError: e.toString(),
+        lastError: error.toString(),
       );
       await _queueService.updateTask(failed);
       await Future<void>.delayed(_retryDelay);
@@ -104,4 +103,3 @@ class ProcessSyncQueueUseCase {
     }
   }
 }
-

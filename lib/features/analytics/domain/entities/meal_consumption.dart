@@ -22,11 +22,7 @@ class MealConsumption {
         userId: json['userId'] as String,
         recipeId: json['recipeId'] as String,
         recipeTitle: json['recipeTitle'] as String,
-        ingredients:
-            (json['ingredients'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            <String>[],
+        ingredients: _parseIngredients(json['ingredients'] as List<dynamic>?),
         meal: json['meal'] as String,
         consumedAt: json['consumedAt'] != null
             ? DateTime.tryParse(json['consumedAt'] as String) ?? DateTime.now()
@@ -97,4 +93,11 @@ class MealConsumption {
     consumedAt: consumedAt ?? this.consumedAt,
     createdAt: createdAt ?? this.createdAt,
   );
+}
+
+List<String> _parseIngredients(List<dynamic>? raw) {
+  if (raw == null) {
+    return <String>[];
+  }
+  return raw.whereType<String>().map((String value) => value).toList();
 }

@@ -22,9 +22,13 @@ class RateLimitCubit extends Cubit<RateLimitState> {
       } else {
         emit(const RateLimitState.error('Failed to load usage'));
       }
-    } catch (e) {
-      Logger.error('[RateLimitCubit] Error loading usage', e);
-      emit(RateLimitState.error(e.toString()));
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[RateLimitCubit] Error loading usage',
+        error,
+        stackTrace,
+      );
+      emit(RateLimitState.error(error.toString()));
     }
   }
 

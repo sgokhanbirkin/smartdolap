@@ -4,25 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
-import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.dart';
 import 'package:smartdolap/features/recipes/data/services/recipes_page_data_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/utils/meal_time_order_helper.dart';
-import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 
-/// Controller for recipes page - handles data loading and state management
-/// TODO(SOLID-SRP): This controller has too many responsibilities:
-/// - Data loading (should be in RecipesPageDataService)
-/// - State management (should be in RecipesCubit)
-/// - Cache management (should be in CacheService)
-/// - Listener management (should be in ListenerService)
-/// Consider refactoring following Single Responsibility Principle
-/// TODO(RESPONSIVE): Add responsive breakpoints for different screen sizes
-/// TODO(LOCALIZATION): Ensure all debug messages are localization-ready
+/// Recipes page controller that coordinates cache + listener services while keeping
+/// the widget tree agnostic of Hive streams and heavy orchestration logic.
+/// Responsibilities are delegated to:
+/// - `_RecipesCacheManager` for cache + data loading orchestration
+/// - `_RecipesListenerManager` for Hive/pantry subscriptions
+/// This keeps the controller focused on wiring and exposes only ValueNotifiers to the UI.
 class RecipesPageController {
   /// Creates a recipes page controller
   RecipesPageController({
-    required this.recipesCubit,
+    required this.recipesViewModel,
     required this.dataService,
     required this.pantryCubit,
     required this.userId,
@@ -30,13 +26,17 @@ class RecipesPageController {
     _initialize();
   }
 
-  final RecipesCubit recipesCubit;
+  final RecipesViewModel recipesViewModel;
   final RecipesPageDataService dataService;
   final PantryCubit pantryCubit;
   final String userId;
+  late final _RecipesCacheManager _cacheManager;
+  late final _RecipesListenerManager _listenerManager;
 
   // Data holders
-  final ValueNotifier<List<Recipe>> favorites = ValueNotifier<List<Recipe>>(<Recipe>[]);
+  final ValueNotifier<List<Recipe>> favorites = ValueNotifier<List<Recipe>>(
+    <Recipe>[],
+  );
   final ValueNotifier<List<Recipe>> breakfastRecipes =
       ValueNotifier<List<Recipe>>(<Recipe>[]);
   final ValueNotifier<List<Recipe>> snackRecipes = ValueNotifier<List<Recipe>>(
@@ -84,501 +84,56 @@ class RecipesPageController {
         },
       });
 
-  // Listeners and subscriptions
-  StreamSubscription<PantryState>? _pantrySubscription;
-  VoidCallback? _favoritesListener;
-  VoidCallback? _madeRecipesListener;
-  Timer? _pantryDebounceTimer;
-  Timer? _madeRecipesDebounceTimer;
-  DateTime? _lastPantryUpdate;
-  DateTime? _lastMadeRecipesUpdate;
-  bool _isLoadingRecipes = false;
-  bool _madeRecipesListenerAdded = false;
-  String? _lastUserRecipesHash;
-  final Map<String, bool> _isLoadingMeal = <String, bool>{};
-  List<String> _lastPantryItems = <String>[];
+  // Lifecycle state
   bool _isDisposed = false;
 
   // Cache kontrolü için flag - static olarak tutuluyor
   static final Map<String, bool> _initialLoadFlags = <String, bool>{};
 
-  late Future<Box<dynamic>> _favoritesFuture;
-  late Future<Box<dynamic>> _userRecipesFuture;
-
   void _initialize() {
-    _favoritesFuture = Hive.isBoxOpen('favorite_recipes')
-        ? Future<Box<dynamic>>.value(Hive.box<dynamic>('favorite_recipes'))
-        : Hive.openBox<dynamic>('favorite_recipes');
-    _userRecipesFuture = Hive.isBoxOpen('profile_box')
-        ? Future<Box<dynamic>>.value(Hive.box<dynamic>('profile_box'))
-        : Hive.openBox<dynamic>('profile_box');
+    _cacheManager = _RecipesCacheManager(
+      userId: userId,
+      dataService: dataService,
+      favorites: favorites,
+      breakfastRecipes: breakfastRecipes,
+      snackRecipes: snackRecipes,
+      lunchRecipes: lunchRecipes,
+      dinnerRecipes: dinnerRecipes,
+      madeRecipes: madeRecipes,
+      allCachedRecipes: allCachedRecipes,
+      loadingStates: loadingStates,
+      allDataNotifier: allDataNotifier,
+      isDisposed: () => _isDisposed,
+    );
+    _listenerManager = _RecipesListenerManager(
+      pantryCubit: pantryCubit,
+      isDisposed: () => _isDisposed,
+      refreshFavorites: _cacheManager.refreshFavorites,
+      refreshMadeRecipes: _cacheManager.loadMadeRecipes,
+      refreshRecommendations: () => recipesViewModel.load(userId),
+    );
 
-    // Initialize allDataNotifier with current values immediately
-    _updateAllCachedRecipes();
-
-    _setupListeners();
+    _cacheManager.updateCombinedData();
+    _listenerManager.initialize();
 
     // User bazlı ilk yükleme kontrolü
     final bool hasLoadedForUser = _initialLoadFlags[userId] ?? false;
 
-    // Başlangıçta tüm meal'ler için loading state'lerini true yap
-    // Bu sayede "Henüz tarif yok" mesajı yerine loading indicator gösterilir
-    final List<String> orderedMeals = MealTimeOrderHelper.getOrderedMeals();
-    final Map<String, bool> initialLoadingStates = <String, bool>{
-      'breakfast': false,
-      'snack': false,
-      'lunch': false,
-      'dinner': false,
-      'favorites': false,
-      'made': false,
-    };
-
-    // İlk yükleme için tüm meal'leri loading yap
-    if (!hasLoadedForUser) {
-      for (final String meal in orderedMeals) {
-        initialLoadingStates[meal] = true;
-        _isLoadingMeal[meal] = true;
-      }
-    }
-
-    loadingStates.value = initialLoadingStates;
-    _updateAllCachedRecipes();
+    loadingStates.value = _cacheManager.buildInitialLoadingState(
+      hasLoadedBefore: hasLoadedForUser,
+    );
+    _cacheManager.updateCombinedData();
 
     if (!hasLoadedForUser) {
       // İlk kez bu user için yükleme yapılıyor
       _initialLoadFlags[userId] = true;
-      _loadAllData();
+      _cacheManager.loadAllData();
     } else {
-      // Daha önce yüklenmiş, cache'den hızlı yükleme
-      _loadFromCache();
+      _cacheManager.loadFromCache();
     }
   }
 
-  /// Load data from cache only (no API calls)
-  Future<void> _loadFromCache() async {
-    if (_isDisposed) {
-      return;
-    }
-
-    try {
-      // Load favorites from cache
-      favorites.value = await dataService.loadFavorites();
-
-      // Load meal recipes from cache (loadMeal will check cache first)
-      final List<String> orderedMeals = MealTimeOrderHelper.getOrderedMeals();
-      for (final String meal in orderedMeals) {
-        if (_isDisposed) {
-          return;
-        }
-
-        // Set loading state for this meal
-        _isLoadingMeal[meal] = true;
-        if (!_isDisposed) {
-          loadingStates.value = <String, bool>{
-            ...loadingStates.value,
-            meal: true,
-          };
-          _updateAllCachedRecipes();
-        }
-
-        try {
-          // loadMeal cache kontrolü yapıyor, cache varsa API çağrısı yapmıyor
-          final List<Recipe> mealRecipes = await dataService.loadMealRecipes(
-            userId,
-            meal,
-          );
-
-          if (_isDisposed) {
-            return;
-          }
-
-          switch (meal) {
-            case 'breakfast':
-              breakfastRecipes.value = mealRecipes;
-              break;
-            case 'snack':
-              snackRecipes.value = mealRecipes;
-              break;
-            case 'lunch':
-              lunchRecipes.value = mealRecipes;
-              break;
-            case 'dinner':
-              dinnerRecipes.value = mealRecipes;
-              break;
-          }
-        } catch (e) {
-          debugPrint(
-            '[RecipesPageController] Cache yükleme hatası ($meal): $e',
-          );
-        } finally {
-          // Clear loading state
-          _isLoadingMeal[meal] = false;
-          if (!_isDisposed) {
-            loadingStates.value = <String, bool>{
-              ...loadingStates.value,
-              meal: false,
-            };
-            _updateAllCachedRecipes();
-          }
-        }
-      }
-
-      if (_isDisposed) {
-        return;
-      }
-
-      // Load made recipes
-      madeRecipes.value = await dataService.loadMadeRecipes();
-
-      if (_isDisposed) {
-        return;
-      }
-
-      // Combine all recipes for search
-      _updateAllCachedRecipes();
-    } on Exception catch (e) {
-      debugPrint('[RecipesPageController] Error loading from cache: $e');
-    }
-  }
-
-  void _setupListeners() {
-    if (_isDisposed) {
-      return;
-    }
-
-    // Favorites listener
-    _favoritesListener = () {
-      if (!_isDisposed) {
-        _loadFavorites();
-      }
-    };
-    _favoritesFuture.then((Box<dynamic> box) {
-      if (!_isDisposed && _favoritesListener != null) {
-        box.listenable().addListener(_favoritesListener!);
-      }
-    });
-
-    // Made recipes listener
-    if (!_madeRecipesListenerAdded && !_isDisposed) {
-      _madeRecipesListener = () {
-        if (_isDisposed) {
-          return;
-        }
-
-        debugPrint(
-          '[RecipesPageController] profile_box değişti, yaptıklarım kontrol ediliyor...',
-        );
-
-        _userRecipesFuture.then((Box<dynamic> box) {
-          if (_isDisposed) {
-            return;
-          }
-
-          final List<dynamic>? currentRecipes =
-              box.get('user_recipes') as List<dynamic>?;
-          final String currentHash = currentRecipes?.toString() ?? '';
-
-          if (_lastUserRecipesHash == currentHash) {
-            debugPrint(
-              '[RecipesPageController] user_recipes değişmedi, atlanıyor',
-            );
-            return;
-          }
-
-          _lastUserRecipesHash = currentHash;
-
-          final DateTime now = DateTime.now();
-          _madeRecipesDebounceTimer?.cancel();
-
-          if (_lastMadeRecipesUpdate != null &&
-              now.difference(_lastMadeRecipesUpdate!).inSeconds < 2) {
-            _madeRecipesDebounceTimer = Timer(const Duration(seconds: 2), () {
-              if (!_isDisposed) {
-                loadMadeRecipes();
-              }
-            });
-            return;
-          }
-
-          _lastMadeRecipesUpdate = now;
-          if (!_isDisposed) {
-            loadMadeRecipes();
-          }
-        });
-      };
-
-      _userRecipesFuture.then((Box<dynamic> box) {
-        if (!_isDisposed &&
-            !_madeRecipesListenerAdded &&
-            _madeRecipesListener != null) {
-          box.listenable().addListener(_madeRecipesListener!);
-          _madeRecipesListenerAdded = true;
-
-          final List<dynamic>? initialRecipes =
-              box.get('user_recipes') as List<dynamic>?;
-          _lastUserRecipesHash = initialRecipes?.toString() ?? '';
-
-          debugPrint('[RecipesPageController] profile_box listener eklendi');
-        }
-      });
-    }
-
-    // Pantry listener
-    if (_isDisposed) {
-      return;
-    }
-
-    _pantrySubscription?.cancel();
-    _pantrySubscription = pantryCubit.stream.listen((PantryState pantryState) {
-      if (_isDisposed) {
-        return;
-      }
-
-      if (pantryState is PantryLoaded && pantryState.items.isNotEmpty) {
-        final List<String> currentItems = pantryState.items
-            .map((PantryItem item) => '${item.id}_${item.name}')
-            .toList();
-
-        if (_lastPantryItems.isEmpty) {
-          _lastPantryItems = currentItems;
-          return;
-        }
-
-        final bool itemsChanged =
-            _lastPantryItems.length != currentItems.length ||
-            !_lastPantryItems.every(currentItems.contains);
-
-        if (!itemsChanged) {
-          return;
-        }
-
-        _lastPantryItems = currentItems;
-        final DateTime now = DateTime.now();
-        _pantryDebounceTimer?.cancel();
-
-        if (_lastPantryUpdate != null &&
-            now.difference(_lastPantryUpdate!).inSeconds < 3) {
-          _pantryDebounceTimer = Timer(const Duration(seconds: 3), () {
-            if (!_isDisposed) {
-              _handlePantryUpdate();
-            }
-          });
-          return;
-        }
-
-        _lastPantryUpdate = now;
-        if (!_isDisposed) {
-          _handlePantryUpdate();
-        }
-      }
-    });
-  }
-
-  Future<void> _loadAllData() async {
-    if (_isDisposed) {
-      return;
-    }
-
-    try {
-      // Load favorites
-      if (!_isDisposed) {
-        favorites.value = await dataService.loadFavorites();
-      }
-
-      if (_isDisposed) {
-        return;
-      }
-
-      // Load meal recipes
-      final List<String> orderedMeals = MealTimeOrderHelper.getOrderedMeals();
-      final List<Future<void>> mealLoadFutures = orderedMeals.map((
-        String meal,
-      ) async {
-        if (_isDisposed) {
-          return;
-        }
-
-        // Set loading state (eğer zaten true değilse)
-        if (_isLoadingMeal[meal] != true) {
-          _isLoadingMeal[meal] = true;
-          if (!_isDisposed) {
-            loadingStates.value = <String, bool>{
-              ...loadingStates.value,
-              meal: true,
-            };
-            _updateAllCachedRecipes();
-          }
-        }
-
-        try {
-          final List<Recipe> mealRecipes = await dataService.loadMealRecipes(
-            userId,
-            meal,
-          );
-
-          if (_isDisposed) {
-            return;
-          }
-
-          switch (meal) {
-            case 'breakfast':
-              breakfastRecipes.value = mealRecipes;
-              break;
-            case 'snack':
-              snackRecipes.value = mealRecipes;
-              break;
-            case 'lunch':
-              lunchRecipes.value = mealRecipes;
-              break;
-            case 'dinner':
-              dinnerRecipes.value = mealRecipes;
-              break;
-          }
-        } catch (e) {
-          debugPrint('[RecipesPageController] Meal yükleme hatası ($meal): $e');
-        } finally {
-          // Clear loading state - HER ZAMAN temizle
-          _isLoadingMeal[meal] = false;
-          if (!_isDisposed) {
-            loadingStates.value = <String, bool>{
-              ...loadingStates.value,
-              meal: false,
-            };
-            _updateAllCachedRecipes();
-          }
-        }
-      }).toList();
-
-      await Future.wait(mealLoadFutures);
-
-      if (_isDisposed) {
-        return;
-      }
-
-      // Load made recipes
-      madeRecipes.value = await dataService.loadMadeRecipes();
-
-      if (_isDisposed) {
-        return;
-      }
-
-      // Combine all recipes for search
-      _updateAllCachedRecipes();
-    } on Exception catch (e) {
-      debugPrint('[RecipesPageController] Error loading data: $e');
-    }
-  }
-
-  void _updateAllCachedRecipes() {
-    if (_isDisposed) {
-      return;
-    }
-
-    final List<Recipe> combined = <Recipe>[
-      ...favorites.value,
-      ...breakfastRecipes.value,
-      ...snackRecipes.value,
-      ...lunchRecipes.value,
-      ...dinnerRecipes.value,
-      ...madeRecipes.value,
-    ];
-
-    // Remove duplicates by title
-    final Set<String> seenTitles = <String>{};
-    final List<Recipe> uniqueRecipes = combined.where((Recipe recipe) {
-      if (seenTitles.contains(recipe.title)) {
-        return false;
-      }
-      seenTitles.add(recipe.title);
-      return true;
-    }).toList();
-
-    if (_isDisposed) {
-      return;
-    }
-
-    allCachedRecipes.value = uniqueRecipes;
-
-    // Update combined data notifier
-    allDataNotifier.value = <String, dynamic>{
-      'favorites': favorites.value,
-      'breakfast': breakfastRecipes.value,
-      'snack': snackRecipes.value,
-      'lunch': lunchRecipes.value,
-      'dinner': dinnerRecipes.value,
-      'made': madeRecipes.value,
-      'loadingStates': loadingStates.value,
-    };
-  }
-
-  Future<void> _loadFavorites() async {
-    if (_isDisposed) {
-      return;
-    }
-
-    try {
-      final List<Recipe> loadedFavorites = await dataService.loadFavorites();
-
-      if (_isDisposed) {
-        return;
-      }
-
-      favorites.value = loadedFavorites;
-      _updateAllCachedRecipes();
-    } on Exception catch (e) {
-      debugPrint('[RecipesPageController] Error loading favorites: $e');
-    }
-  }
-
-  Future<void> loadMadeRecipes() async {
-    if (_isDisposed) {
-      return;
-    }
-
-    debugPrint('[RecipesPageController] _loadMadeRecipes çağrıldı');
-    try {
-      final List<Recipe> loadedMadeRecipes = await dataService
-          .loadMadeRecipes();
-
-      if (_isDisposed) {
-        return;
-      }
-
-      madeRecipes.value = loadedMadeRecipes;
-      _updateAllCachedRecipes();
-      debugPrint(
-        '[RecipesPageController] ${madeRecipes.value.length} yaptıklarım tarifi yüklendi',
-      );
-    } on Exception catch (e) {
-      debugPrint('[RecipesPageController] Error loading made recipes: $e');
-    }
-  }
-
-  void _handlePantryUpdate() {
-    if (_isDisposed || _isLoadingRecipes) {
-      return;
-    }
-
-    debugPrint(
-      '[RecipesPageController] Pantry değişti, öneriler güncelleniyor...',
-    );
-    _isLoadingRecipes = true;
-    recipesCubit
-        .load(userId)
-        .then((_) {
-          if (!_isDisposed) {
-            _isLoadingRecipes = false;
-          }
-        })
-        .catchError((Object error) {
-          if (!_isDisposed) {
-            _isLoadingRecipes = false;
-          }
-          debugPrint(
-            '[RecipesPageController] Pantry güncelleme hatası: $error',
-          );
-        });
-  }
+  Future<void> loadMadeRecipes() => _cacheManager.loadMadeRecipes();
 
   /// Filter recipes by search query
   List<Recipe> filterRecipes(List<Recipe> recipes, String query) {
@@ -597,8 +152,288 @@ class RecipesPageController {
   }
 
   void dispose() {
+    if (_isDisposed) {
+      return;
+    }
     _isDisposed = true;
+    _listenerManager.dispose();
+    favorites.dispose();
+    breakfastRecipes.dispose();
+    snackRecipes.dispose();
+    lunchRecipes.dispose();
+    dinnerRecipes.dispose();
+    madeRecipes.dispose();
+    allCachedRecipes.dispose();
+    loadingStates.dispose();
+    allDataNotifier.dispose();
+  }
+}
 
+class _RecipesCacheManager {
+  _RecipesCacheManager({
+    required this.userId,
+    required this.dataService,
+    required this.favorites,
+    required this.breakfastRecipes,
+    required this.snackRecipes,
+    required this.lunchRecipes,
+    required this.dinnerRecipes,
+    required this.madeRecipes,
+    required this.allCachedRecipes,
+    required this.loadingStates,
+    required this.allDataNotifier,
+    required this.isDisposed,
+  });
+
+  final String userId;
+  final RecipesPageDataService dataService;
+  final ValueNotifier<List<Recipe>> favorites;
+  final ValueNotifier<List<Recipe>> breakfastRecipes;
+  final ValueNotifier<List<Recipe>> snackRecipes;
+  final ValueNotifier<List<Recipe>> lunchRecipes;
+  final ValueNotifier<List<Recipe>> dinnerRecipes;
+  final ValueNotifier<List<Recipe>> madeRecipes;
+  final ValueNotifier<List<Recipe>> allCachedRecipes;
+  final ValueNotifier<Map<String, bool>> loadingStates;
+  final ValueNotifier<Map<String, dynamic>> allDataNotifier;
+  final bool Function() isDisposed;
+
+  final Map<String, bool> _isLoadingMeal = <String, bool>{};
+
+  Map<String, bool> buildInitialLoadingState({required bool hasLoadedBefore}) {
+    final Map<String, bool> states = <String, bool>{
+      'breakfast': false,
+      'snack': false,
+      'lunch': false,
+      'dinner': false,
+      'favorites': false,
+      'made': false,
+    };
+
+    if (!hasLoadedBefore) {
+      for (final String meal in MealTimeOrderHelper.getOrderedMeals()) {
+        states[meal] = true;
+        _isLoadingMeal[meal] = true;
+      }
+    }
+
+    return states;
+  }
+
+  Future<void> loadFromCache() async {
+    if (isDisposed()) {
+      return;
+    }
+
+    try {
+      favorites.value = await dataService.loadFavorites();
+      updateCombinedData();
+
+      for (final String meal in MealTimeOrderHelper.getOrderedMeals()) {
+        if (isDisposed()) {
+          return;
+        }
+        await _loadMealRecipes(meal);
+      }
+
+      if (isDisposed()) {
+        return;
+      }
+
+      madeRecipes.value = await dataService.loadMadeRecipes();
+      updateCombinedData();
+    } on Exception catch (error) {
+      debugPrint('[RecipesCacheManager] Cache load error: $error');
+    }
+  }
+
+  Future<void> loadAllData() async {
+    if (isDisposed()) {
+      return;
+    }
+
+    try {
+      favorites.value = await dataService.loadFavorites();
+      updateCombinedData();
+
+      final List<Future<void>> futures = MealTimeOrderHelper.getOrderedMeals()
+          .map(_loadMealRecipes)
+          .toList();
+      await Future.wait(futures);
+
+      if (isDisposed()) {
+        return;
+      }
+
+      madeRecipes.value = await dataService.loadMadeRecipes();
+      updateCombinedData();
+    } on Exception catch (error) {
+      debugPrint('[RecipesCacheManager] Error loading meals: $error');
+    }
+  }
+
+  Future<void> refreshFavorites() async {
+    if (isDisposed()) {
+      return;
+    }
+    try {
+      favorites.value = await dataService.loadFavorites();
+      updateCombinedData();
+    } on Exception catch (error) {
+      debugPrint('[RecipesCacheManager] Favorites load error: $error');
+    }
+  }
+
+  Future<void> loadMadeRecipes() async {
+    if (isDisposed()) {
+      return;
+    }
+    try {
+      final List<Recipe> loaded = await dataService.loadMadeRecipes();
+      if (isDisposed()) {
+        return;
+      }
+      madeRecipes.value = loaded;
+      updateCombinedData();
+    } on Exception catch (error) {
+      debugPrint('[RecipesCacheManager] Made recipes load error: $error');
+    }
+  }
+
+  void updateCombinedData() {
+    if (isDisposed()) {
+      return;
+    }
+
+    final List<Recipe> combined = <Recipe>[
+      ...favorites.value,
+      ...breakfastRecipes.value,
+      ...snackRecipes.value,
+      ...lunchRecipes.value,
+      ...dinnerRecipes.value,
+      ...madeRecipes.value,
+    ];
+
+    final Set<String> seenTitles = <String>{};
+    final List<Recipe> uniqueRecipes = combined.where((Recipe recipe) {
+      if (seenTitles.contains(recipe.title)) {
+        return false;
+      }
+      seenTitles.add(recipe.title);
+      return true;
+    }).toList();
+
+    if (isDisposed()) {
+      return;
+    }
+
+    allCachedRecipes.value = uniqueRecipes;
+    allDataNotifier.value = <String, dynamic>{
+      'favorites': favorites.value,
+      'breakfast': breakfastRecipes.value,
+      'snack': snackRecipes.value,
+      'lunch': lunchRecipes.value,
+      'dinner': dinnerRecipes.value,
+      'made': madeRecipes.value,
+      'loadingStates': loadingStates.value,
+    };
+  }
+
+  Future<void> _loadMealRecipes(String meal) async {
+    _setMealLoading(meal, true);
+    try {
+      final List<Recipe> recipes = await dataService.loadMealRecipes(
+        userId,
+        meal,
+      );
+      if (isDisposed()) {
+        return;
+      }
+      _assignMeal(meal, recipes);
+    } on Exception catch (error) {
+      debugPrint('[RecipesCacheManager] Meal load error ($meal): $error');
+    } finally {
+      _setMealLoading(meal, false);
+    }
+  }
+
+  void _assignMeal(String meal, List<Recipe> recipes) {
+    switch (meal) {
+      case 'breakfast':
+        breakfastRecipes.value = recipes;
+        break;
+      case 'snack':
+        snackRecipes.value = recipes;
+        break;
+      case 'lunch':
+        lunchRecipes.value = recipes;
+        break;
+      case 'dinner':
+        dinnerRecipes.value = recipes;
+        break;
+    }
+    updateCombinedData();
+  }
+
+  void _setMealLoading(String meal, bool isLoading) {
+    if (_isLoadingMeal[meal] == isLoading || isDisposed()) {
+      return;
+    }
+
+    _isLoadingMeal[meal] = isLoading;
+    loadingStates.value = <String, bool>{
+      ...loadingStates.value,
+      meal: isLoading,
+    };
+    updateCombinedData();
+  }
+}
+
+class _RecipesListenerManager {
+  _RecipesListenerManager({
+    required this.pantryCubit,
+    required this.isDisposed,
+    required this.refreshFavorites,
+    required this.refreshMadeRecipes,
+    required this.refreshRecommendations,
+  }) : _favoritesFuture = Hive.isBoxOpen('favorite_recipes')
+           ? Future<Box<dynamic>>.value(Hive.box<dynamic>('favorite_recipes'))
+           : Hive.openBox<dynamic>('favorite_recipes'),
+       _userRecipesFuture = Hive.isBoxOpen('profile_box')
+           ? Future<Box<dynamic>>.value(Hive.box<dynamic>('profile_box'))
+           : Hive.openBox<dynamic>('profile_box');
+
+  final PantryCubit pantryCubit;
+  final bool Function() isDisposed;
+  final Future<void> Function() refreshFavorites;
+  final Future<void> Function() refreshMadeRecipes;
+  final Future<void> Function() refreshRecommendations;
+
+  final Future<Box<dynamic>> _favoritesFuture;
+  final Future<Box<dynamic>> _userRecipesFuture;
+
+  StreamSubscription<PantryState>? _pantrySubscription;
+  VoidCallback? _favoritesListener;
+  VoidCallback? _madeRecipesListener;
+  Timer? _pantryDebounceTimer;
+  Timer? _madeRecipesDebounceTimer;
+  DateTime? _lastPantryUpdate;
+  DateTime? _lastMadeRecipesUpdate;
+  bool _madeRecipesListenerAdded = false;
+  String? _lastUserRecipesHash;
+  List<String> _lastPantryItems = <String>[];
+  bool _isPantryRefreshInProgress = false;
+
+  void initialize() {
+    if (isDisposed()) {
+      return;
+    }
+    _setupFavoritesListener();
+    _setupMadeRecipesListener();
+    _setupPantryListener();
+  }
+
+  void dispose() {
     _pantryDebounceTimer?.cancel();
     _madeRecipesDebounceTimer?.cancel();
     _pantrySubscription?.cancel();
@@ -614,15 +449,134 @@ class RecipesPageController {
         box.listenable().removeListener(_madeRecipesListener!);
       }
     });
+  }
 
-    favorites.dispose();
-    breakfastRecipes.dispose();
-    snackRecipes.dispose();
-    lunchRecipes.dispose();
-    dinnerRecipes.dispose();
-    madeRecipes.dispose();
-    allCachedRecipes.dispose();
-    loadingStates.dispose();
-    allDataNotifier.dispose();
+  void _setupFavoritesListener() {
+    _favoritesListener = () {
+      if (isDisposed()) {
+        return;
+      }
+      unawaited(refreshFavorites());
+    };
+
+    _favoritesFuture.then((Box<dynamic> box) {
+      if (!isDisposed() && _favoritesListener != null) {
+        box.listenable().addListener(_favoritesListener!);
+      }
+    });
+  }
+
+  void _setupMadeRecipesListener() {
+    if (isDisposed() || _madeRecipesListenerAdded) {
+      return;
+    }
+
+    _madeRecipesListener = () {
+      if (isDisposed()) {
+        return;
+      }
+      _userRecipesFuture.then((Box<dynamic> box) {
+        if (isDisposed()) {
+          return;
+        }
+        final List<dynamic>? currentRecipes =
+            box.get('user_recipes') as List<dynamic>?;
+        final String currentHash = currentRecipes?.toString() ?? '';
+
+        if (_lastUserRecipesHash == currentHash) {
+          return;
+        }
+
+        _lastUserRecipesHash = currentHash;
+        _scheduleMadeRecipesRefresh();
+      });
+    };
+
+    _userRecipesFuture.then((Box<dynamic> box) {
+      if (isDisposed() || _madeRecipesListener == null) {
+        return;
+      }
+      box.listenable().addListener(_madeRecipesListener!);
+      _madeRecipesListenerAdded = true;
+
+      final List<dynamic>? initialRecipes =
+          box.get('user_recipes') as List<dynamic>?;
+      _lastUserRecipesHash = initialRecipes?.toString() ?? '';
+    });
+  }
+
+  void _setupPantryListener() {
+    _pantrySubscription = pantryCubit.stream.listen((PantryState state) {
+      if (isDisposed()) {
+        return;
+      }
+      state.maybeWhen(loaded: _handlePantryItems, orElse: () {});
+    });
+  }
+
+  void _handlePantryItems(List<PantryItem> items) {
+    if (items.isEmpty) {
+      return;
+    }
+    final List<String> currentItems = items
+        .map((PantryItem item) => '${item.id}_${item.name}')
+        .toList();
+
+    if (_lastPantryItems.isEmpty) {
+      _lastPantryItems = currentItems;
+      return;
+    }
+
+    final bool itemsChanged =
+        _lastPantryItems.length != currentItems.length ||
+        !_lastPantryItems.every(currentItems.contains);
+    if (!itemsChanged) {
+      return;
+    }
+
+    _lastPantryItems = currentItems;
+    final DateTime now = DateTime.now();
+    _pantryDebounceTimer?.cancel();
+
+    if (_lastPantryUpdate != null &&
+        now.difference(_lastPantryUpdate!).inSeconds < 3) {
+      _pantryDebounceTimer = Timer(const Duration(seconds: 3), () {
+        if (!isDisposed()) {
+          _refreshRecommendations();
+        }
+      });
+      return;
+    }
+
+    _lastPantryUpdate = now;
+    _refreshRecommendations();
+  }
+
+  void _scheduleMadeRecipesRefresh() {
+    final DateTime now = DateTime.now();
+    _madeRecipesDebounceTimer?.cancel();
+
+    if (_lastMadeRecipesUpdate != null &&
+        now.difference(_lastMadeRecipesUpdate!).inSeconds < 2) {
+      _madeRecipesDebounceTimer = Timer(const Duration(seconds: 2), () {
+        if (!isDisposed()) {
+          unawaited(refreshMadeRecipes());
+        }
+      });
+      return;
+    }
+
+    _lastMadeRecipesUpdate = now;
+    unawaited(refreshMadeRecipes());
+  }
+
+  void _refreshRecommendations() {
+    if (_isPantryRefreshInProgress || isDisposed()) {
+      return;
+    }
+    _isPantryRefreshInProgress = true;
+    refreshRecommendations().whenComplete(() {
+      _isPantryRefreshInProgress = false;
+    });
   }
 }

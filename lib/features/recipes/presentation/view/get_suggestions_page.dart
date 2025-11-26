@@ -8,9 +8,10 @@ import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/core/utils/pantry_categories.dart';
 import 'package:smartdolap/core/widgets/background_wrapper.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
-import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/recipes/presentation/controllers/get_suggestions_page_controller.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/add_ingredient_dialog_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/get_suggestions_action_buttons_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/ingredients_selection_section_widget.dart';
@@ -45,6 +46,8 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
   late GetSuggestionsPageController _controller;
   bool _isLoading = false;
   final TextEditingController _noteController = TextEditingController();
+  RecipesViewModel? _recipesViewModel;
+  PantryViewModel? _pantryViewModel;
 
   @override
   void initState() {
@@ -56,8 +59,18 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _recipesViewModel ??= sl<RecipesViewModel>(
+      param1: context.read<RecipesCubit>(),
+    );
+    _pantryViewModel ??= context.read<PantryViewModel>();
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
+    _recipesViewModel?.dispose();
     super.dispose();
   }
 
@@ -80,7 +93,11 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
       );
 
       try {
-        await context.read<PantryCubit>().add(widget.userId, newItem);
+        final PantryViewModel? pantryViewModel = _pantryViewModel;
+        if (pantryViewModel == null) {
+          throw StateError('PantryViewModel not initialized');
+        }
+        await pantryViewModel.add(widget.userId, newItem);
         setState(() {
           _controller.addIngredient(newItem);
         });
@@ -111,8 +128,11 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
     setState(() => _isLoading = true);
 
     try {
-      final RecipesCubit recipesCubit = context.read<RecipesCubit>();
-      await recipesCubit
+      final RecipesViewModel? viewModel = _recipesViewModel;
+      if (viewModel == null) {
+        throw StateError('RecipesViewModel not initialized');
+      }
+      await viewModel
           .loadWithSelection(
             widget.userId,
             _controller.selectedIngredients.toList(),
@@ -154,72 +174,72 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
   }
 
   @override
-  Widget build(BuildContext context) => BlocProvider.value(
-        value: sl<SyncWorkerCubit>(),
-        child: BackgroundWrapper(
-          child: Scaffold(
-      appBar: AppBar(title: Text(tr('get_suggestions'))),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(AppSizes.padding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // Meal selector
-                  MealSelectorWidget(
-                    selectedMeal: _controller.selectedMeal,
-                    onMealChanged: (String meal) {
-                      setState(() {
-                        _controller.updateMeal(meal);
-                      });
-                    },
-                  ),
-                  SizedBox(height: AppSizes.verticalSpacingL),
-                  // Ingredients selection section
-                  IngredientsSelectionSectionWidget(
-                    items: _controller.currentItems,
-                    selectedIngredients: _controller.selectedIngredients,
-                    expandedCategories: _controller.expandedCategories,
-                    onToggleCategory: (String category) {
-                      setState(() {
-                        _controller.toggleCategory(category);
-                      });
-                    },
-                    onToggleIngredient: (String ingredient) {
-                      setState(() {
-                        _controller.toggleIngredient(ingredient);
-                      });
-                    },
-                    onAddIngredient: _showAddIngredientDialog,
-                  ),
-                  SizedBox(height: AppSizes.verticalSpacingL),
-                  // Note field
-                  NoteFieldWidget(controller: _noteController),
-                  SizedBox(height: AppSizes.verticalSpacingM),
-                  const _SyncStatusBanner(),
-                ],
+  Widget build(BuildContext context) => BlocProvider<SyncWorkerCubit>.value(
+    value: sl<SyncWorkerCubit>(),
+    child: BackgroundWrapper(
+      child: Scaffold(
+        appBar: AppBar(title: Text(tr('get_suggestions'))),
+        body: Column(
+          children: <Widget>[
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(AppSizes.padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    // Meal selector
+                    MealSelectorWidget(
+                      selectedMeal: _controller.selectedMeal,
+                      onMealChanged: (String meal) {
+                        setState(() {
+                          _controller.updateMeal(meal);
+                        });
+                      },
+                    ),
+                    SizedBox(height: AppSizes.verticalSpacingL),
+                    // Ingredients selection section
+                    IngredientsSelectionSectionWidget(
+                      items: _controller.currentItems,
+                      selectedIngredients: _controller.selectedIngredients,
+                      expandedCategories: _controller.expandedCategories,
+                      onToggleCategory: (String category) {
+                        setState(() {
+                          _controller.toggleCategory(category);
+                        });
+                      },
+                      onToggleIngredient: (String ingredient) {
+                        setState(() {
+                          _controller.toggleIngredient(ingredient);
+                        });
+                      },
+                      onAddIngredient: _showAddIngredientDialog,
+                    ),
+                    SizedBox(height: AppSizes.verticalSpacingL),
+                    // Note field
+                    NoteFieldWidget(controller: _noteController),
+                    SizedBox(height: AppSizes.verticalSpacingM),
+                    const _SyncStatusBanner(),
+                  ],
+                ),
               ),
             ),
-          ),
-          // Action buttons
-          GetSuggestionsActionButtonsWidget(
-            selectedCount: _controller.selectedIngredients.length,
-            totalCount: _controller.currentItems.length,
-            isLoading: _isLoading,
-            onToggleSelectAll: () {
-              setState(() {
-                _controller.toggleSelectAll();
-              });
-            },
-            onConfirm: _confirmSelection,
-          ),
-        ],
-      ),
-          ),
+            // Action buttons
+            GetSuggestionsActionButtonsWidget(
+              selectedCount: _controller.selectedIngredients.length,
+              totalCount: _controller.currentItems.length,
+              isLoading: _isLoading,
+              onToggleSelectAll: () {
+                setState(() {
+                  _controller.toggleSelectAll();
+                });
+              },
+              onConfirm: _confirmSelection,
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _SyncStatusBanner extends StatelessWidget {
@@ -237,17 +257,15 @@ class _SyncStatusBanner extends StatelessWidget {
             );
           }
 
-          final bool shouldShow = state.pending > 0 ||
-              state.status == SyncWorkerStatus.running;
+          final bool shouldShow =
+              state.pending > 0 || state.status == SyncWorkerStatus.running;
           if (!shouldShow) {
             return const SizedBox.shrink();
           }
 
           final String message = tr(
             'sync_pending_banner',
-            namedArgs: <String, String>{
-              'count': state.pending.toString(),
-            },
+            namedArgs: <String, String>{'count': state.pending.toString()},
           );
 
           return _SyncBannerContainer(
@@ -272,26 +290,26 @@ class _SyncBannerContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(AppSizes.spacingM),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(AppSizes.radius),
-        ),
-        child: Row(
-          children: <Widget>[
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-            SizedBox(width: AppSizes.spacingS),
-            Expanded(
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: AppSizes.textS,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+    width: double.infinity,
+    padding: EdgeInsets.all(AppSizes.spacingM),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(AppSizes.radius),
+    ),
+    child: Row(
+      children: <Widget>[
+        Icon(icon, color: Theme.of(context).colorScheme.primary),
+        SizedBox(width: AppSizes.spacingS),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: AppSizes.textS,
+              fontWeight: FontWeight.w600,
             ),
-          ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }

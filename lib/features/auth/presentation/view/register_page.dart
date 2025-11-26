@@ -11,6 +11,7 @@ import 'package:smartdolap/features/auth/data/models/auth_failure.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -191,7 +192,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                     ),
                                     onFieldSubmitted: (_) {
                                       if (_formKey.currentState!.validate()) {
-                                        context.read<AuthCubit>().register(
+                                        context.read<AuthViewModel>().register(
                                               email:
                                                   _emailController.text.trim(),
                                               password:
@@ -218,7 +219,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ? null
                                 : () {
                                     if (_formKey.currentState!.validate()) {
-                                      context.read<AuthCubit>().register(
+                                      context.read<AuthViewModel>().register(
                                             email: _emailController.text.trim(),
                                             password: _passwordController.text,
                                             displayName: _nameController.text

@@ -65,18 +65,18 @@ class _RecipeLoadingOverlayWidgetState
     return messages;
   }
 
-  String _getCombinationMessage(String ingredient1, String ingredient2) {
-    // Use the new message generator with decision tree logic
-    return IngredientMessageGenerator.generateCombinationMessage(
-      ingredient1,
-      ingredient2,
-    );
-  }
+  String _getCombinationMessage(String ingredient1, String ingredient2) =>
+      IngredientMessageGenerator.generateCombinationMessage(
+        ingredient1,
+        ingredient2,
+      );
 
   String _getSingleIngredientMessage(String ingredient) {
     final String lowerIngredient = ingredient.toLowerCase();
-    final String baseMessage = tr('recipes.loading.analyzing_ingredient',
-        namedArgs: <String, String>{'ingredient': ingredient});
+    final String baseMessage = tr(
+      'recipes.loading.analyzing_ingredient',
+      namedArgs: <String, String>{'ingredient': ingredient},
+    );
 
     // Fun messages based on ingredient type
     if (lowerIngredient.contains('patlıcan') ||
@@ -124,11 +124,11 @@ class _RecipeLoadingOverlayWidgetState
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
-    
+
     // Fixed popup dimensions: 90% width (5% margin on each side), 50% height
     final double popupWidth = screenWidth * 0.9;
     final double popupHeight = screenHeight * 0.5;
-    
+
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -183,8 +183,10 @@ class _RecipeLoadingOverlayWidgetState
                   Container(
                     padding: EdgeInsets.only(top: AppSizes.verticalSpacingM),
                     child: Text(
-                      tr('recipes.loading.note_hint',
-                          namedArgs: <String, String>{'note': widget.note!}),
+                      tr(
+                        'recipes.loading.note_hint',
+                        namedArgs: <String, String>{'note': widget.note!},
+                      ),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: AppSizes.textM,
@@ -203,4 +205,3 @@ class _RecipeLoadingOverlayWidgetState
     );
   }
 }
-

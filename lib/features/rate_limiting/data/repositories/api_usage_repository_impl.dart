@@ -30,8 +30,12 @@ class ApiUsageRepositoryImpl implements IApiUsageRepository {
         return true;
       }
       return usage.canMakeRequest();
-    } catch (e) {
-      Logger.error('[ApiUsageRepository] Error checking can make request', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[ApiUsageRepository] Error checking can make request',
+        error,
+        stackTrace,
+      );
       // Allow request on error to avoid blocking users
       return true;
     }

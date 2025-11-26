@@ -17,16 +17,10 @@ class IngredientUsage {
         totalUsed: json['totalUsed'] as int? ?? 0,
         averageDailyUsage:
             (json['averageDailyUsage'] as num?)?.toDouble() ?? 0.0,
-        usageDates:
-            (json['usageDates'] as List<dynamic>?)
-                ?.map((e) => DateTime.tryParse(e as String) ?? DateTime.now())
-                .toList() ??
-            <DateTime>[],
-        usageByMeal:
-            (json['usageByMeal'] as Map<dynamic, dynamic>?)?.map(
-              (key, value) => MapEntry(key as String, value as int),
-            ) ??
-            <String, int>{},
+        usageDates: _parseUsageDates(json['usageDates'] as List<dynamic>?),
+        usageByMeal: _parseUsageByMeal(
+          json['usageByMeal'] as Map<dynamic, dynamic>?,
+        ),
         lastUsed: json['lastUsed'] != null
             ? DateTime.tryParse(json['lastUsed'] as String) ?? DateTime.now()
             : DateTime.now(),
@@ -75,4 +69,30 @@ class IngredientUsage {
     usageByMeal: usageByMeal ?? this.usageByMeal,
     lastUsed: lastUsed ?? this.lastUsed,
   );
+}
+
+List<DateTime> _parseUsageDates(List<dynamic>? raw) {
+  if (raw == null) {
+    return <DateTime>[];
+  }
+  return raw
+      .whereType<String>()
+      .map(
+        (String value) =>
+            DateTime.tryParse(value) ?? DateTime.now(),
+      )
+      .toList();
+}
+
+Map<String, int> _parseUsageByMeal(Map<dynamic, dynamic>? raw) {
+  if (raw == null) {
+    return <String, int>{};
+  }
+  final Map<String, int> result = <String, int>{};
+  raw.forEach((Object? key, Object? value) {
+    if (key is String && value is num) {
+      result[key] = value.toInt();
+    }
+  });
+  return result;
 }

@@ -59,10 +59,11 @@ class PantryNotificationScheduler implements IPantryNotificationScheduler {
             Logger.info(
               '[PantryNotificationScheduler] Scheduled notifications for ${items.length} items (debounced)',
             );
-          } catch (e) {
+          } on Object catch (error, stackTrace) {
             Logger.error(
               '[PantryNotificationScheduler] Error scheduling notifications',
-              e,
+              error,
+              stackTrace,
             );
           }
         }
@@ -78,10 +79,11 @@ class PantryNotificationScheduler implements IPantryNotificationScheduler {
         '[PantryNotificationScheduler] Scheduled notifications for ${items.length} items',
       );
       return true;
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Logger.error(
         '[PantryNotificationScheduler] Error scheduling notifications',
-        e,
+        error,
+        stackTrace,
       );
       return false;
     }

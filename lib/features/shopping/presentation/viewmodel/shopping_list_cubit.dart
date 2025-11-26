@@ -50,9 +50,9 @@ class ShoppingListCubit extends Cubit<ShoppingListState> {
     try {
       await addShoppingListItem(householdId: householdId, item: item);
       Logger.info('[ShoppingListCubit] Added item: ${item.name}');
-    } catch (e) {
-      Logger.error('[ShoppingListCubit] Error adding item', e);
-      emit(ShoppingListFailure(e.toString()));
+    } on Object catch (error, stackTrace) {
+      Logger.error('[ShoppingListCubit] Error adding item', error, stackTrace);
+      emit(ShoppingListFailure(error.toString()));
     }
   }
 
@@ -60,9 +60,13 @@ class ShoppingListCubit extends Cubit<ShoppingListState> {
     try {
       await updateShoppingListItem(householdId: householdId, item: item);
       Logger.info('[ShoppingListCubit] Updated item: ${item.name}');
-    } catch (e) {
-      Logger.error('[ShoppingListCubit] Error updating item', e);
-      emit(ShoppingListFailure(e.toString()));
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[ShoppingListCubit] Error updating item',
+        error,
+        stackTrace,
+      );
+      emit(ShoppingListFailure(error.toString()));
     }
   }
 
@@ -70,9 +74,13 @@ class ShoppingListCubit extends Cubit<ShoppingListState> {
     try {
       await deleteShoppingListItem(householdId: householdId, itemId: itemId);
       Logger.info('[ShoppingListCubit] Deleted item: $itemId');
-    } catch (e) {
-      Logger.error('[ShoppingListCubit] Error deleting item', e);
-      emit(ShoppingListFailure(e.toString()));
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[ShoppingListCubit] Error deleting item',
+        error,
+        stackTrace,
+      );
+      emit(ShoppingListFailure(error.toString()));
     }
   }
 
@@ -88,9 +96,13 @@ class ShoppingListCubit extends Cubit<ShoppingListState> {
         completedByUserId: userId,
       );
       Logger.info('[ShoppingListCubit] Completed item: $itemId');
-    } catch (e) {
-      Logger.error('[ShoppingListCubit] Error completing item', e);
-      emit(ShoppingListFailure(e.toString()));
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[ShoppingListCubit] Error completing item',
+        error,
+        stackTrace,
+      );
+      emit(ShoppingListFailure(error.toString()));
     }
   }
 

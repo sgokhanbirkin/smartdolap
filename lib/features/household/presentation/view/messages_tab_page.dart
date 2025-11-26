@@ -52,8 +52,7 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-      child: Column(
+  Widget build(BuildContext context) => Column(
         children: <Widget>[
           Expanded(
             child: widget.messages.isEmpty
@@ -78,8 +77,7 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
           ),
           _buildMessageInput(context),
         ],
-      ),
-    );
+      );
 
   Widget _buildMessageItem(
     BuildContext context,
@@ -217,7 +215,7 @@ class _MessagesTabPageState extends State<MessagesTabPage> {
             avatarId: widget.avatarId,
           );
       _messageController.clear();
-    } catch (e) {
+    } on Object {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(tr('error_sending_message'))),

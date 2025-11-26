@@ -51,10 +51,11 @@ class ShoppingListServiceImpl implements IShoppingListService {
       Logger.info(
         '[ShoppingListService] Added ${pantryItem.name} to pantry from shopping list',
       );
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Logger.error(
         '[ShoppingListService] Error adding to pantry from shopping list',
-        e,
+        error,
+        stackTrace,
       );
       rethrow;
     }
@@ -84,10 +85,11 @@ class ShoppingListServiceImpl implements IShoppingListService {
       );
 
       Logger.info('[ShoppingListService] Completed and added item to pantry');
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Logger.error(
         '[ShoppingListService] Error completing and adding to pantry',
-        e,
+        error,
+        stackTrace,
       );
       rethrow;
     }
@@ -110,7 +112,9 @@ class ShoppingListServiceImpl implements IShoppingListService {
           .toList();
 
       if (completedItems.isEmpty) {
-        Logger.info('[ShoppingListService] No completed items to add to pantry');
+        Logger.info(
+          '[ShoppingListService] No completed items to add to pantry',
+        );
         return 0;
       }
 
@@ -125,7 +129,8 @@ class ShoppingListServiceImpl implements IShoppingListService {
             name: item.name,
             quantity: item.quantity ?? 1.0,
             unit: item.unit ?? 'adet',
-            category: item.category, // Category already determined when adding to shopping list
+            category: item
+                .category, // Category already determined when adding to shopping list
             addedByUserId: userId,
             addedByAvatarId: avatarId,
             createdAt: DateTime.now(),
@@ -147,10 +152,11 @@ class ShoppingListServiceImpl implements IShoppingListService {
           Logger.info(
             '[ShoppingListService] Added ${pantryItem.name} to pantry and removed from shopping list',
           );
-        } catch (e) {
+        } on Object catch (error, stackTrace) {
           Logger.error(
             '[ShoppingListService] Error adding ${item.name} to pantry',
-            e,
+            error,
+            stackTrace,
           );
           // Continue with next item instead of failing completely
         }
@@ -160,10 +166,11 @@ class ShoppingListServiceImpl implements IShoppingListService {
         '[ShoppingListService] Completed and added $addedCount items to pantry',
       );
       return addedCount;
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Logger.error(
         '[ShoppingListService] Error completing all and adding to pantry',
-        e,
+        error,
+        stackTrace,
       );
       rethrow;
     }

@@ -28,7 +28,8 @@ class SharePage extends StatefulWidget {
   State<SharePage> createState() => _SharePageState();
 }
 
-class _SharePageState extends State<SharePage> with SingleTickerProviderStateMixin {
+class _SharePageState extends State<SharePage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -46,164 +47,170 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) => BackgroundWrapper(
     child: BlocBuilder<AuthCubit, AuthState>(
-      builder: (BuildContext context, AuthState authState) => authState.maybeWhen(
-          authenticated: (domain.User user) {
-            if (user.householdId == null) {
-              return Scaffold(
-                appBar: AppBar(
-                  title: Text(tr('share_title')),
-                ),
-                body: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppSizes.padding),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Icon(
-                          Icons.group_outlined,
-                          size: 64.sp,
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                        SizedBox(height: 16.h),
-                        Text(
-                          tr('household_setup_required'),
-                          style: TextStyle(
-                            fontSize: AppSizes.textL,
-                            fontWeight: FontWeight.bold,
+      builder: (BuildContext context, AuthState authState) =>
+          authState.maybeWhen(
+            authenticated: (domain.User user) {
+              if (user.householdId == null) {
+                return Scaffold(
+                  appBar: AppBar(title: Text(tr('share_title'))),
+                  body: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSizes.padding),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Icon(
+                            Icons.group_outlined,
+                            size: 64.sp,
+                            color: Theme.of(context).colorScheme.outline,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          tr('household_setup_description'),
-                          style: TextStyle(
-                            fontSize: AppSizes.textM,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          SizedBox(height: 16.h),
+                          Text(
+                            tr('household_setup_required'),
+                            style: TextStyle(
+                              fontSize: AppSizes.textL,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 24.h),
-                        ElevatedButton.icon(
+                          SizedBox(height: 8.h),
+                          Text(
+                            tr('household_setup_description'),
+                            style: TextStyle(
+                              fontSize: AppSizes.textM,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 24.h),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(
+                                context,
+                              ).pushNamed(AppRouter.householdSetup);
+                            },
+                            icon: const Icon(Icons.add_home),
+                            label: Text(tr('household_setup_title')),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return BlocProvider<HouseholdCubit>(
+                create: (_) => sl<HouseholdCubit>(),
+                child: Builder(
+                  builder: (BuildContext scaffoldContext) => Scaffold(
+                    appBar: AppBar(
+                      title: Text(tr('share_title')),
+                      actions: <Widget>[
+                        IconButton(
+                          icon: const Icon(Icons.shopping_cart_outlined),
+                          tooltip: tr('shopping_list.title'),
                           onPressed: () {
-                            Navigator.of(context).pushNamed(
-                              AppRouter.householdSetup,
-                            );
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRouter.shoppingList);
                           },
-                          icon: const Icon(Icons.add_home),
-                          label: Text(tr('household_setup_title')),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.restaurant_menu_outlined),
+                          tooltip: tr('food_preferences'),
+                          onPressed: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRouter.foodPreferencesOnboarding);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.person_add_outlined),
+                          tooltip: tr('invite_member'),
+                          onPressed: () => _showInviteDialog(
+                            scaffoldContext,
+                            user.householdId!,
+                          ),
                         ),
                       ],
+                      bottom: TabBar(
+                        controller: _tabController,
+                        tabs: <Widget>[
+                          Tab(
+                            icon: const Icon(
+                              Icons.message_outlined,
+                              color: Colors.white,
+                            ),
+                            text: tr('messages'),
+                          ),
+                          Tab(
+                            icon: const Icon(
+                              Icons.share_outlined,
+                              color: Colors.white,
+                            ),
+                            text: tr('shared_recipes'),
+                          ),
+                          Tab(
+                            icon: const Icon(
+                              Icons.analytics_outlined,
+                              color: Colors.white,
+                            ),
+                            text: tr('statistics'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    body: BlocProvider<ShareCubit>(
+                      create: (_) =>
+                          sl<ShareCubit>()..watchShare(user.householdId!),
+                      child: BlocBuilder<ShareCubit, ShareState>(
+                        builder: (BuildContext context, ShareState state) =>
+                            state.when(
+                              initial: () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              loading: () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              loaded:
+                                  (
+                                    List<HouseholdMessage> messages,
+                                    List<SharedRecipe> sharedRecipes,
+                                  ) => TabBarView(
+                                    controller: _tabController,
+                                    children: <Widget>[
+                                      MessagesTabPage(
+                                        messages: messages,
+                                        householdId: user.householdId!,
+                                        userId: user.id,
+                                        userName:
+                                            user.displayName ?? user.email,
+                                        avatarId: user.avatarId,
+                                      ),
+                                      SharedRecipesTabPage(
+                                        sharedRecipes: sharedRecipes,
+                                      ),
+                                      HouseholdAnalyticsPage(
+                                        householdId: user.householdId!,
+                                      ),
+                                    ],
+                                  ),
+                              error: (String message) =>
+                                  Center(child: Text(message)),
+                            ),
+                      ),
                     ),
                   ),
                 ),
               );
-            }
-
-            return BlocProvider<HouseholdCubit>(
-              create: (_) => sl<HouseholdCubit>(),
-              child: Builder(
-                builder: (BuildContext scaffoldContext) => Scaffold(
-                  appBar: AppBar(
-                    title: Text(tr('share_title')),
-                    actions: <Widget>[
-                      IconButton(
-                        icon: const Icon(Icons.shopping_cart_outlined),
-                        tooltip: tr('shopping_list.title'),
-                        onPressed: () {
-                          Navigator.of(context).pushNamed(
-                            AppRouter.shoppingList,
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.restaurant_menu_outlined),
-                        tooltip: tr('food_preferences'),
-                        onPressed: () {
-                          Navigator.of(context).pushNamed(
-                            AppRouter.foodPreferencesOnboarding,
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.person_add_outlined),
-                        tooltip: tr('invite_member'),
-                        onPressed: () => _showInviteDialog(scaffoldContext, user.householdId!),
-                      ),
-                    ],
-                    bottom: TabBar(
-                      controller: _tabController,
-                      tabs: <Widget>[
-                        Tab(
-                          icon: const Icon(
-                            Icons.message_outlined,
-                            color: Colors.white,
-                          ),
-                          text: tr('messages'),
-                        ),
-                        Tab(
-                          icon: const Icon(
-                            Icons.share_outlined,
-                            color: Colors.white,
-                          ),
-                          text: tr('shared_recipes'),
-                        ),
-                        Tab(
-                          icon: const Icon(
-                            Icons.analytics_outlined,
-                            color: Colors.white,
-                          ),
-                          text: tr('statistics'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  body: Container(
-                    child: BlocProvider<ShareCubit>(
-                      create: (_) => sl<ShareCubit>()..watchShare(user.householdId!),
-                      child: BlocBuilder<ShareCubit, ShareState>(
-                        builder: (BuildContext context, ShareState state) => state.when(
-                            initial: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            loaded: (List<HouseholdMessage> messages, List<SharedRecipe> sharedRecipes) => TabBarView(
-                              controller: _tabController,
-                              children: <Widget>[
-                                MessagesTabPage(
-                                  messages: messages,
-                                  householdId: user.householdId!,
-                                  userId: user.id,
-                                  userName: user.displayName ?? user.email,
-                                  avatarId: user.avatarId,
-                                ),
-                                SharedRecipesTabPage(
-                                  sharedRecipes: sharedRecipes,
-                                ),
-                                HouseholdAnalyticsPage(
-                                  householdId: user.householdId!,
-                                ),
-                              ],
-                            ),
-                            error: (String message) => Center(
-                              child: Text(message),
-                            ),
-                          ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-          orElse: () => Scaffold(
-            appBar: AppBar(
-              title: Text(tr('share_title')),
+            },
+            orElse: () => Scaffold(
+              appBar: AppBar(title: Text(tr('share_title'))),
+              body: const SizedBox.shrink(),
             ),
-            body: const SizedBox.shrink(),
           ),
-        ),
     ),
   );
 
@@ -218,14 +225,17 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
       householdId,
     );
 
-    if (!context.mounted || inviteCode == null) {
+    if (!context.mounted) {
+      return;
+    }
+    if (inviteCode == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(tr('error_generating_invite_code'))),
       );
       return;
     }
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: Text(tr('invite_member')),
@@ -258,10 +268,7 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
                 ),
               ),
               SizedBox(height: 16.h),
-              QrCodeGeneratorWidget(
-                inviteCode: inviteCode,
-                size: 200.w,
-              ),
+              QrCodeGeneratorWidget(inviteCode: inviteCode, size: 200.w),
               SizedBox(height: 16.h),
               Text(
                 tr('invite_code_instructions'),
@@ -284,4 +291,3 @@ class _SharePageState extends State<SharePage> with SingleTickerProviderStateMix
     );
   }
 }
-

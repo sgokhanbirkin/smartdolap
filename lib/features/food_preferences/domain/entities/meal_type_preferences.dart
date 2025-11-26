@@ -11,22 +11,10 @@ class MealTypePreferences {
   /// Create from JSON
   factory MealTypePreferences.fromJson(Map<String, dynamic> json) =>
       MealTypePreferences(
-        breakfast: (json['breakfast'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            const <String>[],
-        lunch: (json['lunch'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            const <String>[],
-        dinner: (json['dinner'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            const <String>[],
-        snack: (json['snack'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            const <String>[],
+        breakfast: _parseStringList(json['breakfast'] as List<dynamic>?),
+        lunch: _parseStringList(json['lunch'] as List<dynamic>?),
+        dinner: _parseStringList(json['dinner'] as List<dynamic>?),
+        snack: _parseStringList(json['snack'] as List<dynamic>?),
       );
 
   /// Breakfast products (product names)
@@ -43,11 +31,11 @@ class MealTypePreferences {
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'breakfast': breakfast,
-        'lunch': lunch,
-        'dinner': dinner,
-        'snack': snack,
-      };
+    'breakfast': breakfast,
+    'lunch': lunch,
+    'dinner': dinner,
+    'snack': snack,
+  };
 
   /// Creates a modified copy with new values
   MealTypePreferences copyWith({
@@ -55,20 +43,25 @@ class MealTypePreferences {
     List<String>? lunch,
     List<String>? dinner,
     List<String>? snack,
-  }) =>
-      MealTypePreferences(
-        breakfast: breakfast ?? this.breakfast,
-        lunch: lunch ?? this.lunch,
-        dinner: dinner ?? this.dinner,
-        snack: snack ?? this.snack,
-      );
+  }) => MealTypePreferences(
+    breakfast: breakfast ?? this.breakfast,
+    lunch: lunch ?? this.lunch,
+    dinner: dinner ?? this.dinner,
+    snack: snack ?? this.snack,
+  );
 
   /// Get all products as a flat list
   List<String> get allProducts => <String>{
-        ...breakfast,
-        ...lunch,
-        ...dinner,
-        ...snack,
-      }.toList(); // Remove duplicates
+    ...breakfast,
+    ...lunch,
+    ...dinner,
+    ...snack,
+  }.toList(); // Remove duplicates
 }
 
+List<String> _parseStringList(List<dynamic>? source) {
+  if (source == null) {
+    return const <String>[];
+  }
+  return source.whereType<String>().toList();
+}

@@ -69,9 +69,8 @@ class _FavoritesShelfWidgetState extends State<FavoritesShelfWidget>
       }
       final Box<dynamic> favoritesBox = snapshot.data!;
       final List<Recipe> favorites = favoritesBox.values
-          .map<Recipe>(
-            (value) => Recipe.fromMap(value as Map<dynamic, dynamic>),
-          )
+          .whereType<Map<dynamic, dynamic>>()
+          .map<Recipe>(Recipe.fromMap)
           .toList();
 
       if (favorites.isEmpty) {
@@ -108,10 +107,8 @@ class _FavoritesShelfWidgetState extends State<FavoritesShelfWidget>
         valueListenable: favoritesBox.listenable(),
         builder: (BuildContext context, Box<dynamic> box, Widget? child) {
           final List<Recipe> updatedFavorites = box.values
-              .map<Recipe>(
-                (value) =>
-                    Recipe.fromMap(value as Map<dynamic, dynamic>),
-              )
+              .whereType<Map<dynamic, dynamic>>()
+              .map<Recipe>(Recipe.fromMap)
               .toList();
 
           if (updatedFavorites.isEmpty) {

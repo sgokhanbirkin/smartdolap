@@ -26,8 +26,7 @@ class HouseholdAnalyticsPage extends StatelessWidget {
   final String householdId;
 
   @override
-  Widget build(BuildContext context) => Container(
-      child: BlocBuilder<AuthCubit, AuthState>(
+  Widget build(BuildContext context) => BlocBuilder<AuthCubit, AuthState>(
         builder: (BuildContext context, AuthState authState) => authState.maybeWhen(
             authenticated: (domain.User user) => StreamBuilder<List<MealConsumption>>(
               stream: sl<IMealConsumptionRepository>().watchConsumptions(
@@ -236,7 +235,6 @@ class HouseholdAnalyticsPage extends StatelessWidget {
             ),
           orElse: () => const SizedBox.shrink(),
         ),
-      ),
-    );
+      );
 }
 

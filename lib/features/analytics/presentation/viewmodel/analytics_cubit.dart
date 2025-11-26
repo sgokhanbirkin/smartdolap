@@ -8,9 +8,8 @@ import 'package:smartdolap/features/analytics/presentation/viewmodel/analytics_s
 
 /// Cubit for managing analytics state
 class AnalyticsCubit extends Cubit<AnalyticsState> {
-  AnalyticsCubit({
-    required this.getUserAnalytics,
-  }) : super(const AnalyticsInitial());
+  AnalyticsCubit({required this.getUserAnalytics})
+    : super(const AnalyticsInitial());
 
   final GetUserAnalyticsUseCase getUserAnalytics;
 
@@ -25,9 +24,13 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
         householdId: householdId,
       );
       emit(AnalyticsLoaded(analytics));
-    } catch (e) {
-      Logger.error('[AnalyticsCubit] Error loading analytics', e);
-      emit(AnalyticsFailure(e.toString()));
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[AnalyticsCubit] Error loading analytics',
+        error,
+        stackTrace,
+      );
+      emit(AnalyticsFailure(error.toString()));
     }
   }
 
@@ -38,4 +41,3 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
     await loadAnalytics(userId: userId, householdId: householdId);
   }
 }
-

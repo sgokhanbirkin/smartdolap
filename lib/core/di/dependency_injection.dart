@@ -1,3 +1,5 @@
+// ignore_for_file: directives_ordering
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
@@ -29,6 +31,7 @@ import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/register_usecase.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
+import 'package:smartdolap/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:smartdolap/features/food_preferences/data/repositories/food_preference_repository_impl.dart';
 import 'package:smartdolap/features/food_preferences/domain/repositories/i_food_preference_repository.dart';
 import 'package:smartdolap/features/food_preferences/domain/use_cases/get_all_food_preferences_usecase.dart';
@@ -61,6 +64,7 @@ import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.d
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
 import 'package:smartdolap/features/profile/data/prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/data/repositories/badge_repository_impl.dart';
@@ -69,6 +73,7 @@ import 'package:smartdolap/features/profile/domain/repositories/i_profile_stats_
 import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/profile/domain/repositories/i_user_recipe_repository.dart';
 import 'package:smartdolap/features/profile/presentation/viewmodel/profile_cubit.dart';
+import 'package:smartdolap/features/profile/presentation/viewmodel/profile_view_model.dart';
 import 'package:smartdolap/features/rate_limiting/data/repositories/api_usage_repository_impl.dart';
 import 'package:smartdolap/features/rate_limiting/data/services/rate_limit_service_impl.dart';
 import 'package:smartdolap/features/rate_limiting/domain/repositories/i_api_usage_repository.dart';
@@ -90,6 +95,7 @@ import 'package:smartdolap/features/recipes/domain/use_cases/watch_global_commen
 import 'package:smartdolap/features/recipes/domain/use_cases/watch_household_comments_usecase.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/comment_cubit.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 import 'package:smartdolap/features/sync/data/services/sync_queue_service.dart';
 import 'package:smartdolap/features/sync/domain/services/i_sync_queue_service.dart';
 import 'package:smartdolap/features/sync/presentation/cubit/sync_worker_cubit.dart';
@@ -105,14 +111,7 @@ import 'package:smartdolap/features/shopping/presentation/viewmodel/shopping_lis
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
 import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
 import 'package:smartdolap/product/services/image_lookup_service.dart'
-    show
-        DuckDuckGoImageSearchService,
-        GoogleImageSearchService,
-        GoogleImagesHtmlScrapingService,
-        IImageLookupService,
-        MultiImageSearchService,
-        PexelsImageSearchService,
-        UnsplashImageSearchService;
+    show IImageLookupService, NoOpImageSearchService;
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_service.dart';
 import 'package:smartdolap/product/services/storage/i_storage_service.dart';
@@ -178,6 +177,7 @@ Future<void> setupLocator() async {
   // Register UserRecipeService as IUserRecipeRepository (DIP)
   if (!sl.isRegistered<IUserRecipeRepository>()) {
     sl.registerLazySingleton<IUserRecipeRepository>(
+      // ignore: unnecessary_lambdas
       () => sl<UserRecipeService>(),
     );
   }
@@ -227,15 +227,18 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<IAuthRepository>(
     () => AuthRepositoryImpl(sl<fb.FirebaseAuth>(), sl<FirebaseFirestore>()),
   );
-  sl.registerFactory(() => LoginUseCase(sl()));
-  sl.registerFactory(() => LogoutUseCase(sl()));
-  sl.registerFactory(() => RegisterUseCase(sl()));
-  sl.registerFactory(
-    () => AuthCubit(
-      loginUseCase: sl(),
-      logoutUseCase: sl(),
-      registerUseCase: sl(),
-      repository: sl(),
+  sl.registerFactory<LoginUseCase>(() => LoginUseCase(sl()));
+  sl.registerFactory<LogoutUseCase>(() => LogoutUseCase(sl()));
+  sl.registerFactory<RegisterUseCase>(() => RegisterUseCase(sl()));
+  sl.registerLazySingleton<AuthCubit>(AuthCubit.new);
+  sl.registerLazySingleton<AuthViewModel>(
+    () => AuthViewModel(
+      cubit: sl<AuthCubit>(),
+      loginUseCase: sl<LoginUseCase>(),
+      logoutUseCase: sl<LogoutUseCase>(),
+      registerUseCase: sl<RegisterUseCase>(),
+      authRepository: sl<IAuthRepository>(),
+      syncService: sl<ISyncService>(),
     ),
   );
 
@@ -246,16 +249,23 @@ Future<void> setupLocator() async {
       sl<Box<dynamic>>(instanceName: 'pantryBox'),
     ),
   );
-  sl.registerFactory(() => ListPantryItems(sl()));
-  sl.registerFactory(() => AddPantryItem(sl()));
-  sl.registerFactory(() => UpdatePantryItem(sl()));
-  sl.registerFactory(() => DeletePantryItem(sl()));
-  sl.registerFactory(
-    () => PantryCubit(
-      listPantryItems: sl(),
-      addPantryItem: sl(),
-      updatePantryItem: sl(),
-      deletePantryItem: sl(),
+  // Pantry Use Cases
+  sl.registerFactory<ListPantryItems>(() => ListPantryItems(sl()));
+  sl.registerFactory<AddPantryItem>(() => AddPantryItem(sl()));
+  sl.registerFactory<UpdatePantryItem>(() => UpdatePantryItem(sl()));
+  sl.registerFactory<DeletePantryItem>(() => DeletePantryItem(sl()));
+
+  // Pantry Cubit - State only (MVVM pattern)
+  sl.registerFactory<PantryCubit>(PantryCubit.new);
+
+  // Pantry ViewModel - Business logic orchestration (MVVM pattern)
+  sl.registerFactory<PantryViewModel>(
+    () => PantryViewModel(
+      cubit: sl<PantryCubit>(),
+      listPantryItems: sl<ListPantryItems>(),
+      addPantryItem: sl<AddPantryItem>(),
+      updatePantryItem: sl<UpdatePantryItem>(),
+      deletePantryItem: sl<DeletePantryItem>(),
       notificationCoordinator: sl<IPantryNotificationCoordinator>(),
     ),
   );
@@ -265,59 +275,11 @@ Future<void> setupLocator() async {
     () => Dio(BaseOptions(baseUrl: 'https://api.openai.com/v1')),
   );
 
-  // Image lookup services - Multi-service with fallback chain
-  // Priority: Google HTML Scraping > Pexels > Unsplash > DuckDuckGo (fallback)
-  // Google scraping is first because:
-  // - Free and unlimited (user's phone makes the request)
-  // - No API key needed
-  // - Each user has their own IP (no rate limiting issues)
-  // - Google bot detection is less suspicious from user devices
-  sl.registerLazySingleton<IImageLookupService>(() {
-    final List<IImageLookupService> services = <IImageLookupService>[];
-
-    // ✅ ÖNCE PEXELS API (En iyi ücretsiz seçenek - 200 requests/hour)
-    final String? pexelsApiKey = dotenv.env['PEXELS_API_KEY'];
-    if (pexelsApiKey != null && pexelsApiKey.isNotEmpty) {
-      services.add(PexelsImageSearchService(dio: Dio(), apiKey: pexelsApiKey));
-    }
-
-    // ✅ İKİNCİ UNSplash API (50 requests/hour)
-    final String? unsplashAccessKey = dotenv.env['UNSPLASH_ACCESS_KEY'];
-    if (unsplashAccessKey != null && unsplashAccessKey.isNotEmpty) {
-      services.add(
-        UnsplashImageSearchService(dio: Dio(), accessKey: unsplashAccessKey),
-      );
-    }
-
-    // ✅ ÜÇÜNCÜ Google Custom Search API (100 requests/day, yasal)
-    final String? googleApiKey = dotenv.env['GOOGLE_CUSTOM_SEARCH_API_KEY'];
-    final String? googleEngineId = dotenv.env['GOOGLE_CUSTOM_SEARCH_ENGINE_ID'];
-    if (googleApiKey != null &&
-        googleApiKey.isNotEmpty &&
-        googleEngineId != null &&
-        googleEngineId.isNotEmpty) {
-      services.add(
-        GoogleImageSearchService(
-          dio: Dio(),
-          apiKey: googleApiKey,
-          searchEngineId: googleEngineId,
-        ),
-      );
-    }
-
-    // Fallback: Google Images HTML scraping (ToS riski var, son çare)
-    services.add(GoogleImagesHtmlScrapingService(Dio()));
-
-    // Son fallback: DuckDuckGo (always available, but unreliable)
-    services.add(DuckDuckGoImageSearchService(Dio()));
-
-    return MultiImageSearchService(services: services);
-  });
-
-  // Backward compatibility - register DuckDuckGo as ImageLookupService (old name)
-  // Note: This is deprecated, use IImageLookupService instead
-  sl.registerLazySingleton<DuckDuckGoImageSearchService>(
-    () => DuckDuckGoImageSearchService(Dio()),
+  // Image lookup services - DISABLED for production
+  // Using NoOpImageSearchService to avoid external API calls
+  // Images should come from OpenAI response or be null (placeholder shown)
+  sl.registerLazySingleton<IImageLookupService>(
+    () => const NoOpImageSearchService(),
   );
 
   // Feedback Service
@@ -336,10 +298,7 @@ Future<void> setupLocator() async {
 
   // OpenAI
   sl.registerLazySingleton<IOpenAIService>(
-    () => OpenAIService(
-      dio: sl(),
-      rateLimitService: sl<IRateLimitService>(),
-    ),
+    () => OpenAIService(dio: sl(), rateLimitService: sl<IRateLimitService>()),
   );
 
   // Storage
@@ -398,13 +357,18 @@ Future<void> setupLocator() async {
   // Analytics cubit
   sl.registerFactory(() => AnalyticsCubit(getUserAnalytics: sl()));
 
-  // Profile cubit
-  sl.registerFactory<ProfileCubit>(
-    () => ProfileCubit(
+  // Profile cubit - state only
+  sl.registerFactory<ProfileCubit>(ProfileCubit.new);
+
+  // Profile view model - orchestrates business logic
+  sl.registerFactoryParam<ProfileViewModel, ProfileCubit, void>(
+    (ProfileCubit cubit, _) => ProfileViewModel(
+      cubit: cubit,
       prefService: sl<IPromptPreferenceService>(),
       statsService: sl<IProfileStatsService>(),
       userRecipeService: sl<UserRecipeService>(),
       authCubit: sl<AuthCubit>(),
+      badgeRepository: sl<IBadgeRepository>(),
     ),
   );
 
@@ -497,16 +461,18 @@ Future<void> setupLocator() async {
   );
   sl.registerFactory(() => SuggestRecipesFromPantry(sl()));
   sl.registerFactory(() => GetRecipeDetail(sl()));
-  sl.registerFactory(
-    () => RecipesCubit(
-      suggest: sl(),
-      openAI: sl(),
+  sl.registerFactory<RecipesCubit>(RecipesCubit.new);
+  sl.registerFactoryParam<RecipesViewModel, RecipesCubit, void>(
+    (RecipesCubit cubit, _) => RecipesViewModel(
+      cubit: cubit,
+      suggest: sl<SuggestRecipesFromPantry>(),
+      openAI: sl<IOpenAIService>(),
       promptPreferences: sl<IPromptPreferenceService>(),
-      imageLookup: sl<IImageLookupService>(),
       cacheService: sl<IRecipeCacheService>(),
       imageService: sl<IRecipeImageService>(),
-      userRecipeRepository: sl(),
-      recipesRepository: sl(),
+      userRecipeRepository: sl<IUserRecipeRepository>(),
+      recipesRepository: sl<IRecipesRepository>(),
+      pantryRepository: sl<IPantryRepository>(),
     ),
   );
 

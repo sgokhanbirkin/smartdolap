@@ -57,9 +57,8 @@ class GetSuggestionsPageController {
   }
 
   /// Update selected meal
-  void updateMeal(String meal) {
-    _selectedMeal = meal;
-  }
+  // ignore: use_setters_to_change_properties
+  void updateMeal(String meal) => _selectedMeal = meal;
 
   /// Toggle category expansion
   void toggleCategory(String category) {

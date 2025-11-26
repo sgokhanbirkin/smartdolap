@@ -16,8 +16,12 @@ class RateLimitServiceImpl implements IRateLimitService {
   Future<bool> canMakeRequest(String userId) async {
     try {
       return await _repository.canMakeRequest(userId);
-    } catch (e) {
-      Logger.error('[RateLimitService] Error checking can make request', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[RateLimitService] Error checking can make request',
+        error,
+        stackTrace,
+      );
       // Allow request on error to avoid blocking users
       return true;
     }
@@ -27,8 +31,12 @@ class RateLimitServiceImpl implements IRateLimitService {
   Future<void> trackRequest(String userId) async {
     try {
       await _repository.incrementRequest(userId);
-    } catch (e) {
-      Logger.error('[RateLimitService] Error tracking request', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[RateLimitService] Error tracking request',
+        error,
+        stackTrace,
+      );
       // Don't rethrow - tracking failure shouldn't block the app
     }
   }
@@ -37,8 +45,8 @@ class RateLimitServiceImpl implements IRateLimitService {
   Future<ApiUsage?> getUsage(String userId) async {
     try {
       return await _repository.getUsage(userId);
-    } catch (e) {
-      Logger.error('[RateLimitService] Error getting usage', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error('[RateLimitService] Error getting usage', error, stackTrace);
       return null;
     }
   }
@@ -47,11 +55,13 @@ class RateLimitServiceImpl implements IRateLimitService {
   Future<void> updatePackage(String userId, PackageType packageType) async {
     try {
       await _repository.updatePackage(userId, packageType);
-    } catch (e) {
-      Logger.error('[RateLimitService] Error updating package', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[RateLimitService] Error updating package',
+        error,
+        stackTrace,
+      );
       rethrow;
     }
   }
 }
-
-

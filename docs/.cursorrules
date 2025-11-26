@@ -1,0 +1,72 @@
+# Flutter Project Architecture Rules
+
+## Architecture
+- Use MVVM + Cubit pattern
+- Clean Architecture principles (Core → Features → Product)
+- Feature-based folder structure
+- Each feature should be self-contained (model, service, state, view_model, view, widgets)
+
+## Code Quality
+- Follow SOLID principles
+- Single Responsibility: Each class should have one reason to change
+- Use interfaces for services (abstract class Service + Implementation)
+- Dependency Injection via get_it
+- Result pattern for error handling (no exceptions in business logic)
+
+## Responsive Design
+- Use flutter_screenutil for all dimensions
+- All width/height values: `.w`, `.h`
+- All padding/margin/spacing: `.w`, `.h`
+- All borderRadius: `.r`
+- All fontSize: `.sp`
+- NEVER use hardcoded numeric values for UI dimensions
+
+## Localization
+- All UI text must use LocaleKeys constants
+- Use `.tr()` extension for translations
+- Error messages must be localized
+- NO hardcoded strings in UI
+
+## Network Layer
+- Single DioClient instance (singleton)
+- Base URL from .env file
+- Result<T> pattern for all network calls
+- Strategy Pattern for response parsing
+- Map-based status code mapping (no long switch-case)
+
+## Error Handling
+- Sealed error hierarchy (AppError with subtypes)
+- Result pattern (Success/Failure) instead of exceptions
+- Error localization via extension methods
+
+## State Management
+- Cubit for state management
+- Immutable state classes with Equatable
+- ViewModel for business logic orchestration
+- View only for UI rendering
+
+## Testing
+- Widget tests with setupTestScreenSize
+- Integration tests for service layer
+- Mock dependencies with mocktail
+- Use realistic test data (matching API response format)
+
+## File Organization
+- Core layer: Framework-agnostic infrastructure
+- Features layer: Self-contained feature modules
+- Product layer: App-specific implementations and configs
+- Each feature: model/, service/, state/, view_model/, view/, widgets/
+
+## Dependency Injection
+- Register all dependencies in app_locator.dart
+- Feature-based initialization functions
+- Use lazySingleton for services, factory for Cubits
+- No circular dependencies
+
+## Code Style
+- Use early return pattern (avoid deep nesting)
+- Maximum method length: 30-40 lines
+- Descriptive variable and method names
+- Comments only for complex business logic
+- Remove debugPrint statements from production code
+

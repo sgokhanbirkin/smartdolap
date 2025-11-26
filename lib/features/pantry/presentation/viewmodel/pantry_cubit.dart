@@ -1,95 +1,82 @@
-// ignore_for_file: public_member_api_docs, avoid_catches_without_on_clauses
-
-import 'dart:async';
-
+// ignore: depend_on_referenced_packages
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
-import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_notification_coordinator.dart';
-import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart';
-import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
-import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
-import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
-import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_state.dart';
 
-/// Pantry Cubit - Manages pantry state and operations
-/// Follows Single Responsibility Principle - only handles pantry state management
-/// Notification scheduling is delegated to PantryNotificationCoordinator (SRP)
+part 'pantry_state.dart';
+
+/// Pantry Cubit - State-only implementation following MVVM pattern
+///
+/// Responsibilities:
+/// - Emit state changes only
+/// - No business logic (delegated to PantryViewModel)
+///
+/// SOLID Principles:
+/// - Single Responsibility: Only handles state emission
+/// - Open/Closed: State types can be extended without modifying cubit
+/// - Dependency Inversion: Depends on abstract state types
 class PantryCubit extends Cubit<PantryState> {
-  PantryCubit({
-    required this.listPantryItems,
-    required this.addPantryItem,
-    required this.updatePantryItem,
-    required this.deletePantryItem,
-    required this.notificationCoordinator,
-  }) : super(const PantryInitial());
+  /// Creates a PantryCubit with initial state
+  PantryCubit() : super(const PantryState.initial());
 
-  final ListPantryItems listPantryItems;
-  final AddPantryItem addPantryItem;
-  final UpdatePantryItem updatePantryItem;
-  final DeletePantryItem deletePantryItem;
-  final IPantryNotificationCoordinator notificationCoordinator;
+  /// Sets loading state
+  void setLoading() => emit(const PantryState.loading());
 
-  StreamSubscription<List<PantryItem>>? _sub;
+  /// Sets loaded state with items
+  void setLoaded(List<PantryItem> items) => emit(PantryState.loaded(items));
 
-  Future<void> watch(String householdId) async {
-    emit(const PantryLoading());
-    await _sub?.cancel();
-    _sub = listPantryItems(householdId: householdId).listen(
-      (List<PantryItem> items) => emit(PantryLoaded(items)),
-      onError: (Object e) => emit(PantryFailure(e.toString())),
-    );
-  }
+  /// Sets error state with localized message key
+  void setError(String messageKey) => emit(PantryState.failure(messageKey));
 
-  Future<void> refresh(String householdId) async {
-    await watch(householdId);
-  }
-
-  Future<void> add(String householdId, PantryItem item) async {
-    try {
-      await addPantryItem(householdId: householdId, item: item);
-      // Delegate notification scheduling to coordinator
-      await notificationCoordinator.handleItemAdded(item);
-    } catch (e) {
-      emit(PantryFailure(e.toString()));
+  /// Updates items in loaded state (for optimistic updates)
+  void updateItems(List<PantryItem> items) {
+    final PantryState currentState = state;
+    if (currentState is _PantryLoaded) {
+      emit(PantryState.loaded(items));
     }
   }
 
-  Future<void> update(String householdId, PantryItem item) async {
-    try {
-      // Get old item to check if expiry date changed
-      final PantryState currentState = state;
-      PantryItem? oldItem;
-      if (currentState is PantryLoaded) {
-        oldItem = currentState.items.firstWhere(
-          (PantryItem i) => i.id == item.id,
-          orElse: () => item,
-        );
-      }
-
-      await updatePantryItem(householdId: householdId, item: item);
-
-      // Delegate notification updates to coordinator
-      if (oldItem != null) {
-        await notificationCoordinator.handleItemUpdated(oldItem, item);
-      }
-    } catch (e) {
-      emit(PantryFailure(e.toString()));
+  /// Adds single item to current list (optimistic update)
+  void addItem(PantryItem item) {
+    final PantryState currentState = state;
+    if (currentState is _PantryLoaded) {
+      final List<PantryItem> updatedItems = <PantryItem>[
+        ...currentState.items,
+        item,
+      ];
+      emit(PantryState.loaded(updatedItems));
     }
   }
 
-  Future<void> remove(String householdId, String itemId) async {
-    try {
-      await deletePantryItem(householdId: householdId, itemId: itemId);
-      // Delegate notification cancellation to coordinator
-      await notificationCoordinator.handleItemDeleted(itemId);
-    } catch (e) {
-      emit(PantryFailure(e.toString()));
+  /// Removes single item from current list (optimistic update)
+  void removeItem(String itemId) {
+    final PantryState currentState = state;
+    if (currentState is _PantryLoaded) {
+      final List<PantryItem> updatedItems = currentState.items
+          .where((PantryItem i) => i.id != itemId)
+          .toList();
+      emit(PantryState.loaded(updatedItems));
     }
   }
 
-  @override
-  Future<void> close() {
-    _sub?.cancel();
-    return super.close();
+  /// Updates single item in current list (optimistic update)
+  void updateItem(PantryItem item) {
+    final PantryState currentState = state;
+    if (currentState is _PantryLoaded) {
+      final List<PantryItem> updatedItems = currentState.items
+          .map((PantryItem i) => i.id == item.id ? item : i)
+          .toList();
+      emit(PantryState.loaded(updatedItems));
+    }
+  }
+
+  /// Gets current items if in loaded state
+  List<PantryItem>? get currentItems {
+    final PantryState currentState = state;
+    if (currentState is _PantryLoaded) {
+      return currentState.items;
+    }
+    return null;
   }
 }

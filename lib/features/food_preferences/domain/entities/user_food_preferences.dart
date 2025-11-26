@@ -17,10 +17,9 @@ class UserFoodPreferences {
       UserFoodPreferences(
         userId: json['userId'] as String,
         householdId: json['householdId'] as String,
-        selectedFoodIds: (json['selectedFoodIds'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            const <String>[],
+        selectedFoodIds: _parseSelectedFoodIds(
+          json['selectedFoodIds'] as List<dynamic>?,
+        ),
         mealTypePreferences: json['mealTypePreferences'] != null
             ? MealTypePreferences.fromJson(
                 json['mealTypePreferences'] as Map<String, dynamic>,
@@ -52,13 +51,13 @@ class UserFoodPreferences {
 
   /// Convert to JSON
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'userId': userId,
-        'householdId': householdId,
-        'selectedFoodIds': selectedFoodIds,
-        'mealTypePreferences': mealTypePreferences.toJson(),
-        if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
-        'isCompleted': isCompleted,
-      };
+    'userId': userId,
+    'householdId': householdId,
+    'selectedFoodIds': selectedFoodIds,
+    'mealTypePreferences': mealTypePreferences.toJson(),
+    if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
+    'isCompleted': isCompleted,
+  };
 
   /// Creates a modified copy with new values
   UserFoodPreferences copyWith({
@@ -68,14 +67,19 @@ class UserFoodPreferences {
     MealTypePreferences? mealTypePreferences,
     DateTime? completedAt,
     bool? isCompleted,
-  }) =>
-      UserFoodPreferences(
-        userId: userId ?? this.userId,
-        householdId: householdId ?? this.householdId,
-        selectedFoodIds: selectedFoodIds ?? this.selectedFoodIds,
-        mealTypePreferences: mealTypePreferences ?? this.mealTypePreferences,
-        completedAt: completedAt ?? this.completedAt,
-        isCompleted: isCompleted ?? this.isCompleted,
-      );
+  }) => UserFoodPreferences(
+    userId: userId ?? this.userId,
+    householdId: householdId ?? this.householdId,
+    selectedFoodIds: selectedFoodIds ?? this.selectedFoodIds,
+    mealTypePreferences: mealTypePreferences ?? this.mealTypePreferences,
+    completedAt: completedAt ?? this.completedAt,
+    isCompleted: isCompleted ?? this.isCompleted,
+  );
 }
 
+List<String> _parseSelectedFoodIds(List<dynamic>? raw) {
+  if (raw == null) {
+    return <String>[];
+  }
+  return raw.whereType<String>().toList();
+}

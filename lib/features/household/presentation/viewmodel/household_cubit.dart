@@ -35,18 +35,20 @@ class HouseholdCubit extends Cubit<HouseholdState> {
   void watchHousehold(String householdId) {
     emit(const HouseholdState.loading());
     _householdSubscription?.cancel();
-    _householdSubscription = repository.watchHousehold(householdId).listen(
-      (Household? household) {
-        if (household != null) {
-          emit(HouseholdState.loaded(household));
-        } else {
-          emit(const HouseholdState.noHousehold());
-        }
-      },
-      onError: (Object error) {
-        emit(HouseholdState.error(error.toString()));
-      },
-    );
+    _householdSubscription = repository
+        .watchHousehold(householdId)
+        .listen(
+          (Household? household) {
+            if (household != null) {
+              emit(HouseholdState.loaded(household));
+            } else {
+              emit(const HouseholdState.noHousehold());
+            }
+          },
+          onError: (Object error) {
+            emit(HouseholdState.error(error.toString()));
+          },
+        );
   }
 
   /// Create a new household
@@ -65,8 +67,8 @@ class HouseholdCubit extends Cubit<HouseholdState> {
         ownerAvatarId: ownerAvatarId,
       );
       emit(HouseholdState.loaded(household));
-    } catch (e) {
-      emit(HouseholdState.error(e.toString()));
+    } on Object catch (error) {
+      emit(HouseholdState.error(error.toString()));
     }
   }
 
@@ -79,8 +81,9 @@ class HouseholdCubit extends Cubit<HouseholdState> {
   }) async {
     emit(const HouseholdState.loading());
     try {
-      final String? householdId =
-          await getHouseholdFromInviteUseCase.call(inviteCode);
+      final String? householdId = await getHouseholdFromInviteUseCase.call(
+        inviteCode,
+      );
       if (householdId == null) {
         emit(const HouseholdState.error('Invalid invite code'));
         return;
@@ -100,8 +103,8 @@ class HouseholdCubit extends Cubit<HouseholdState> {
       } else {
         emit(const HouseholdState.error('Failed to load household'));
       }
-    } catch (e) {
-      emit(HouseholdState.error(e.toString()));
+    } on Object catch (error) {
+      emit(HouseholdState.error(error.toString()));
     }
   }
 
@@ -109,8 +112,8 @@ class HouseholdCubit extends Cubit<HouseholdState> {
   Future<String?> generateInviteCode(String householdId) async {
     try {
       return await generateInviteCodeUseCase.call(householdId);
-    } catch (e) {
-      emit(HouseholdState.error(e.toString()));
+    } on Object catch (error) {
+      emit(HouseholdState.error(error.toString()));
       return null;
     }
   }
@@ -125,8 +128,8 @@ class HouseholdCubit extends Cubit<HouseholdState> {
       } else {
         emit(const HouseholdState.noHousehold());
       }
-    } catch (e) {
-      emit(HouseholdState.error(e.toString()));
+    } on Object catch (error) {
+      emit(HouseholdState.error(error.toString()));
     }
   }
 
@@ -136,4 +139,3 @@ class HouseholdCubit extends Cubit<HouseholdState> {
     return super.close();
   }
 }
-

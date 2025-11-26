@@ -9,13 +9,20 @@ import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_notification_coordinator.dart';
 import 'package:smartdolap/features/pantry/domain/repositories/i_pantry_repository.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/recipes/data/services/recipes_page_data_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/controllers/recipes_page_controller.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/recipes_advanced_sections_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/recipes_search_bar_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/recipes_search_results_widget.dart';
@@ -38,11 +45,19 @@ class _RecipesPageState extends State<RecipesPage> {
   final ValueNotifier<String> _searchQuery = ValueNotifier<String>('');
   Timer? _searchDebounce;
   RecipesPageController? _controller;
+  RecipesCubit? _recipesCubit;
+  RecipesViewModel? _recipesViewModel;
+  PantryCubit? _pantryCubit;
+  PantryViewModel? _pantryViewModel;
+  String? _pantryHouseholdId;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _recipesCubit = sl<RecipesCubit>();
+    _recipesViewModel = sl<RecipesViewModel>(param1: _recipesCubit!);
+    _pantryCubit = sl<PantryCubit>();
   }
 
   void _onSearchChanged() {
@@ -54,6 +69,28 @@ class _RecipesPageState extends State<RecipesPage> {
     });
   }
 
+  void _ensurePantryDependencies(String householdId) {
+    final PantryCubit cubit = _pantryCubit ?? sl<PantryCubit>();
+    _pantryCubit = cubit;
+    if (_pantryViewModel != null && _pantryHouseholdId == householdId) {
+      return;
+    }
+    _pantryViewModel?.dispose();
+    _pantryHouseholdId = householdId;
+    final PantryViewModel viewModel = PantryViewModel(
+      cubit: cubit,
+      listPantryItems: sl<ListPantryItems>(),
+      addPantryItem: sl<AddPantryItem>(),
+      updatePantryItem: sl<UpdatePantryItem>(),
+      deletePantryItem: sl<DeletePantryItem>(),
+      notificationCoordinator: sl<IPantryNotificationCoordinator>(),
+    );
+    _pantryViewModel = viewModel;
+    unawaited(viewModel.watch(householdId));
+  }
+
+  String _resolveHouseholdId(domain.User user) => user.householdId ?? user.id;
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -62,71 +99,95 @@ class _RecipesPageState extends State<RecipesPage> {
     _searchQuery.dispose();
     _scrollController.dispose();
     _controller?.dispose();
+    _recipesViewModel?.dispose();
+    _pantryViewModel?.dispose();
+    _recipesCubit?.close();
+    _pantryCubit?.close();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: BlocBuilder<AuthCubit, AuthState>(
-      builder: (BuildContext context, AuthState state) => state.when(
-        initial: () => const SizedBox.shrink(),
-        loading: () => const Center(
-          child: CustomLoadingIndicator(
-            type: LoadingType.pulsingGrid,
-            size: 50,
-          ),
-        ),
-        error: (_) => const EmptyState(messageKey: 'recipes_empty_message'),
-        unauthenticated: () =>
-            const EmptyState(messageKey: 'recipes_empty_message'),
-        authenticated: (domain.User user) => MultiBlocProvider(
-            providers: <BlocProvider<dynamic>>[
-              BlocProvider<RecipesCubit>(
-                create: (BuildContext _) => sl<RecipesCubit>(),
-              ),
-              BlocProvider<PantryCubit>(
-                create: (BuildContext _) => sl<PantryCubit>()..watch(user.id),
-              ),
-            ],
-            child: Builder(
-              builder: (BuildContext inner) {
-                final RecipesCubit recipesCubit = inner.read<RecipesCubit>();
-                final PantryCubit pantryCubit = inner.read<PantryCubit>();
-                final RecipesPageDataService dataService =
-                    RecipesPageDataService(recipesCubit: recipesCubit);
-
-                // Initialize controller if not already initialized
-                _controller ??= RecipesPageController(
-                  recipesCubit: recipesCubit,
-                  dataService: dataService,
-                  pantryCubit: pantryCubit,
-                  userId: user.id,
-                );
-
-                return SafeArea(
-                  child: BlocBuilder<RecipesCubit, RecipesState>(
-                    builder: (BuildContext context, RecipesState recipesState) => ValueListenableBuilder<String>(
-                        valueListenable: _searchQuery,
-                        builder:
-                            (
-                              BuildContext context,
-                              String query,
-                              Widget? child,
-                            ) => _buildContent(
-                                context,
-                                recipesState,
-                                query,
-                                user,
-                              ),
-                      ),
-                  ),
-                );
-              },
+  Widget build(BuildContext context) {
+    if (_recipesCubit == null ||
+        _recipesViewModel == null ||
+        _pantryCubit == null) {
+      return const SizedBox.shrink();
+    }
+    return Scaffold(
+      body: BlocBuilder<AuthCubit, AuthState>(
+        builder: (BuildContext context, AuthState state) => state.when(
+          initial: () => const SizedBox.shrink(),
+          loading: () => const Center(
+            child: CustomLoadingIndicator(
+              type: LoadingType.pulsingGrid,
+              size: 50,
             ),
           ),
+          error: (_) => const EmptyState(messageKey: 'recipes_empty_message'),
+          unauthenticated: () =>
+              const EmptyState(messageKey: 'recipes_empty_message'),
+          authenticated: (domain.User user) {
+            final String householdId = _resolveHouseholdId(user);
+            _ensurePantryDependencies(householdId);
+            return MultiBlocProvider(
+              providers: <BlocProvider<dynamic>>[
+                BlocProvider<RecipesCubit>.value(value: _recipesCubit!),
+                BlocProvider<PantryCubit>.value(value: _pantryCubit!),
+              ],
+              child: RepositoryProvider<PantryViewModel>.value(
+                value: _pantryViewModel!,
+                child: RepositoryProvider<RecipesViewModel>.value(
+                  value: _recipesViewModel!,
+                  child: Builder(
+                    builder: (BuildContext inner) {
+                      final RecipesViewModel recipesViewModel = inner
+                          .read<RecipesViewModel>();
+                      final PantryCubit pantryCubit = inner.read<PantryCubit>();
+                      final RecipesPageDataService dataService =
+                          RecipesPageDataService(
+                            recipesViewModel: recipesViewModel,
+                          );
+
+                      // Initialize controller if not already initialized
+                      _controller ??= RecipesPageController(
+                        recipesViewModel: recipesViewModel,
+                        dataService: dataService,
+                        pantryCubit: pantryCubit,
+                        userId: user.id,
+                      );
+
+                      return SafeArea(
+                        child: BlocBuilder<RecipesCubit, RecipesState>(
+                          builder:
+                              (
+                                BuildContext context,
+                                RecipesState recipesState,
+                              ) => ValueListenableBuilder<String>(
+                                valueListenable: _searchQuery,
+                                builder:
+                                    (
+                                      BuildContext context,
+                                      String query,
+                                      Widget? child,
+                                    ) => _buildContent(
+                                      context,
+                                      recipesState,
+                                      query,
+                                      user,
+                                    ),
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _buildContent(
     BuildContext context,
@@ -259,7 +320,10 @@ class _RecipesPageState extends State<RecipesPage> {
             child: ErrorState(
               messageKey: recipesState.message,
               onRetry: () {
-                _controller?.recipesCubit.load(_controller!.userId);
+                final RecipesViewModel? vm = _recipesViewModel;
+                if (vm != null && _controller != null) {
+                  vm.load(_controller!.userId);
+                }
               },
               lottieAsset: 'assets/animations/Cooking.json',
             ),
@@ -273,7 +337,10 @@ class _RecipesPageState extends State<RecipesPage> {
       context,
     ).pushNamed<bool>(AppRouter.recipeDetail, arguments: recipe);
     if (recipeMade == true && mounted) {
-      _controller?.loadMadeRecipes();
+      final RecipesPageController? controller = _controller;
+      if (controller != null) {
+        unawaited(controller.loadMadeRecipes());
+      }
     }
   }
 
@@ -309,13 +376,13 @@ class _RecipesPageState extends State<RecipesPage> {
           'meal': null,
         },
       );
-    } catch (e) {
+    } on Object catch (error) {
       if (!context.mounted) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${tr('error')}: $e'),
+          content: Text('${tr('error')}: $error'),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );

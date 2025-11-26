@@ -7,17 +7,17 @@ import 'package:smartdolap/features/profile/data/user_recipe_service.dart';
 import 'package:smartdolap/features/profile/domain/entities/user_recipe.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe_step.dart';
-import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 
 /// Service for loading recipes page data - SRP: Single responsibility for data loading
 class RecipesPageDataService {
   /// Constructor
   RecipesPageDataService({
-    required this.recipesCubit,
+    required this.recipesViewModel,
     UserRecipeService? userRecipeService,
   }) : _userRecipeService = userRecipeService ?? sl<UserRecipeService>();
 
-  final RecipesCubit recipesCubit;
+  final RecipesViewModel recipesViewModel;
   final UserRecipeService _userRecipeService;
 
   /// Load favorites from Hive
@@ -27,49 +27,51 @@ class RecipesPageDataService {
         : await Hive.openBox<dynamic>('favorite_recipes');
 
     return favoritesBox.values
-        .map<Recipe>(
-          (value) => Recipe.fromMap(value as Map<dynamic, dynamic>),
-        )
+        .whereType<Map<dynamic, dynamic>>()
+        .map<Recipe>(Recipe.fromMap)
         .toList();
   }
 
   /// Load recipes for a specific meal
-  Future<List<Recipe>> loadMealRecipes(String userId, String meal) async => recipesCubit.loadMeal(userId, meal);
+  Future<List<Recipe>> loadMealRecipes(String userId, String meal) async =>
+      recipesViewModel.loadMeal(userId, meal);
 
   /// Load made recipes (recipes marked as made - with or without photo)
   Future<List<Recipe>> loadMadeRecipes() async {
     debugPrint('[RecipesPageDataService] Yaptıklarım yükleniyor...');
     final List<UserRecipe> allRecipes = _userRecipeService.fetch();
-    debugPrint('[RecipesPageDataService] Toplam ${allRecipes.length} tarif bulundu');
-    
+    debugPrint(
+      '[RecipesPageDataService] Toplam ${allRecipes.length} tarif bulundu',
+    );
+
     // Yaptıklarım: createManual ile eklenen TÜM tarifler
     // (isAIRecommendation true/false fark etmez, createManual ile eklenen her tarif "yaptım" sayılır)
     final List<UserRecipe> madeUserRecipes = allRecipes.toList();
-    
-    debugPrint('[RecipesPageDataService] ${madeUserRecipes.length} yaptıklarım tarifi bulundu');
+
+    debugPrint(
+      '[RecipesPageDataService] ${madeUserRecipes.length} yaptıklarım tarifi bulundu',
+    );
     for (final UserRecipe ur in madeUserRecipes) {
-      debugPrint('[RecipesPageDataService] - ${ur.title} (imagePath: ${ur.imagePath ?? "yok"}, isAI: ${ur.isAIRecommendation})');
+      debugPrint(
+        '[RecipesPageDataService] - ${ur.title} (imagePath: ${ur.imagePath ?? "yok"}, isAI: ${ur.isAIRecommendation})',
+      );
     }
 
-    return madeUserRecipes
-        .map<Recipe>(
-          (UserRecipe ur) {
-            // Convert String steps to RecipeStep list
-            final List<RecipeStep> recipeSteps = ur.steps
-                .map(RecipeStep.fromString)
-                .toList();
-            
-            return Recipe(
-              id: ur.id,
-              title: ur.title,
-              ingredients: ur.ingredients,
-              steps: recipeSteps,
-              imageUrl: ur.imagePath,
-              category: ur.tags.isNotEmpty ? ur.tags.first : null,
-            );
-          },
-        )
-        .toList();
+    return madeUserRecipes.map<Recipe>((UserRecipe ur) {
+      // Convert String steps to RecipeStep list
+      final List<RecipeStep> recipeSteps = ur.steps
+          .map(RecipeStep.fromString)
+          .toList();
+
+      return Recipe(
+        id: ur.id,
+        title: ur.title,
+        ingredients: ur.ingredients,
+        steps: recipeSteps,
+        imageUrl: ur.imagePath,
+        category: ur.tags.isNotEmpty ? ur.tags.first : null,
+      );
+    }).toList();
   }
 
   /// Load all meal recipes in parallel
@@ -83,20 +85,21 @@ class RecipesPageDataService {
 
     final Map<String, List<Recipe>> mealRecipes = <String, List<Recipe>>{};
 
-    final List<Future<void>> mealLoadFutures = orderedMeals.map(
-      (String meal) async {
-        try {
-          final List<Recipe> recipes = await loadMealRecipes(userId, meal);
-          mealRecipes[meal] = recipes;
-        } catch (e) {
-          debugPrint('[RecipesPageDataService] Meal yükleme hatası ($meal): $e');
-          mealRecipes[meal] = <Recipe>[];
-        }
-      },
-    ).toList();
+    final List<Future<void>> mealLoadFutures = orderedMeals.map((
+      String meal,
+    ) async {
+      try {
+        final List<Recipe> recipes = await loadMealRecipes(userId, meal);
+        mealRecipes[meal] = recipes;
+      } on Object catch (error, stackTrace) {
+        debugPrint(
+          '[RecipesPageDataService] Meal yükleme hatası ($meal): $error\n$stackTrace',
+        );
+        mealRecipes[meal] = <Recipe>[];
+      }
+    }).toList();
 
     await Future.wait(mealLoadFutures);
     return mealRecipes;
   }
 }
-

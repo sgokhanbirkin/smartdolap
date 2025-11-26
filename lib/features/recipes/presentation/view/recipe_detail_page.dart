@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -95,6 +97,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     Recipe recipe,
     domain.User user,
   ) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final ThemeData theme = Theme.of(context);
+    final Size size = MediaQuery.of(context).size;
+
     try {
       // Convert Recipe to UserRecipe
       final UserRecipe userRecipe = UserRecipe(
@@ -111,7 +117,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       ShareCubit? shareCubit;
       try {
         shareCubit = context.read<ShareCubit>();
-      } catch (_) {
+      } on Object {
         // If ShareCubit is not available in context, create a new instance
         shareCubit = sl<ShareCubit>();
       }
@@ -123,23 +129,19 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         avatarId: user.avatarId,
       );
 
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             tr('share_recipe_success'),
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              color: theme.colorScheme.onPrimaryContainer,
               fontWeight: FontWeight.w600,
             ),
           ),
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          backgroundColor: theme.colorScheme.primaryContainer,
           behavior: SnackBarBehavior.floating,
           margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height * 0.1,
+            bottom: size.height * 0.1,
             left: AppSizes.padding,
             right: AppSizes.padding,
           ),
@@ -150,23 +152,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           _sharedWithFamily = true;
         });
       }
-    } catch (e) {
-      if (!mounted) {
+    } on Object {
+      if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             tr('share_recipe_error'),
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onErrorContainer,
+              color: theme.colorScheme.onErrorContainer,
               fontWeight: FontWeight.w600,
             ),
           ),
-          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          backgroundColor: theme.colorScheme.errorContainer,
           behavior: SnackBarBehavior.floating,
           margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height * 0.1,
+            bottom: size.height * 0.1,
             left: AppSizes.padding,
             right: AppSizes.padding,
           ),
@@ -195,7 +197,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     await Share.share(buffer.toString(), subject: recipe.title);
   }
 
-
   Future<void> _markAsMade() async {
     if (widget.recipe == null) {
       return;
@@ -203,23 +204,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
     final bool? addPhoto = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
+      builder: (BuildContext dialogContext) => AlertDialog(
         title: Text(tr('recipe_made_title')),
         content: Text(tr('recipe_made_message')),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(tr('recipe_made_skip_photo')),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(tr('recipe_made_add_photo')),
           ),
         ],
       ),
     );
 
-    if (addPhoto == null) {
+    if (!mounted || addPhoto == null) {
       return;
     }
 
@@ -236,27 +237,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         // Upload to Firebase Storage
         final String? userId = FirebaseAuth.instance.currentUser?.uid;
         if (userId == null) {
-          if (!mounted) {
+          if (!context.mounted) {
             return;
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                tr('recipe_made_error'),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              behavior: SnackBarBehavior.floating,
-              margin: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.height * 0.1,
-                left: AppSizes.padding,
-                right: AppSizes.padding,
-              ),
-            ),
-          );
+          _showMadeErrorSnackBar(context);
           return;
         }
 
@@ -267,30 +251,13 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           imageUrl = await _recipeDetailService.uploadRecipePhoto(
             userId: userId,
             recipeId: widget.recipe!.id,
-            imageBytes: imageBytes as Uint8List,
+            imageBytes: Uint8List.fromList(imageBytes),
           );
         } on Exception {
-          if (!mounted) {
+          if (!context.mounted) {
             return;
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                tr('recipe_made_error'),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-              behavior: SnackBarBehavior.floating,
-              margin: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.height * 0.1,
-                left: AppSizes.padding,
-                right: AppSizes.padding,
-              ),
-            ),
-          );
+          _showMadeErrorSnackBar(context);
           setState(() => _isSaving = false);
           return;
         }
@@ -304,7 +271,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       imageUrl: imageUrl,
     );
 
-    if (!mounted) {
+    if (!context.mounted) {
       return;
     }
 
@@ -332,47 +299,63 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         orElse: () async {},
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr('recipes.marked_as_made'),
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height * 0.1,
-            left: AppSizes.padding,
-            right: AppSizes.padding,
-          ),
-        ),
-      );
+      _showMadeSuccessSnackBar(context);
       Navigator.of(context).pop(true); // true döndür - yaptıklarım güncellensin
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr('common.unexpected_error'),
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onErrorContainer,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          backgroundColor: Theme.of(context).colorScheme.errorContainer,
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height * 0.1,
-            left: AppSizes.padding,
-            right: AppSizes.padding,
-          ),
-        ),
-      );
+      _showMadeErrorSnackBar(context);
     }
 
     setState(() => _isSaving = false);
+  }
+
+  void _showMadeErrorSnackBar(BuildContext context) {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final ThemeData theme = Theme.of(context);
+    final Size size = MediaQuery.of(context).size;
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          tr('recipe_made_error'),
+          style: TextStyle(
+            color: theme.colorScheme.onErrorContainer,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: theme.colorScheme.errorContainer,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: size.height * 0.1,
+          left: AppSizes.padding,
+          right: AppSizes.padding,
+        ),
+      ),
+    );
+  }
+
+  void _showMadeSuccessSnackBar(BuildContext context) {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final ThemeData theme = Theme.of(context);
+    final Size size = MediaQuery.of(context).size;
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          tr('recipes.marked_as_made'),
+          style: TextStyle(
+            color: theme.colorScheme.onPrimaryContainer,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: theme.colorScheme.primaryContainer,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: size.height * 0.1,
+          left: AppSizes.padding,
+          right: AppSizes.padding,
+        ),
+      ),
+    );
   }
 
   void _toggleIngredient(int index) {
@@ -409,11 +392,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     return BackgroundWrapper(
       child: Scaffold(
         appBar: AppBar(
-          title: Text(
-            data.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+          title: Text(data.title, maxLines: 2, overflow: TextOverflow.ellipsis),
           actions: <Widget>[
             // Share with family button (only if user has household)
             BlocBuilder<AuthCubit, AuthState>(
@@ -430,9 +409,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                                 : Icons.group,
                             color: _sharedWithFamily
                                 ? Colors.green
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer,
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
                           ),
                           onPressed: canShare
                               ? () => _shareWithFamily(context, data, user)
@@ -495,12 +474,14 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   BlocBuilder<AuthCubit, AuthState>(
                     builder: (BuildContext context, AuthState authState) =>
                         authState.maybeWhen(
-                          authenticated: (domain.User user) => RecipeRatingWidget(
-                            recipeId: data.id,
-                            currentUserId: user.id,
-                            isHouseholdOnly: widget.isHouseholdOnly,
-                            householdId: widget.householdId ?? user.householdId,
-                          ),
+                          authenticated: (domain.User user) =>
+                              RecipeRatingWidget(
+                                recipeId: data.id,
+                                currentUserId: user.id,
+                                isHouseholdOnly: widget.isHouseholdOnly,
+                                householdId:
+                                    widget.householdId ?? user.householdId,
+                              ),
                           orElse: () => const SizedBox.shrink(),
                         ),
                   ),
@@ -512,7 +493,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                           authenticated: (domain.User user) => ConstrainedBox(
                             constraints: BoxConstraints(
                               minHeight: 300.h,
-                              maxHeight: MediaQuery.of(context).size.height * 0.5,
+                              maxHeight:
+                                  MediaQuery.of(context).size.height * 0.5,
                             ),
                             child: BlocProvider<CommentCubit>(
                               create: (_) => sl<CommentCubit>(),

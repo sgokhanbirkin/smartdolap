@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
-import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 
 /// Filter dialog widget for recipes
 class FilterDialogWidget extends StatelessWidget {
@@ -22,8 +22,7 @@ class FilterDialogWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Set<String> inc = <String>{
-      ...?((currentFilters['ingredients'] as List<dynamic>?)
-          ?.cast<String>()),
+      ...?((currentFilters['ingredients'] as List<dynamic>?)?.cast<String>()),
     };
     String? meal = currentFilters['meal'] as String?;
     int? maxCal = currentFilters['maxCalories'] as int?;
@@ -125,7 +124,7 @@ class FilterDialogWidget extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context, false);
-              context.read<RecipesCubit>().resetFilters();
+              context.read<RecipesViewModel>().resetFilters();
             },
             child: Text(tr('filter_reset')),
           ),

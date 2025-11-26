@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:smartdolap/core/utils/logger.dart';
 import 'package:smartdolap/features/pantry/domain/entities/ingredient.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
@@ -60,7 +61,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
     String? meal,
     List<String> excludeTitles = const <String>[],
   }) async {
-    print(
+    debugPrint(
       '[RecipesRepository] _generateRecipesWithOpenAIAndSave başladı - '
       'count: $count, meal: $meal, excludeTitles: ${excludeTitles.length}',
     );
@@ -76,7 +77,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       excludeTitles: excludeTitles,
     );
 
-    print(
+    debugPrint(
       '[RecipesRepository] OpenAI yanıtı geldi - ${suggestions.length} öneri',
     );
 
@@ -104,7 +105,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       final List<RecipeStep> recipeSteps = s.steps
           .map(RecipeStep.fromString)
           .toList();
-      
+
       final Recipe recipe = Recipe(
         id: recipeId,
         title: s.title,
@@ -126,6 +127,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
           entityType: 'recipe',
           operation: 'create',
           payload: FirestoreRecipeMapper.toMap(recipe),
+          createdAt: DateTime.now(),
         ),
       );
     }
@@ -133,7 +135,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
     // PromptPreferences güncelle
     await _promptPrefs.incrementGenerated(recipes.length);
 
-    print(
+    debugPrint(
       '[RecipesRepository] _generateRecipesWithOpenAIAndSave tamamlandı - '
       "${recipes.length} tarif Firestore'a kaydedildi",
     );
@@ -150,10 +152,13 @@ class RecipesRepositoryImpl implements IRecipesRepository {
   @override
   Future<List<Recipe>> getRecipesFromFirestoreFirst({
     required String userId,
-    required List<Ingredient> ingredients, required String prompt, required int targetCount, String? meal,
+    required List<Ingredient> ingredients,
+    required String prompt,
+    required int targetCount,
+    String? meal,
     List<String> excludeTitles = const <String>[],
   }) async {
-    print(
+    debugPrint(
       '[RecipesRepository] getRecipesFromFirestoreFirst başladı - '
       'userId: $userId, meal: $meal, targetCount: $targetCount',
     );
@@ -169,7 +174,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
     // Cache'deki tarifleri filtrele (boş liste olabilir)
     List<Recipe> filteredCached = <Recipe>[];
     if (cachedRecipes != null && cachedRecipes.isNotEmpty) {
-      print(
+      debugPrint(
         "[RecipesRepository] Hive cache'den ${cachedRecipes.length} tarif bulundu",
       );
 
@@ -185,7 +190,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       );
 
       if (filteredCached.length >= targetCount) {
-        print(
+        debugPrint(
           '[RecipesRepository] ✅ Hive cache yeterli, ${filteredCached.length} tarif döndürülüyor. '
           "Firestore'a istek atılmıyor (Firebase limit optimizasyonu)",
         );
@@ -194,18 +199,18 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       }
 
       // Cache yetersizse AI'ye devam et
-      print(
+      debugPrint(
         '[RecipesRepository] Hive cache yetersiz (${filteredCached.length}/$targetCount), '
         "AI'ye soruluyor (Firebase limit optimizasyonu)",
       );
     } else {
-      print(
+      debugPrint(
         "[RecipesRepository] Hive cache boş, AI'ye soruluyor (Firebase limit optimizasyonu)",
       );
     }
 
     // 2. HIVE BOŞ VEYA YETERSİZSE - DİREKT AI'YE SOR (Firestore'a gitme - Firebase limit optimizasyonu)
-    print(
+    debugPrint(
       "[RecipesRepository] ⚡ Firestore'a gitmeden direkt AI'ye soruluyor (Firebase limit optimizasyonu)",
     );
 
@@ -219,31 +224,25 @@ class RecipesRepositoryImpl implements IRecipesRepository {
 
       // Eksik kalan tarif sayısını hesapla
       final int remaining = targetCount - filteredCached.length;
-      print(
-        "[RecipesRepository] AI'den $remaining yeni tarif isteniyor",
-      );
+      debugPrint("[RecipesRepository] AI'den $remaining yeni tarif isteniyor");
 
       if (remaining > 0) {
-        final List<Recipe> generated =
-            await _generateRecipesWithOpenAIAndSave(
-              userId: userId,
-              ingredients: ingredients,
-              prompt: prompt,
-              count: remaining,
-              meal: meal,
-              excludeTitles: allExcludeTitles,
-            );
+        final List<Recipe> generated = await _generateRecipesWithOpenAIAndSave(
+          userId: userId,
+          ingredients: ingredients,
+          prompt: prompt,
+          count: remaining,
+          meal: meal,
+          excludeTitles: allExcludeTitles,
+        );
 
         // Yeni tarifleri hem Hive'a hem Firestore'a kaydet (zaten _generateRecipesWithOpenAIAndSave içinde Firestore'a kaydediliyor)
         // Sadece Hive cache'e ekle
         await _recipeCacheService.addRecipesToCache(cacheKey, generated);
 
-        final List<Recipe> combined = <Recipe>[
-          ...filteredCached,
-          ...generated,
-        ];
+        final List<Recipe> combined = <Recipe>[...filteredCached, ...generated];
 
-        print(
+        debugPrint(
           '[RecipesRepository] ✅ getRecipesFromFirestoreFirst tamamlandı - '
           'Toplam ${combined.length} tarif (${filteredCached.length} Hive cache, '
           '${generated.length} yeni AI tarifi). '
@@ -260,7 +259,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         e,
       );
       if (filteredCached.isNotEmpty) {
-        print(
+        debugPrint(
           "[RecipesRepository] OpenAI hatası, Hive cache'den ${filteredCached.length} tarif döndürülüyor",
         );
         return filteredCached;
@@ -272,7 +271,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
         e,
       );
       if (filteredCached.isNotEmpty) {
-        print(
+        debugPrint(
           "[RecipesRepository] OpenAI hatası, Hive cache'den ${filteredCached.length} tarif döndürülüyor",
         );
         return filteredCached;
@@ -280,7 +279,6 @@ class RecipesRepositoryImpl implements IRecipesRepository {
       rethrow;
     }
   }
-
 
   @override
   Future<List<Recipe>> suggestFromPantry({required String householdId}) async {
@@ -305,17 +303,17 @@ class RecipesRepositoryImpl implements IRecipesRepository {
     // ✅ Hive cache'e kaydediliyor: yüklenilen yerde `addRecipesToCache` ile
     // ✅ Firestore'a kaydetme isteği: arka planda sync kuyruğu ile
     // ============================================================================
-    print(
+    debugPrint(
       '[RecipesRepository] suggestFromPantry başladı - householdId: $householdId',
     );
     final DateTime repoStartTime = DateTime.now();
 
-    print('[RecipesRepository] Pantry items yükleniyor...');
+    debugPrint('[RecipesRepository] Pantry items yükleniyor...');
     final List<dynamic> pantryItemsRaw = await _pantry.getItems(
       householdId: householdId,
     );
     final List<PantryItem> pantryItems = pantryItemsRaw.cast<PantryItem>();
-    print('[RecipesRepository] ${pantryItems.length} pantry item bulundu');
+    debugPrint('[RecipesRepository] ${pantryItems.length} pantry item bulundu');
 
     final List<Ingredient> ingredients = pantryItems
         .map<Ingredient>(
@@ -345,7 +343,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
     );
 
     final Duration repoDuration = DateTime.now().difference(repoStartTime);
-    print(
+    debugPrint(
       '[RecipesRepository] suggestFromPantry tamamlandı - ${recipes.length} tarif, Toplam süre: ${repoDuration.inSeconds} saniye',
     );
     return recipes;

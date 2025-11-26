@@ -11,7 +11,7 @@ class UserRecipeFormPage extends StatefulWidget {
   const UserRecipeFormPage({super.key, this.onSubmit});
 
   /// Callback fired when the user saves the recipe.
-  final Future<void> Function({
+  final Future<bool> Function({
     required String title,
     required List<String> ingredients,
     required List<String> steps,
@@ -190,12 +190,12 @@ class _UserRecipeFormPageState extends State<UserRecipeFormPage> {
               SizedBox(height: AppSizes.verticalSpacingL),
               FilledButton(
                 onPressed: () async {
-                  final NavigatorState navigator = Navigator.of(context);
                   if (!_formKey.currentState!.validate()) {
                     return;
                   }
+                  bool isSuccess = true;
                   if (widget.onSubmit != null) {
-                    await widget.onSubmit!(
+                    isSuccess = await widget.onSubmit!(
                       title: _title.text.trim(),
                       description: _description.text.trim(),
                       ingredients: _ingredients,
@@ -205,10 +205,19 @@ class _UserRecipeFormPageState extends State<UserRecipeFormPage> {
                       videoPath: _videoFile?.path,
                     );
                   }
-                  if (!mounted) {
+                  if (!context.mounted) {
                     return;
                   }
-                  navigator.pop(true);
+                  final NavigatorState navigator = Navigator.of(context);
+                  final ScaffoldMessengerState messenger =
+                      ScaffoldMessenger.of(context);
+                  if (isSuccess) {
+                    navigator.pop(true);
+                  } else {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(tr('error_generic'))),
+                    );
+                  }
                 },
                 child: Text(tr('profile_save_btn')),
               ),

@@ -13,18 +13,16 @@ class FirestoreRecipeMapper {
     return _mapDataToRecipe(data, doc.id);
   }
 
-  /// Map Firestore QuerySnapshot to List<Recipe>
+  /// Map Firestore QuerySnapshot to list of Recipe entities.
   static List<Recipe> fromQuerySnapshot(
     QuerySnapshot<Map<String, dynamic>> snapshot,
   ) => snapshot.docs.map(fromDocumentSnapshot).toList();
 
-  /// Map Firestore data Map to Recipe
-  static Recipe fromMap(
-    Map<String, dynamic> data,
-    String documentId,
-  ) => _mapDataToRecipe(data, documentId);
+  /// Map Firestore data map to a `Recipe` entity.
+  static Recipe fromMap(Map<String, dynamic> data, String documentId) =>
+      _mapDataToRecipe(data, documentId);
 
-  /// Map List<DocumentSnapshot> to List<Recipe>
+  /// Map list of `DocumentSnapshot` to list of `Recipe` entities.
   static List<Recipe> fromDocumentSnapshots(
     List<DocumentSnapshot<Map<String, dynamic>>> docs,
   ) => docs.map(fromDocumentSnapshot).toList();
@@ -32,21 +30,23 @@ class FirestoreRecipeMapper {
   /// Internal helper to map data to Recipe
   static Recipe _mapDataToRecipe(Map<String, dynamic> data, String id) {
     // Parse steps - handle both string list and RecipeStep list
-    final dynamic stepsData = data['steps'];
+    final Object? stepsData = data['steps'];
     List<RecipeStep> stepsList = <RecipeStep>[];
-    
+
     if (stepsData != null && stepsData is List<dynamic>) {
       if (stepsData.isNotEmpty) {
-        final dynamic firstItem = stepsData.first;
+        final Object? firstItem = stepsData.first;
         if (firstItem is Map) {
           // It's a list of RecipeStep objects
           stepsList = stepsData
-              .map((e) => RecipeStep.fromJson(e as Map<String, dynamic>))
+              .whereType<Map<String, dynamic>>()
+              .map(RecipeStep.fromJson)
               .toList();
         } else if (firstItem is String) {
           // It's a list of strings (backward compatibility)
           stepsList = stepsData
-              .map((e) => RecipeStep.fromString(e as String))
+              .whereType<String>()
+              .map(RecipeStep.fromString)
               .toList();
         }
       }
@@ -55,10 +55,7 @@ class FirestoreRecipeMapper {
     return Recipe(
       id: id,
       title: data['title'] as String? ?? '',
-      ingredients: (data['ingredients'] as List<dynamic>?)
-              ?.map<String>((e) => e.toString())
-              .toList() ??
-          <String>[],
+      ingredients: _mapIngredients(data['ingredients'] as List<dynamic>?),
       steps: stepsList,
       calories: data['calories'] as int?,
       durationMinutes: data['durationMinutes'] as int?,
@@ -78,3 +75,9 @@ class FirestoreRecipeMapper {
   }
 }
 
+List<String> _mapIngredients(List<dynamic>? raw) {
+  if (raw == null) {
+    return <String>[];
+  }
+  return raw.map<String>((Object? value) => value.toString()).toList();
+}

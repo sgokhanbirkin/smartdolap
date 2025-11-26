@@ -109,7 +109,7 @@ class HouseholdRepositoryImpl implements IHouseholdRepository {
             : DateTime.now(),
         members: members,
       );
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -252,7 +252,7 @@ class HouseholdRepositoryImpl implements IHouseholdRepository {
       }
 
       return data['householdId'] as String?;
-    } catch (e) {
+    } on Object {
       return null;
     }
   }

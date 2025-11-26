@@ -1,3 +1,4 @@
+// ignore_for_file: join_return_with_assignment
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -42,28 +43,78 @@ class StepsListWidget extends StatelessWidget {
     if (stepType == null) {
       return '';
     }
-    try {
-      return tr('step_type_$stepType');
-    } catch (e) {
-      // If translation not found, return the stepType itself
-      return stepType;
+    final String key = 'step_type_$stepType';
+    final String translated = tr(key);
+    // If translation key is missing, easy_localization returns the key itself.
+    return translated == key ? stepType : translated;
+  }
+
+  /// Normalize step description for legacy/LLM formatted strings
+  String _normalizeDescription(String description) {
+    String text = description.trim();
+
+    // Remove leading braces
+    while (text.startsWith('{')) {
+      text = text.substring(1).trim();
     }
+
+    // Strip leading "description:" key if present
+    text = text.replaceFirst(
+      RegExp(r'^description\s*:?\s*', caseSensitive: false),
+      '',
+    );
+
+    // Remove wrapping quotes and trailing braces
+    if (text.endsWith('}')) {
+      text = text.substring(0, text.length - 1).trim();
+    }
+    if (text.startsWith('"') && text.endsWith('"') && text.length >= 2) {
+      text = text.substring(1, text.length - 1);
+    }
+
+    // Remove any stray quotes
+    text = text.replaceAll('"', '').trim();
+
+    return text;
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      Text(
-        tr('steps_label'),
-        style: TextStyle(
-          fontSize: AppSizes.textL,
-          fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) {
+    // Normalize and filter steps for legacy/LLM formatted content
+    final List<RecipeStep> normalizedSteps = steps
+        .where((RecipeStep step) {
+          final String d = step.description.trim().toLowerCase();
+          if (d.isEmpty) {
+            return false;
+          }
+          if (d.startsWith('durationminutes:') ||
+              d.startsWith('steptype:') ||
+              d.startsWith('temperature:')) {
+            return false;
+          }
+          return true;
+        })
+        .map(
+          (RecipeStep step) => step.copyWith(
+            description: _normalizeDescription(step.description),
+          ),
+        )
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          tr('steps_label'),
+          style: TextStyle(
+            fontSize: AppSizes.textL,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-      SizedBox(height: AppSizes.verticalSpacingS),
-      ...steps.asMap().entries.map(
-        (MapEntry<int, RecipeStep> entry) {
+        SizedBox(height: AppSizes.verticalSpacingS),
+        ...normalizedSteps.asMap().entries.map((
+          MapEntry<int, RecipeStep> entry,
+        ) {
           final RecipeStep step = entry.value;
           final bool isCompleted = completedSteps.contains(entry.key);
           final bool isTablet = context.isTablet;
@@ -123,8 +174,9 @@ class StepsListWidget extends StatelessWidget {
                           ),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
                         ),
                       // Step type badge
                       if (step.stepType != null)
@@ -140,8 +192,9 @@ class StepsListWidget extends StatelessWidget {
                           ),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
-                          backgroundColor:
-                              Theme.of(context).colorScheme.secondaryContainer,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.secondaryContainer,
                         ),
                       // Temperature badge
                       if (step.temperature != null)
@@ -167,10 +220,9 @@ class StepsListWidget extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.all(AppSizes.spacingXS),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .tertiaryContainer
-                            .withValues(alpha: 0.3),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(AppSizes.radiusS),
                       ),
                       child: Row(
@@ -188,9 +240,9 @@ class StepsListWidget extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: AppSizes.textXS,
                                 fontStyle: FontStyle.italic,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onTertiaryContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onTertiaryContainer,
                               ),
                             ),
                           ),
@@ -223,9 +275,8 @@ class StepsListWidget extends StatelessWidget {
               onTap: () => onStepToggled(entry.key),
             ),
           );
-        },
-      ),
-    ],
-  );
+        }),
+      ],
+    );
+  }
 }
-

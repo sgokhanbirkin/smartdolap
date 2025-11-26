@@ -5,19 +5,24 @@ class TONLEncoder {
   TONLEncoder._();
 
   /// Encode a Map or List to TONL format
-  static String encode(data, {bool includeTypes = false}) {
+  static String encode(Object data, {bool includeTypes = false}) {
     if (data is Map<String, dynamic>) {
       return _encodeMap(data, includeTypes: includeTypes);
-    } else if (data is List) {
+    } else if (data is List<dynamic>) {
       return _encodeList(data, includeTypes: includeTypes);
-    } else {
-      throw ArgumentError('TONL encoding only supports Map and List');
     }
+    throw ArgumentError('TONL encoding only supports Map and List');
   }
 
   /// Decode TONL format to Map or List
   static dynamic decode(String tonl) {
-    final List<String> lines = tonl.split('\n').where((String line) => line.trim().isNotEmpty && !line.trim().startsWith('#')).toList();
+    final List<String> lines = tonl
+        .split('\n')
+        .where(
+          (String line) =>
+              line.trim().isNotEmpty && !line.trim().startsWith('#'),
+        )
+        .toList();
 
     if (lines.isEmpty) {
       return <String, dynamic>{};
@@ -53,7 +58,7 @@ class TONLEncoder {
         buffer.writeln(
           _encodeArray(
             entry.key,
-            entry.value as List,
+            entry.value as List<dynamic>,
             includeTypes: includeTypes,
           ),
         );
@@ -73,8 +78,7 @@ class TONLEncoder {
     return buffer.toString().trim();
   }
 
-  // ignore: strict_raw_type
-  static String _encodeList(List list, {bool includeTypes = false}) {
+  static String _encodeList(List<dynamic> list, {bool includeTypes = false}) {
     if (list.isEmpty) {
       return '#version 1.0\nitems[0]{}:';
     }
@@ -89,7 +93,9 @@ class TONLEncoder {
 
       for (final dynamic item in list) {
         if (item is Map<String, dynamic>) {
-          final List<String> values = keys.map((String key) => _encodeValue(item[key])).toList();
+          final List<String> values = keys
+              .map((String key) => _encodeValue(item[key]))
+              .toList();
           buffer.writeln('  ${values.join(', ')}');
         }
       }
@@ -124,7 +130,9 @@ class TONLEncoder {
 
       for (final dynamic item in list) {
         if (item is Map<String, dynamic>) {
-          final List<String> values = fields.map((String field) => _encodeValue(item[field])).toList();
+          final List<String> values = fields
+              .map((String field) => _encodeValue(item[field]))
+              .toList();
           buffer.writeln('  ${values.join(', ')}');
         }
       }
@@ -149,12 +157,14 @@ class TONLEncoder {
     final List<String> fields = map.keys.toList();
     final StringBuffer buffer = StringBuffer();
     buffer.writeln('$key{${fields.join(',')}}:');
-    final List<String> values = fields.map((String field) => _encodeValue(map[field])).toList();
+    final List<String> values = fields
+        .map((String field) => _encodeValue(map[field]))
+        .toList();
     buffer.writeln('  ${values.join(', ')}');
     return buffer.toString();
   }
 
-  static String _encodeValue(value) {
+  static String _encodeValue(Object? value) {
     if (value == null) {
       return 'null';
     } else if (value is String) {
@@ -170,7 +180,7 @@ class TONLEncoder {
     } else if (value is List) {
       return '[${value.map(_encodeValue).join(',')}]';
     } else if (value is Map) {
-      return '{${value.entries.map((MapEntry e) => '${_encodeValue(e.key)}:${_encodeValue(e.value)}').join(',')}}';
+      return '{${value.entries.map((MapEntry<Object?, Object?> e) => '${_encodeValue(e.key)}:${_encodeValue(e.value)}').join(',')}}';
     } else {
       return value.toString();
     }
@@ -210,11 +220,11 @@ class TONLEncoder {
           currentArray != null &&
           trimmed.isNotEmpty) {
         // Parse data row (remove leading spaces if present)
-        final String cleanRow = trimmed.startsWith('  ') 
-            ? trimmed.substring(2) 
+        final String cleanRow = trimmed.startsWith('  ')
+            ? trimmed.substring(2)
             : trimmed;
         final List<String> values = _parseRow(cleanRow);
-        
+
         if (values.length == currentFields.length) {
           final Map<String, dynamic> item = <String, dynamic>{};
           for (int i = 0; i < currentFields.length; i++) {
@@ -347,7 +357,9 @@ class TONLEncoder {
       return trimmed.substring(1, trimmed.length - 1);
     } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
       // Parse array format: [item1,item2,item3]
-      final String arrayContent = trimmed.substring(1, trimmed.length - 1).trim();
+      final String arrayContent = trimmed
+          .substring(1, trimmed.length - 1)
+          .trim();
       if (arrayContent.isEmpty) {
         return <String>[];
       }

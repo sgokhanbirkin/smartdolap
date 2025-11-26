@@ -33,7 +33,9 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
           await getUserFoodPreferencesUseCase.call(userId);
 
       if (currentPreferences != null) {
-        _selectedFoodIds = List<String>.from(currentPreferences.selectedFoodIds);
+        _selectedFoodIds = List<String>.from(
+          currentPreferences.selectedFoodIds,
+        );
         _mealTypePreferences = currentPreferences.mealTypePreferences;
       }
 
@@ -44,28 +46,33 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
           currentPreferences: currentPreferences,
         ),
       );
-    } catch (e) {
-      emit(FoodPreferencesState.error(e.toString()));
+    } on Object catch (error) {
+      emit(FoodPreferencesState.error(error.toString()));
     }
   }
 
   /// Toggle food selection
   void toggleFoodSelection(String foodId) {
     state.maybeWhen(
-      loaded: (List<FoodPreference> allFoodPreferences, List<String> selectedFoodIds, UserFoodPreferences? currentPreferences) {
-        if (_selectedFoodIds.contains(foodId)) {
-          _selectedFoodIds.remove(foodId);
-        } else {
-          _selectedFoodIds.add(foodId);
-        }
-        emit(
-          FoodPreferencesState.loaded(
-            allFoodPreferences: allFoodPreferences,
-            selectedFoodIds: List<String>.from(_selectedFoodIds),
-            currentPreferences: currentPreferences,
-          ),
-        );
-      },
+      loaded:
+          (
+            List<FoodPreference> allFoodPreferences,
+            List<String> selectedFoodIds,
+            UserFoodPreferences? currentPreferences,
+          ) {
+            if (_selectedFoodIds.contains(foodId)) {
+              _selectedFoodIds.remove(foodId);
+            } else {
+              _selectedFoodIds.add(foodId);
+            }
+            emit(
+              FoodPreferencesState.loaded(
+                allFoodPreferences: allFoodPreferences,
+                selectedFoodIds: List<String>.from(_selectedFoodIds),
+                currentPreferences: currentPreferences,
+              ),
+            );
+          },
       orElse: () {},
     );
   }
@@ -103,8 +110,8 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
 
       await saveUserFoodPreferencesUseCase.call(preferences);
       emit(const FoodPreferencesState.saved());
-    } catch (e) {
-      emit(FoodPreferencesState.error(e.toString()));
+    } on Object catch (error) {
+      emit(FoodPreferencesState.error(error.toString()));
     }
   }
 
@@ -114,4 +121,3 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
   /// Get meal type preferences
   MealTypePreferences get mealTypePreferences => _mealTypePreferences;
 }
-

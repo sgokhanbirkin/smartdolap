@@ -118,8 +118,8 @@ class ShareCubit extends Cubit<ShareState> {
       ]);
 
       emit(ShareState.loaded(messages: messages, sharedRecipes: recipes));
-    } catch (e) {
-      emit(ShareState.error(e.toString()));
+    } on Object catch (error) {
+      emit(ShareState.error(error.toString()));
     }
   }
 
@@ -153,8 +153,8 @@ class ShareCubit extends Cubit<ShareState> {
           avatarId: avatarId,
         );
       }
-    } catch (e) {
-      emit(ShareState.error(e.toString()));
+    } on Object catch (error) {
+      emit(ShareState.error(error.toString()));
     }
   }
 
@@ -176,8 +176,8 @@ class ShareCubit extends Cubit<ShareState> {
         text: text,
         avatarId: avatarId,
       );
-    } catch (e) {
-      emit(ShareState.error(e.toString()));
+    } on Object catch (error) {
+      emit(ShareState.error(error.toString()));
     }
   }
 

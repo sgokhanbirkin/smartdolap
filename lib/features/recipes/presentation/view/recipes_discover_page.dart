@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +11,7 @@ import 'package:smartdolap/core/di/dependency_injection.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 import 'package:smartdolap/product/widgets/recipe_card.dart';
 
@@ -29,39 +32,42 @@ class RecipesDiscoverPage extends StatefulWidget {
 class _RecipesDiscoverPageState extends State<RecipesDiscoverPage> {
   final ScrollController _ctrl = ScrollController();
   RecipesCubit? _discoverCubit;
+  RecipesViewModel? _discoverViewModel;
 
   @override
   void initState() {
     super.initState();
     _ctrl.addListener(_onScroll);
+    _discoverCubit = sl<RecipesCubit>();
+    _discoverViewModel = sl<RecipesViewModel>(param1: _discoverCubit!);
+    unawaited(_discoverViewModel!.discoverInit(widget.userId, widget.query));
   }
 
   void _onScroll() {
     if (_ctrl.position.pixels <= _ctrl.position.maxScrollExtent - 300) {
       return;
     }
-    final RecipesCubit? cubit = _discoverCubit;
-    if (cubit == null) {
+    if (_discoverViewModel == null) {
       return;
     }
-    cubit.discoverMore(widget.userId, widget.query);
+    unawaited(_discoverViewModel!.discoverMore(widget.userId, widget.query));
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _discoverViewModel?.dispose();
+    _discoverCubit?.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(tr('recipes_title'))),
-    body: BlocProvider<RecipesCubit>(
-      create: (_) =>
-          sl<RecipesCubit>()..discoverInit(widget.userId, widget.query),
+    body: BlocProvider<RecipesCubit>.value(
+      value: _discoverCubit!,
       child: BlocBuilder<RecipesCubit, RecipesState>(
         builder: (BuildContext context, RecipesState s) {
-          _discoverCubit = context.read<RecipesCubit>();
           if (s is RecipesLoading || s is RecipesInitial) {
             return const Center(child: CircularProgressIndicator());
           }

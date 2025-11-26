@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-/// Helper class for meal time ordering based on current time
-/// TODO(LOCALIZATION): Meal names are now localization-ready via tr() calls
+/// Helper class for meal time ordering based on current time.
+/// Meal names are localization-ready via `tr()` calls.
 class MealTimeOrderHelper {
   /// Get ordered meal list based on current time
   /// Returns list of meals in order: [first, second, third, fourth]

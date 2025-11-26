@@ -17,6 +17,7 @@ import 'package:smartdolap/features/recipes/data/services/recipes_page_data_serv
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/presentation/utils/meal_time_order_helper.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/compact_recipe_card_widget.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 import 'package:smartdolap/product/widgets/empty_state.dart';
@@ -37,6 +38,7 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
   final ScrollController _scrollController = ScrollController();
   RecipesPageDataService? _dataService;
   RecipesCubit? _recipesCubit;
+  RecipesViewModel? _recipesViewModel;
   List<Recipe> _recipes = <Recipe>[];
   bool _isLoading = false;
   bool _isSelectionMode = false;
@@ -46,13 +48,16 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
   void initState() {
     super.initState();
     _recipesCubit = sl<RecipesCubit>();
-    _dataService = RecipesPageDataService(recipesCubit: _recipesCubit!);
+    _recipesViewModel = sl<RecipesViewModel>(param1: _recipesCubit!);
+    _dataService = RecipesPageDataService(recipesViewModel: _recipesViewModel!);
     _loadInitialRecipes();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _recipesViewModel?.dispose();
+    _recipesCubit?.close();
     super.dispose();
   }
 
@@ -214,8 +219,8 @@ class _MealRecipesPageState extends State<MealRecipesPage> {
       await userRecipeService.deleteRecipesByTitles(titlesToDelete);
 
       // Cache'den sil
-      if (_recipesCubit != null) {
-        await _recipesCubit!.deleteRecipesFromCache(
+      if (_recipesViewModel != null) {
+        await _recipesViewModel!.deleteRecipesFromCache(
           widget.userId,
           widget.meal,
           titlesToDelete,

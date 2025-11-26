@@ -6,9 +6,25 @@ import 'package:flutter/foundation.dart';
 /// Interface for image lookup services
 /// Follows Dependency Inversion Principle - allows multiple implementations
 abstract class IImageLookupService {
-  /// Search for an image URL based on query
-  /// Returns the first matching image URL or null if not found
+  /// Unique identifier for the provider (e.g., google, pexels).
+  String get providerId;
+
+  /// Search for an image URL based on query.
+  /// Returns the first matching image URL or null if not found.
   Future<String?> search(String query);
+}
+
+/// No-op implementation that always returns null
+/// Used in production to disable external image search
+/// This is the RECOMMENDED implementation for production builds
+class NoOpImageSearchService implements IImageLookupService {
+  const NoOpImageSearchService();
+
+  @override
+  String get providerId => 'noop';
+
+  @override
+  Future<String?> search(String query) async => null;
 }
 
 /// Google Custom Search API implementation for image search
@@ -27,6 +43,9 @@ class GoogleImageSearchService implements IImageLookupService {
   static const String _baseUrl = 'https://www.googleapis.com/customsearch/v1';
 
   @override
+  String get providerId => 'google_custom_search';
+
+  @override
   Future<String?> search(String query) async {
     final String sanitized = query.trim();
     if (sanitized.isEmpty) {
@@ -34,24 +53,23 @@ class GoogleImageSearchService implements IImageLookupService {
     }
 
     try {
-      final Response<Map<String, dynamic>> response = await dio.get<Map<String, dynamic>>(
-        _baseUrl,
-        queryParameters: <String, dynamic>{
-          'key': apiKey,
-          'cx': searchEngineId,
-          'q': sanitized,
-          'searchType': 'image',
-          'num': 5, // Get top 5 results
-          'safe': 'active', // Safe search
-          'imgSize': 'large', // Prefer large images
-          'imgType': 'photo', // Only photos
-        },
-        options: Options(
-          headers: <String, String>{
-            'Accept': 'application/json',
-          },
-        ),
-      );
+      final Response<Map<String, dynamic>> response = await dio
+          .get<Map<String, dynamic>>(
+            _baseUrl,
+            queryParameters: <String, dynamic>{
+              'key': apiKey,
+              'cx': searchEngineId,
+              'q': sanitized,
+              'searchType': 'image',
+              'num': 5, // Get top 5 results
+              'safe': 'active', // Safe search
+              'imgSize': 'large', // Prefer large images
+              'imgType': 'photo', // Only photos
+            },
+            options: Options(
+              headers: <String, String>{'Accept': 'application/json'},
+            ),
+          );
 
       final Map<String, dynamic>? data = response.data;
       if (data == null) {
@@ -60,7 +78,9 @@ class GoogleImageSearchService implements IImageLookupService {
 
       final List<dynamic>? items = data['items'] as List<dynamic>?;
       if (items == null || items.isEmpty) {
-        debugPrint('[GoogleImageSearchService] No results for query: $sanitized');
+        debugPrint(
+          '[GoogleImageSearchService] No results for query: $sanitized',
+        );
         return null;
       }
 
@@ -69,7 +89,9 @@ class GoogleImageSearchService implements IImageLookupService {
       for (final dynamic item in items) {
         final Map<String, dynamic> itemMap = item as Map<String, dynamic>;
         final String? imageUrl = itemMap['link'] as String?;
-        if (imageUrl != null && imageUrl.isNotEmpty && _isValidImageUrl(imageUrl)) {
+        if (imageUrl != null &&
+            imageUrl.isNotEmpty &&
+            _isValidImageUrl(imageUrl)) {
           validUrls.add(imageUrl);
         }
       }
@@ -82,16 +104,20 @@ class GoogleImageSearchService implements IImageLookupService {
       // Return a random image URL from the results for variety
       final Random random = Random();
       final String selectedUrl = validUrls[random.nextInt(validUrls.length)];
-      debugPrint('[GoogleImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl');
+      debugPrint(
+        '[GoogleImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl',
+      );
       return selectedUrl;
-    } on DioException catch (e) {
-      debugPrint('[GoogleImageSearchService] Error: ${e.message}');
-      if (e.response != null) {
-        debugPrint('[GoogleImageSearchService] Response: ${e.response?.data}');
+    } on DioException catch (error) {
+      debugPrint('[GoogleImageSearchService] Error: ${error.message}');
+      if (error.response != null) {
+        debugPrint(
+          '[GoogleImageSearchService] Response: ${error.response?.data}',
+        );
       }
       return null;
-    } catch (e) {
-      debugPrint('[GoogleImageSearchService] Unexpected error: $e');
+    } on Object catch (error) {
+      debugPrint('[GoogleImageSearchService] Unexpected error: $error');
       return null;
     }
   }
@@ -113,15 +139,15 @@ class GoogleImageSearchService implements IImageLookupService {
 /// Free tier: 200 requests per hour
 /// Requires API key from https://www.pexels.com/api/
 class PexelsImageSearchService implements IImageLookupService {
-  PexelsImageSearchService({
-    required this.dio,
-    required this.apiKey,
-  });
+  PexelsImageSearchService({required this.dio, required this.apiKey});
 
   final Dio dio;
   final String apiKey;
 
   static const String _baseUrl = 'https://api.pexels.com/v1/search';
+
+  @override
+  String get providerId => 'pexels';
 
   @override
   Future<String?> search(String query) async {
@@ -131,20 +157,21 @@ class PexelsImageSearchService implements IImageLookupService {
     }
 
     try {
-      final Response<Map<String, dynamic>> response = await dio.get<Map<String, dynamic>>(
-        _baseUrl,
-        queryParameters: <String, dynamic>{
-          'query': sanitized,
-          'per_page': 5,
-          'orientation': 'landscape', // Better for recipe cards
-        },
-        options: Options(
-          headers: <String, String>{
-            'Authorization': apiKey,
-            'Accept': 'application/json',
-          },
-        ),
-      );
+      final Response<Map<String, dynamic>> response = await dio
+          .get<Map<String, dynamic>>(
+            _baseUrl,
+            queryParameters: <String, dynamic>{
+              'query': sanitized,
+              'per_page': 5,
+              'orientation': 'landscape', // Better for recipe cards
+            },
+            options: Options(
+              headers: <String, String>{
+                'Authorization': apiKey,
+                'Accept': 'application/json',
+              },
+            ),
+          );
 
       final Map<String, dynamic>? data = response.data;
       if (data == null) {
@@ -153,7 +180,9 @@ class PexelsImageSearchService implements IImageLookupService {
 
       final List<dynamic>? photos = data['photos'] as List<dynamic>?;
       if (photos == null || photos.isEmpty) {
-        debugPrint('[PexelsImageSearchService] No results for query: $sanitized');
+        debugPrint(
+          '[PexelsImageSearchService] No results for query: $sanitized',
+        );
         return null;
       }
 
@@ -161,7 +190,8 @@ class PexelsImageSearchService implements IImageLookupService {
       final List<String> validUrls = <String>[];
       for (final dynamic photo in photos) {
         final Map<String, dynamic> photoMap = photo as Map<String, dynamic>;
-        final Map<String, dynamic>? src = photoMap['src'] as Map<String, dynamic>?;
+        final Map<String, dynamic>? src =
+            photoMap['src'] as Map<String, dynamic>?;
         final String? imageUrl = src?['medium'] as String?;
         if (imageUrl != null && imageUrl.isNotEmpty) {
           validUrls.add(imageUrl);
@@ -176,16 +206,20 @@ class PexelsImageSearchService implements IImageLookupService {
       // Return a random image URL from the results for variety
       final Random random = Random();
       final String selectedUrl = validUrls[random.nextInt(validUrls.length)];
-      debugPrint('[PexelsImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl');
+      debugPrint(
+        '[PexelsImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl',
+      );
       return selectedUrl;
-    } on DioException catch (e) {
-      debugPrint('[PexelsImageSearchService] Error: ${e.message}');
-      if (e.response != null) {
-        debugPrint('[PexelsImageSearchService] Response: ${e.response?.data}');
+    } on DioException catch (error) {
+      debugPrint('[PexelsImageSearchService] Error: ${error.message}');
+      if (error.response != null) {
+        debugPrint(
+          '[PexelsImageSearchService] Response: ${error.response?.data}',
+        );
       }
       return null;
-    } catch (e) {
-      debugPrint('[PexelsImageSearchService] Unexpected error: $e');
+    } on Object catch (error) {
+      debugPrint('[PexelsImageSearchService] Unexpected error: $error');
       return null;
     }
   }
@@ -195,15 +229,15 @@ class PexelsImageSearchService implements IImageLookupService {
 /// Free tier: 50 requests per hour
 /// Requires API key from https://unsplash.com/developers
 class UnsplashImageSearchService implements IImageLookupService {
-  UnsplashImageSearchService({
-    required this.dio,
-    required this.accessKey,
-  });
+  UnsplashImageSearchService({required this.dio, required this.accessKey});
 
   final Dio dio;
   final String accessKey;
 
   static const String _baseUrl = 'https://api.unsplash.com/search/photos';
+
+  @override
+  String get providerId => 'unsplash';
 
   @override
   Future<String?> search(String query) async {
@@ -213,20 +247,21 @@ class UnsplashImageSearchService implements IImageLookupService {
     }
 
     try {
-      final Response<Map<String, dynamic>> response = await dio.get<Map<String, dynamic>>(
-        _baseUrl,
-        queryParameters: <String, dynamic>{
-          'query': sanitized,
-          'per_page': 5,
-          'orientation': 'landscape', // Better for recipe cards
-        },
-        options: Options(
-          headers: <String, String>{
-            'Authorization': 'Client-ID $accessKey',
-            'Accept': 'application/json',
-          },
-        ),
-      );
+      final Response<Map<String, dynamic>> response = await dio
+          .get<Map<String, dynamic>>(
+            _baseUrl,
+            queryParameters: <String, dynamic>{
+              'query': sanitized,
+              'per_page': 5,
+              'orientation': 'landscape', // Better for recipe cards
+            },
+            options: Options(
+              headers: <String, String>{
+                'Authorization': 'Client-ID $accessKey',
+                'Accept': 'application/json',
+              },
+            ),
+          );
 
       final Map<String, dynamic>? data = response.data;
       if (data == null) {
@@ -235,7 +270,9 @@ class UnsplashImageSearchService implements IImageLookupService {
 
       final List<dynamic>? results = data['results'] as List<dynamic>?;
       if (results == null || results.isEmpty) {
-        debugPrint('[UnsplashImageSearchService] No results for query: $sanitized');
+        debugPrint(
+          '[UnsplashImageSearchService] No results for query: $sanitized',
+        );
         return null;
       }
 
@@ -243,7 +280,8 @@ class UnsplashImageSearchService implements IImageLookupService {
       final List<String> validUrls = <String>[];
       for (final dynamic result in results) {
         final Map<String, dynamic> resultMap = result as Map<String, dynamic>;
-        final Map<String, dynamic>? urls = resultMap['urls'] as Map<String, dynamic>?;
+        final Map<String, dynamic>? urls =
+            resultMap['urls'] as Map<String, dynamic>?;
         final String? imageUrl = urls?['regular'] as String?;
         if (imageUrl != null && imageUrl.isNotEmpty) {
           validUrls.add(imageUrl);
@@ -258,16 +296,20 @@ class UnsplashImageSearchService implements IImageLookupService {
       // Return a random image URL from the results for variety
       final Random random = Random();
       final String selectedUrl = validUrls[random.nextInt(validUrls.length)];
-      debugPrint('[UnsplashImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl');
+      debugPrint(
+        '[UnsplashImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl',
+      );
       return selectedUrl;
-    } on DioException catch (e) {
-      debugPrint('[UnsplashImageSearchService] Error: ${e.message}');
-      if (e.response != null) {
-        debugPrint('[UnsplashImageSearchService] Response: ${e.response?.data}');
+    } on DioException catch (error) {
+      debugPrint('[UnsplashImageSearchService] Error: ${error.message}');
+      if (error.response != null) {
+        debugPrint(
+          '[UnsplashImageSearchService] Response: ${error.response?.data}',
+        );
       }
       return null;
-    } catch (e) {
-      debugPrint('[UnsplashImageSearchService] Unexpected error: $e');
+    } on Object catch (error) {
+      debugPrint('[UnsplashImageSearchService] Unexpected error: $error');
       return null;
     }
   }
@@ -276,12 +318,14 @@ class UnsplashImageSearchService implements IImageLookupService {
 /// Fallback service that tries multiple image search services in order
 /// Implements Strategy Pattern with fallback chain
 class MultiImageSearchService implements IImageLookupService {
-  MultiImageSearchService({
-    required this.services,
-  }) : assert(services.isNotEmpty, 'At least one service must be provided');
+  MultiImageSearchService({required this.services})
+    : assert(services.isNotEmpty, 'At least one service must be provided');
 
   /// List of image search services to try in order
   final List<IImageLookupService> services;
+
+  @override
+  String get providerId => 'multi';
 
   @override
   Future<String?> search(String query) async {
@@ -290,16 +334,22 @@ class MultiImageSearchService implements IImageLookupService {
       try {
         final String? result = await service.search(query);
         if (result != null && result.isNotEmpty) {
-          debugPrint('[MultiImageSearchService] Found image using ${service.runtimeType}');
+          debugPrint(
+            '[MultiImageSearchService] Found image using ${service.runtimeType}',
+          );
           return result;
         }
-      } catch (e) {
-        debugPrint('[MultiImageSearchService] Service ${service.runtimeType} failed: $e');
+      } on Object catch (error) {
+        debugPrint(
+          '[MultiImageSearchService] Service ${service.runtimeType} failed: $error',
+        );
         // Continue to next service
       }
     }
 
-    debugPrint('[MultiImageSearchService] All services failed for query: $query');
+    debugPrint(
+      '[MultiImageSearchService] All services failed for query: $query',
+    );
     return null;
   }
 }
@@ -332,6 +382,9 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
   };
 
   @override
+  String get providerId => 'google_images_html';
+
+  @override
   Future<String?> search(String query) async {
     final String sanitized = query.trim();
     if (sanitized.isEmpty) {
@@ -356,7 +409,9 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
 
       // Check if Google blocked the request
       if (response.statusCode == 429 || response.statusCode == 403) {
-        debugPrint('[GoogleImagesHtmlScrapingService] Google blocked the request (${response.statusCode})');
+        debugPrint(
+          '[GoogleImagesHtmlScrapingService] Google blocked the request (${response.statusCode})',
+        );
         return null;
       }
 
@@ -366,7 +421,9 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
       }
 
       // Check if Google returned a CAPTCHA page
-      if (html.contains('captcha') || html.contains('CAPTCHA') || html.contains('unusual traffic')) {
+      if (html.contains('captcha') ||
+          html.contains('CAPTCHA') ||
+          html.contains('unusual traffic')) {
         debugPrint('[GoogleImagesHtmlScrapingService] Google CAPTCHA detected');
         return null;
       }
@@ -374,14 +431,16 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
       // Try to extract image URLs from HTML
       // We'll collect multiple results and filter out restaurant/shop images
       final List<String> candidateUrls = <String>[];
-      
+
       // Method 1: Look for JSON-LD structured data
       final RegExp jsonLdPattern = RegExp(
         r'<script[^>]*type=.*application/ld\+json.*>(.*?)</script>',
         dotAll: true,
         caseSensitive: false,
       );
-      final Iterable<RegExpMatch> jsonLdMatches = jsonLdPattern.allMatches(html);
+      final Iterable<RegExpMatch> jsonLdMatches = jsonLdPattern.allMatches(
+        html,
+      );
       for (final RegExpMatch match in jsonLdMatches) {
         try {
           final String jsonContent = match.group(1) ?? '';
@@ -390,14 +449,16 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
             r'https?://[^\s"<>]+\.(jpg|jpeg|png|webp)',
             caseSensitive: false,
           );
-          final Iterable<RegExpMatch> imageMatches = imageUrlPattern.allMatches(jsonContent);
+          final Iterable<RegExpMatch> imageMatches = imageUrlPattern.allMatches(
+            jsonContent,
+          );
           for (final RegExpMatch imageMatch in imageMatches) {
             final String? imageUrl = imageMatch.group(0);
             if (imageUrl != null && _isValidImageUrl(imageUrl)) {
               candidateUrls.add(imageUrl);
             }
           }
-        } catch (e) {
+        } on Object {
           // Continue to next method
         }
       }
@@ -441,8 +502,11 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
       // If we have good food images, return a random one
       if (goodFoodUrls.isNotEmpty) {
         final Random random = Random();
-        final String selectedUrl = goodFoodUrls[random.nextInt(goodFoodUrls.length)];
-        debugPrint('[GoogleImagesHtmlScrapingService] Selected random good food image (${goodFoodUrls.length} options): $selectedUrl');
+        final String selectedUrl =
+            goodFoodUrls[random.nextInt(goodFoodUrls.length)];
+        debugPrint(
+          '[GoogleImagesHtmlScrapingService] Selected random good food image (${goodFoodUrls.length} options): $selectedUrl',
+        );
         return selectedUrl;
       }
 
@@ -452,9 +516,12 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
         // Skip first 2 results (usually restaurant photos) and pick randomly from the rest
         final int startIndex = candidateUrls.length > 2 ? 2 : 0;
         final int endIndex = candidateUrls.length;
-        final int randomIndex = startIndex + random.nextInt(endIndex - startIndex);
+        final int randomIndex =
+            startIndex + random.nextInt(endIndex - startIndex);
         final String selectedUrl = candidateUrls[randomIndex];
-        debugPrint('[GoogleImagesHtmlScrapingService] Selected random image from ${candidateUrls.length} candidates: $selectedUrl');
+        debugPrint(
+          '[GoogleImagesHtmlScrapingService] Selected random image from ${candidateUrls.length} candidates: $selectedUrl',
+        );
         return selectedUrl;
       }
 
@@ -465,23 +532,32 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
       final RegExpMatch? base64Match = base64Pattern.firstMatch(html);
       if (base64Match != null) {
         // Base64 images are too large, skip them
-        debugPrint('[GoogleImagesHtmlScrapingService] Found base64 image, skipping');
+        debugPrint(
+          '[GoogleImagesHtmlScrapingService] Found base64 image, skipping',
+        );
       }
 
-      debugPrint('[GoogleImagesHtmlScrapingService] No image found for query: $sanitized');
+      debugPrint(
+        '[GoogleImagesHtmlScrapingService] No image found for query: $sanitized',
+      );
       return null;
-    } on DioException catch (e) {
-      debugPrint('[GoogleImagesHtmlScrapingService] Error: ${e.message}');
-      if (e.response != null) {
-        debugPrint('[GoogleImagesHtmlScrapingService] Status: ${e.response?.statusCode}');
+    } on DioException catch (error) {
+      debugPrint('[GoogleImagesHtmlScrapingService] Error: ${error.message}');
+      if (error.response != null) {
+        debugPrint(
+          '[GoogleImagesHtmlScrapingService] Status: ${error.response?.statusCode}',
+        );
         // Google may return 429 (Too Many Requests) or 403 (Forbidden)
-        if (e.response?.statusCode == 429 || e.response?.statusCode == 403) {
-          debugPrint('[GoogleImagesHtmlScrapingService] Google blocked the request');
+        if (error.response?.statusCode == 429 ||
+            error.response?.statusCode == 403) {
+          debugPrint(
+            '[GoogleImagesHtmlScrapingService] Google blocked the request',
+          );
         }
       }
       return null;
-    } catch (e) {
-      debugPrint('[GoogleImagesHtmlScrapingService] Unexpected error: $e');
+    } on Object catch (error) {
+      debugPrint('[GoogleImagesHtmlScrapingService] Unexpected error: $error');
       return null;
     }
   }
@@ -505,7 +581,7 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
   bool _isGoodFoodImage(String url, String query) {
     final String lowerUrl = url.toLowerCase();
     final String lowerQuery = query.toLowerCase();
-    
+
     // Filter out restaurant/shop related URLs
     final List<String> badKeywords = <String>[
       'restaurant',
@@ -537,14 +613,14 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
       'building',
       'bina',
     ];
-    
+
     // Check if URL contains bad keywords
     for (final String keyword in badKeywords) {
       if (lowerUrl.contains(keyword)) {
         return false;
       }
     }
-    
+
     // Prefer URLs that contain food-related keywords
     final List<String> goodKeywords = <String>[
       'food',
@@ -562,14 +638,14 @@ class GoogleImagesHtmlScrapingService implements IImageLookupService {
       'serving',
       'servis',
     ];
-    
+
     // Bonus points if URL contains food keywords
     for (final String keyword in goodKeywords) {
       if (lowerUrl.contains(keyword) || lowerQuery.contains(keyword)) {
         return true;
       }
     }
-    
+
     // If no bad keywords found, it's probably okay
     return true;
   }
@@ -604,16 +680,17 @@ class DuckDuckGoImageSearchService implements IImageLookupService {
         return null;
       }
 
-      final Response<dynamic> res = await dio.get<dynamic>(
-        'https://duckduckgo.com/i.js',
-        queryParameters: <String, String>{
-          'l': 'tr-tr',
-          'o': 'json',
-          'q': sanitized,
-          'vqd': token,
-        },
-        options: Options(headers: _headers),
-      );
+      final Response<Map<String, dynamic>> res = await dio
+          .get<Map<String, dynamic>>(
+            'https://duckduckgo.com/i.js',
+            queryParameters: <String, String>{
+              'l': 'tr-tr',
+              'o': 'json',
+              'q': sanitized,
+              'vqd': token,
+            },
+            options: Options(headers: _headers),
+          );
       final List<dynamic>? results = res.data?['results'] as List<dynamic>?;
       if (results == null || results.isEmpty) {
         return null;
@@ -624,7 +701,9 @@ class DuckDuckGoImageSearchService implements IImageLookupService {
       for (final dynamic result in results) {
         final Map<String, dynamic> resultMap = result as Map<String, dynamic>;
         final String? imageUrl = resultMap['image'] as String?;
-        if (imageUrl != null && imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+        if (imageUrl != null &&
+            imageUrl.isNotEmpty &&
+            imageUrl.startsWith('http')) {
           validUrls.add(imageUrl);
         }
       }
@@ -636,16 +715,20 @@ class DuckDuckGoImageSearchService implements IImageLookupService {
       // Return a random image URL from the results for variety
       final Random random = Random();
       final String selectedUrl = validUrls[random.nextInt(validUrls.length)];
-      debugPrint('[DuckDuckGoImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl');
+      debugPrint(
+        '[DuckDuckGoImageSearchService] Selected random image (${validUrls.length} options): $selectedUrl',
+      );
       return selectedUrl;
-    } on Exception {
+    } on Object {
       return null;
     }
   }
+
+  @override
+  String get providerId => 'duckduckgo';
 
   String? _extractToken(String body) {
     final RegExpMatch? match = RegExp("vqd='([^']+)'").firstMatch(body);
     return match?.group(1);
   }
 }
-

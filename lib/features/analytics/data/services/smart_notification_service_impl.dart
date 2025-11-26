@@ -108,10 +108,11 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
           );
         }
       }
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Logger.error(
         '[SmartNotificationService] Error checking dietary suggestions',
-        e,
+        error,
+        stackTrace,
       );
     }
   }
@@ -202,8 +203,12 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
           }
         }
       }
-    } catch (e) {
-      Logger.error('[SmartNotificationService] Error checking low stock', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[SmartNotificationService] Error checking low stock',
+        error,
+        stackTrace,
+      );
     }
   }
 
@@ -220,10 +225,11 @@ class SmartNotificationServiceImpl implements ISmartNotificationService {
       Logger.info(
         '[SmartNotificationService] Scheduled smart notifications for household: $householdId',
       );
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Logger.error(
         '[SmartNotificationService] Error scheduling smart notifications',
-        e,
+        error,
+        stackTrace,
       );
     }
   }

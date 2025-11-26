@@ -207,8 +207,12 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
 
       final Map<String, dynamic> data = snapshot.data()!;
       return UserAnalytics.fromJson(data);
-    } catch (e) {
-      Logger.error('[AnalyticsRepository] Error getting cached analytics', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[AnalyticsRepository] Error getting cached analytics',
+        error,
+        stackTrace,
+      );
       return null;
     }
   }
@@ -218,8 +222,12 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
     try {
       await _doc(analytics.userId).set(analytics.toJson());
       Logger.info('[AnalyticsRepository] Updated analytics cache');
-    } catch (e) {
-      Logger.error('[AnalyticsRepository] Error updating analytics', e);
+    } on Object catch (error, stackTrace) {
+      Logger.error(
+        '[AnalyticsRepository] Error updating analytics',
+        error,
+        stackTrace,
+      );
       rethrow;
     }
   }

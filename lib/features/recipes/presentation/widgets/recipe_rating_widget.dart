@@ -49,151 +49,145 @@ class _RecipeRatingWidgetState extends State<RecipeRatingWidget> {
         ),
       child: BlocBuilder<CommentCubit, CommentState>(
         builder: (BuildContext context, CommentState state) => state.maybeWhen(
-            loaded: (List<RecipeComment> comments) {
-              // Calculate average rating from comments
-              final List<int> ratings = comments
-                  .where((RecipeComment c) => c.rating != null)
-                  .map((RecipeComment c) => c.rating!)
-                  .toList();
+          loaded: (List<RecipeComment> comments) {
+            // Calculate average rating from comments
+            final List<int> ratings = comments
+                .where((RecipeComment c) => c.rating != null)
+                .map((RecipeComment c) => c.rating!)
+                .toList();
 
-              // Find user's rating
-              RecipeComment? userComment;
-              try {
-                userComment = comments.firstWhere(
-                  (RecipeComment c) => c.userId == widget.currentUserId,
-                );
-              } catch (e) {
-                userComment = null;
-              }
-              final int? existingUserRating = userComment?.rating;
+            // Find user's rating
+            RecipeComment? userComment;
+            userComment = comments.cast<RecipeComment?>().firstWhere(
+              (RecipeComment? c) =>
+                  c != null && c.userId == widget.currentUserId,
+              orElse: () => null,
+            );
+            final int? existingUserRating = userComment?.rating;
 
-              final double averageRating = ratings.isEmpty
-                  ? 0.0
-                  : ratings.reduce((int a, int b) => a + b) / ratings.length;
+            final double averageRating = ratings.isEmpty
+                ? 0.0
+                : ratings.reduce((int a, int b) => a + b) / ratings.length;
 
-              return Container(
-                padding: EdgeInsets.all(AppSizes.spacingM),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(AppSizes.radius),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    // Average rating display
-                    if (ratings.isNotEmpty) ...<Widget>[
-                      Row(
-                        children: <Widget>[
-                          Text(
-                            tr('average_rating'),
-                            style: TextStyle(
-                              fontSize: isTablet
-                                  ? AppSizes.textM
-                                  : AppSizes.textS,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(width: AppSizes.spacingS),
-                          Row(
-                            children: List<Widget>.generate(5, (int index) => Icon(
-                                index < averageRating.round()
-                                    ? Icons.star
-                                    : Icons.star_border,
-                                size: 20.sp,
-                                color: Colors.amber,
-                              )),
-                          ),
-                          SizedBox(width: AppSizes.spacingXS),
-                          Text(
-                            averageRating.toStringAsFixed(1),
-                            style: TextStyle(
-                              fontSize: isTablet
-                                  ? AppSizes.textL
-                                  : AppSizes.textM,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(width: AppSizes.spacingXS),
-                          Text(
-                            '(${ratings.length} ${tr('ratings')})',
-                            style: TextStyle(
-                              fontSize: isTablet
-                                  ? AppSizes.textS
-                                  : AppSizes.textXS,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: AppSizes.spacingM),
-                    ],
-                    // User rating section
+            return Container(
+              padding: EdgeInsets.all(AppSizes.spacingM),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppSizes.radius),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // Average rating display
+                  if (ratings.isNotEmpty) ...<Widget>[
                     Row(
                       children: <Widget>[
                         Text(
-                          tr('your_rating'),
+                          tr('average_rating'),
                           style: TextStyle(
                             fontSize: isTablet
                                 ? AppSizes.textM
                                 : AppSizes.textS,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         SizedBox(width: AppSizes.spacingS),
-                        ...List<Widget>.generate(5, (int index) {
-                          final int ratingValue = index + 1;
-                          final bool isSelected = (_userRating ??
-                                  existingUserRating ??
-                                  0) >=
-                              ratingValue;
-
-                          return GestureDetector(
-                            onTap: _isSubmitting
-                                ? null
-                                : () {
-                                    setState(() {
-                                      _userRating = ratingValue;
-                                    });
-                                    _submitRating(ratingValue);
-                                  },
-                            child: Padding(
-                              padding: EdgeInsets.only(right: 4.w),
-                              child: Icon(
-                                isSelected ? Icons.star : Icons.star_border,
-                                size: 24.sp,
-                                color: _isSubmitting
-                                    ? Colors.grey
-                                    : Colors.amber,
-                              ),
+                        Row(
+                          children: List<Widget>.generate(
+                            5,
+                            (int index) => Icon(
+                              index < averageRating.round()
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              size: 20.sp,
+                              color: Colors.amber,
                             ),
-                          );
-                        }),
-                        if (_isSubmitting)
-                          Padding(
-                            padding: EdgeInsets.only(left: AppSizes.spacingS),
-                            child: SizedBox(
-                              width: 16.w,
-                              height: 16.h,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).colorScheme.primary,
-                                ),
+                          ),
+                        ),
+                        SizedBox(width: AppSizes.spacingXS),
+                        Text(
+                          averageRating.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: isTablet
+                                ? AppSizes.textL
+                                : AppSizes.textM,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: AppSizes.spacingXS),
+                        Text(
+                          '(${ratings.length} ${tr('ratings')})',
+                          style: TextStyle(
+                            fontSize: isTablet
+                                ? AppSizes.textS
+                                : AppSizes.textXS,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: AppSizes.spacingM),
+                  ],
+                  // User rating section
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        tr('your_rating'),
+                        style: TextStyle(
+                          fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.spacingS),
+                      ...List<Widget>.generate(5, (int index) {
+                        final int ratingValue = index + 1;
+                        final bool isSelected =
+                            (_userRating ?? existingUserRating ?? 0) >=
+                            ratingValue;
+
+                        return GestureDetector(
+                          onTap: _isSubmitting
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _userRating = ratingValue;
+                                  });
+                                  _submitRating(ratingValue);
+                                },
+                          child: Padding(
+                            padding: EdgeInsets.only(right: 4.w),
+                            child: Icon(
+                              isSelected ? Icons.star : Icons.star_border,
+                              size: 24.sp,
+                              color: _isSubmitting ? Colors.grey : Colors.amber,
+                            ),
+                          ),
+                        );
+                      }),
+                      if (_isSubmitting)
+                        Padding(
+                          padding: EdgeInsets.only(left: AppSizes.spacingS),
+                          child: SizedBox(
+                            width: 16.w,
+                            height: 16.h,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-            orElse: () => const SizedBox.shrink(),
-          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+          orElse: () => const SizedBox.shrink(),
+        ),
       ),
     );
   }
@@ -205,7 +199,7 @@ class _RecipeRatingWidgetState extends State<RecipeRatingWidget> {
 
     try {
       final CommentCubit cubit = context.read<CommentCubit>();
-      
+
       // Kullanıcının mevcut yorumunu bul
       final CommentState currentState = cubit.state;
       final List<RecipeComment> comments = currentState.maybeWhen(
@@ -214,18 +208,15 @@ class _RecipeRatingWidgetState extends State<RecipeRatingWidget> {
       );
 
       RecipeComment? existingComment;
-      try {
-        existingComment = comments.firstWhere(
-          (RecipeComment c) => c.userId == widget.currentUserId,
-        );
-      } catch (e) {
-        existingComment = null;
-      }
+      existingComment = comments.cast<RecipeComment?>().firstWhere(
+        (RecipeComment? c) => c != null && c.userId == widget.currentUserId,
+        orElse: () => null,
+      );
 
       // Kullanıcı bilgilerini al
       final AuthCubit authCubit = context.read<AuthCubit>();
       final AuthState authState = authCubit.state;
-      
+
       final domain.User? user = authState.maybeWhen(
         authenticated: (domain.User u) => u,
         orElse: () => null,
@@ -267,11 +258,11 @@ class _RecipeRatingWidgetState extends State<RecipeRatingWidget> {
           rating: rating,
         );
       }
-      
+
       setState(() {
         _isSubmitting = false;
       });
-    } catch (e) {
+    } on Object {
       setState(() {
         _isSubmitting = false;
       });
@@ -288,4 +279,3 @@ class _RecipeRatingWidgetState extends State<RecipeRatingWidget> {
     }
   }
 }
-

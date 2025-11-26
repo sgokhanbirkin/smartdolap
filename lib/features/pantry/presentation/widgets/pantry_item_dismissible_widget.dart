@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/core/widgets/animated_pantry_card.dart';
 import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
-import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 
 /// Widget that wraps a pantry item card with swipe-to-delete functionality
 class PantryItemDismissibleWidget extends StatelessWidget {
@@ -57,7 +57,7 @@ class PantryItemDismissibleWidget extends StatelessWidget {
       return true;
     },
     onDismissed: (DismissDirection direction) {
-      context.read<PantryCubit>().remove(userId, item.id);
+      context.read<PantryViewModel>().remove(userId, item.id);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -88,7 +88,7 @@ class PantryItemDismissibleWidget extends StatelessWidget {
       index: index,
       onTap: onTap,
       onQuantityChanged: (PantryItem updatedItem) {
-        context.read<PantryCubit>().update(userId, updatedItem);
+        context.read<PantryViewModel>().update(userId, updatedItem);
       },
     ),
   );

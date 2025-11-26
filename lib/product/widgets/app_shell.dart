@@ -9,10 +9,8 @@ import 'package:smartdolap/features/profile/presentation/view/profile_page.dart'
 import 'package:smartdolap/features/recipes/presentation/view/recipes_page.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
-/// App shell with bottom navigation
-/// Prevents back navigation - user must logout to exit
-/// TODO(RESPONSIVE): Add tablet/desktop navigation (drawer or side navigation)
-/// TODO(LOCALIZATION): Ensure all navigation labels are localization-ready
+/// App shell with responsive navigation (bottom nav on phone, drawer on tablet/desktop).
+/// Prevents back navigation - user must logout to exit.
 class AppShell extends StatefulWidget {
   /// App shell constructor
   const AppShell({super.key});
