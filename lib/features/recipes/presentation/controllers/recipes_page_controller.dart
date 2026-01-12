@@ -240,7 +240,7 @@ class _RecipesCacheManager {
         return;
       }
 
-      madeRecipes.value = await dataService.loadMadeRecipes();
+      madeRecipes.value = await dataService.loadMadeRecipes(userId);
       updateCombinedData();
     } on Exception catch (error) {
       debugPrint('[RecipesCacheManager] Cache load error: $error');
@@ -265,7 +265,7 @@ class _RecipesCacheManager {
         return;
       }
 
-      madeRecipes.value = await dataService.loadMadeRecipes();
+      madeRecipes.value = await dataService.loadMadeRecipes(userId);
       updateCombinedData();
     } on Exception catch (error) {
       debugPrint('[RecipesCacheManager] Error loading meals: $error');
@@ -289,7 +289,7 @@ class _RecipesCacheManager {
       return;
     }
     try {
-      final List<Recipe> loaded = await dataService.loadMadeRecipes();
+      final List<Recipe> loaded = await dataService.loadMadeRecipes(userId);
       if (isDisposed()) {
         return;
       }

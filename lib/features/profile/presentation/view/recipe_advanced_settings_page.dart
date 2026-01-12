@@ -1,7 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:smartdolap/core/constants/app_colors.dart';
 import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.dart';
 import 'package:smartdolap/features/profile/presentation/widgets/chip_group_widget.dart';
@@ -34,14 +33,18 @@ class _RecipeAdvancedSettingsPageState
   void initState() {
     super.initState();
     _prefs = widget.initialPrefs;
-    _calorieMinController.text =
-        _prefs.calorieRangeMin > 0 ? _prefs.calorieRangeMin.toString() : '';
-    _calorieMaxController.text =
-        _prefs.calorieRangeMax > 0 ? _prefs.calorieRangeMax.toString() : '';
-    _proteinMinController.text =
-        _prefs.proteinMin > 0 ? _prefs.proteinMin.toString() : '';
-    _fiberMinController.text =
-        _prefs.fiberMin > 0 ? _prefs.fiberMin.toString() : '';
+    _calorieMinController.text = _prefs.calorieRangeMin > 0
+        ? _prefs.calorieRangeMin.toString()
+        : '';
+    _calorieMaxController.text = _prefs.calorieRangeMax > 0
+        ? _prefs.calorieRangeMax.toString()
+        : '';
+    _proteinMinController.text = _prefs.proteinMin > 0
+        ? _prefs.proteinMin.toString()
+        : '';
+    _fiberMinController.text = _prefs.fiberMin > 0
+        ? _prefs.fiberMin.toString()
+        : '';
   }
 
   @override
@@ -78,22 +81,19 @@ class _RecipeAdvancedSettingsPageState
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      backgroundColor: AppColors.primaryRed, // Kırmızı renk
-      foregroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      foregroundColor: Theme.of(context).colorScheme.onPrimary,
       title: Text(
         tr('profile_advanced_settings_title'),
-        style: TextStyle(
-          fontSize: AppSizes.textM,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(fontSize: AppSizes.textM, fontWeight: FontWeight.w600),
       ),
       actions: <Widget>[
         TextButton(
           onPressed: _saveAndPop,
           child: Text(
             tr('save'),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -140,16 +140,20 @@ class _RecipeAdvancedSettingsPageState
                     onSelected: (String value) =>
                         _updatePrefs(_prefs.copyWith(dietStyle: value)),
                     onAddCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customDiets: <String>[..._prefs.customDiets, value],
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customDiets: <String>[..._prefs.customDiets, value],
+                        ),
+                      );
                     },
                     onRemoveCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customDiets: _prefs.customDiets
-                            .where((String v) => v != value)
-                            .toList(),
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customDiets: _prefs.customDiets
+                              .where((String v) => v != value)
+                              .toList(),
+                        ),
+                      );
                     },
                   ),
                   SizedBox(height: AppSizes.verticalSpacingL),
@@ -170,20 +174,26 @@ class _RecipeAdvancedSettingsPageState
                     ],
                     customValues: _prefs.customCuisines,
                     selected: _prefs.cuisineFocus,
-                    onSelected: (String value) => _updatePrefs(
-                      _prefs.copyWith(cuisineFocus: value),
-                    ),
+                    onSelected: (String value) =>
+                        _updatePrefs(_prefs.copyWith(cuisineFocus: value)),
                     onAddCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customCuisines: <String>[..._prefs.customCuisines, value],
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customCuisines: <String>[
+                            ..._prefs.customCuisines,
+                            value,
+                          ],
+                        ),
+                      );
                     },
                     onRemoveCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customCuisines: _prefs.customCuisines
-                            .where((String v) => v != value)
-                            .toList(),
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customCuisines: _prefs.customCuisines
+                              .where((String v) => v != value)
+                              .toList(),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -249,10 +259,9 @@ class _RecipeAdvancedSettingsPageState
                       ),
                     ],
                     selected: <String>{_prefs.cookingTime},
-                    onSelectionChanged: (Set<String> selection) =>
-                        _updatePrefs(_prefs.copyWith(
-                          cookingTime: selection.first,
-                        )),
+                    onSelectionChanged: (Set<String> selection) => _updatePrefs(
+                      _prefs.copyWith(cookingTime: selection.first),
+                    ),
                   ),
                   SizedBox(height: AppSizes.verticalSpacingM),
                   // Difficulty
@@ -296,10 +305,9 @@ class _RecipeAdvancedSettingsPageState
                       ),
                     ],
                     selected: <String>{_prefs.difficulty},
-                    onSelectionChanged: (Set<String> selection) =>
-                        _updatePrefs(_prefs.copyWith(
-                          difficulty: selection.first,
-                        )),
+                    onSelectionChanged: (Set<String> selection) => _updatePrefs(
+                      _prefs.copyWith(difficulty: selection.first),
+                    ),
                   ),
                 ],
               ),
@@ -350,10 +358,7 @@ class _RecipeAdvancedSettingsPageState
                         ),
                       ),
                       SizedBox(width: AppSizes.spacingM),
-                      Text(
-                        '-',
-                        style: TextStyle(fontSize: AppSizes.textL),
-                      ),
+                      Text('-', style: TextStyle(fontSize: AppSizes.textL)),
                       SizedBox(width: AppSizes.spacingM),
                       Expanded(
                         child: TextField(
@@ -426,31 +431,41 @@ class _RecipeAdvancedSettingsPageState
                   Wrap(
                     spacing: AppSizes.spacingS,
                     runSpacing: AppSizes.spacingS,
-                    children: <String>[
-                      'gluten-free',
-                      'laktoz-free',
-                      'şeker-free',
-                      'tuz-free',
-                      'fındık-free',
-                    ].map<Widget>(
-                      (String diet) => FilterChip(
-                        label: Text(diet),
-                        selected: _prefs.specialDiets.contains(diet),
-                        onSelected: (bool selected) {
-                          if (selected) {
-                            _updatePrefs(_prefs.copyWith(
-                              specialDiets: <String>[..._prefs.specialDiets, diet],
-                            ));
-                          } else {
-                            _updatePrefs(_prefs.copyWith(
-                              specialDiets: _prefs.specialDiets
-                                  .where((String d) => d != diet)
-                                  .toList(),
-                            ));
-                          }
-                        },
-                      ),
-                    ).toList(),
+                    children:
+                        <String>[
+                              'gluten-free',
+                              'laktoz-free',
+                              'şeker-free',
+                              'tuz-free',
+                              'fındık-free',
+                            ]
+                            .map<Widget>(
+                              (String diet) => FilterChip(
+                                label: Text(diet),
+                                selected: _prefs.specialDiets.contains(diet),
+                                onSelected: (bool selected) {
+                                  if (selected) {
+                                    _updatePrefs(
+                                      _prefs.copyWith(
+                                        specialDiets: <String>[
+                                          ..._prefs.specialDiets,
+                                          diet,
+                                        ],
+                                      ),
+                                    );
+                                  } else {
+                                    _updatePrefs(
+                                      _prefs.copyWith(
+                                        specialDiets: _prefs.specialDiets
+                                            .where((String d) => d != diet)
+                                            .toList(),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            )
+                            .toList(),
                   ),
                 ],
               ),
@@ -483,7 +498,9 @@ class _RecipeAdvancedSettingsPageState
                         selected: _prefs.seasonalPreference.isEmpty,
                         onSelected: (bool selected) {
                           if (selected) {
-                            _updatePrefs(_prefs.copyWith(seasonalPreference: ''));
+                            _updatePrefs(
+                              _prefs.copyWith(seasonalPreference: ''),
+                            );
                           }
                         },
                       ),
@@ -491,36 +508,44 @@ class _RecipeAdvancedSettingsPageState
                         label: Text(tr('profile_season_winter')),
                         selected: _prefs.seasonalPreference == 'kış',
                         onSelected: (bool selected) {
-                          _updatePrefs(_prefs.copyWith(
-                            seasonalPreference: selected ? 'kış' : '',
-                          ));
+                          _updatePrefs(
+                            _prefs.copyWith(
+                              seasonalPreference: selected ? 'kış' : '',
+                            ),
+                          );
                         },
                       ),
                       FilterChip(
                         label: Text(tr('profile_season_summer')),
                         selected: _prefs.seasonalPreference == 'yaz',
                         onSelected: (bool selected) {
-                          _updatePrefs(_prefs.copyWith(
-                            seasonalPreference: selected ? 'yaz' : '',
-                          ));
+                          _updatePrefs(
+                            _prefs.copyWith(
+                              seasonalPreference: selected ? 'yaz' : '',
+                            ),
+                          );
                         },
                       ),
                       FilterChip(
                         label: Text(tr('profile_season_spring')),
                         selected: _prefs.seasonalPreference == 'ilkbahar',
                         onSelected: (bool selected) {
-                          _updatePrefs(_prefs.copyWith(
-                            seasonalPreference: selected ? 'ilkbahar' : '',
-                          ));
+                          _updatePrefs(
+                            _prefs.copyWith(
+                              seasonalPreference: selected ? 'ilkbahar' : '',
+                            ),
+                          );
                         },
                       ),
                       FilterChip(
                         label: Text(tr('profile_season_fall')),
                         selected: _prefs.seasonalPreference == 'sonbahar',
                         onSelected: (bool selected) {
-                          _updatePrefs(_prefs.copyWith(
-                            seasonalPreference: selected ? 'sonbahar' : '',
-                          ));
+                          _updatePrefs(
+                            _prefs.copyWith(
+                              seasonalPreference: selected ? 'sonbahar' : '',
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -550,30 +575,37 @@ class _RecipeAdvancedSettingsPageState
                   Wrap(
                     spacing: AppSizes.spacingS,
                     runSpacing: AppSizes.spacingS,
-                    children: <String>[
-                      'breakfast',
-                      'lunch',
-                      'dinner',
-                      'snack',
-                    ].map<Widget>(
-                      (String mealType) => FilterChip(
-                        label: Text(tr('profile_meal_$mealType')),
-                        selected: _prefs.preferredMealTypes.contains(mealType),
-                        onSelected: (bool selected) {
-                          if (selected) {
-                            _updatePrefs(_prefs.copyWith(
-                              preferredMealTypes: <String>[..._prefs.preferredMealTypes, mealType],
-                            ));
-                          } else {
-                            _updatePrefs(_prefs.copyWith(
-                              preferredMealTypes: _prefs.preferredMealTypes
-                                  .where((String m) => m != mealType)
-                                  .toList(),
-                            ));
-                          }
-                        },
-                      ),
-                    ).toList(),
+                    children: <String>['breakfast', 'lunch', 'dinner', 'snack']
+                        .map<Widget>(
+                          (String mealType) => FilterChip(
+                            label: Text(tr('profile_meal_$mealType')),
+                            selected: _prefs.preferredMealTypes.contains(
+                              mealType,
+                            ),
+                            onSelected: (bool selected) {
+                              if (selected) {
+                                _updatePrefs(
+                                  _prefs.copyWith(
+                                    preferredMealTypes: <String>[
+                                      ..._prefs.preferredMealTypes,
+                                      mealType,
+                                    ],
+                                  ),
+                                );
+                              } else {
+                                _updatePrefs(
+                                  _prefs.copyWith(
+                                    preferredMealTypes: _prefs
+                                        .preferredMealTypes
+                                        .where((String m) => m != mealType)
+                                        .toList(),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
@@ -604,16 +636,20 @@ class _RecipeAdvancedSettingsPageState
                     onSelected: (String value) =>
                         _updatePrefs(_prefs.copyWith(tone: value)),
                     onAddCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customTones: <String>[..._prefs.customTones, value],
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customTones: <String>[..._prefs.customTones, value],
+                        ),
+                      );
                     },
                     onRemoveCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customTones: _prefs.customTones
-                            .where((String v) => v != value)
-                            .toList(),
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customTones: _prefs.customTones
+                              .where((String v) => v != value)
+                              .toList(),
+                        ),
+                      );
                     },
                   ),
                   ChipGroupWidget(
@@ -633,16 +669,20 @@ class _RecipeAdvancedSettingsPageState
                     onSelected: (String value) =>
                         _updatePrefs(_prefs.copyWith(goal: value)),
                     onAddCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customGoals: <String>[..._prefs.customGoals, value],
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customGoals: <String>[..._prefs.customGoals, value],
+                        ),
+                      );
                     },
                     onRemoveCustom: (String value) {
-                      _updatePrefs(_prefs.copyWith(
-                        customGoals: _prefs.customGoals
-                            .where((String v) => v != value)
-                            .toList(),
-                      ));
+                      _updatePrefs(
+                        _prefs.copyWith(
+                          customGoals: _prefs.customGoals
+                              .where((String v) => v != value)
+                              .toList(),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -655,4 +695,3 @@ class _RecipeAdvancedSettingsPageState
     ),
   );
 }
-

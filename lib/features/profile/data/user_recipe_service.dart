@@ -10,8 +10,19 @@ class UserRecipeService implements IUserRecipeRepository {
   UserRecipeService(this._box);
 
   final Box<dynamic> _box;
-  static const String _userRecipesKey = 'user_recipes';
   static const Uuid _uuid = Uuid();
+
+  /// Current user ID for data isolation
+  String? _currentUserId;
+
+  /// Set the current user ID to ensure data isolation
+  void setCurrentUserId(String? userId) {
+    _currentUserId = userId;
+  }
+
+  /// Get the storage key for the current user
+  String get _userRecipesKey =>
+      _currentUserId != null ? 'user_recipes_$_currentUserId' : 'user_recipes';
 
   @override
   List<UserRecipe> fetch() {

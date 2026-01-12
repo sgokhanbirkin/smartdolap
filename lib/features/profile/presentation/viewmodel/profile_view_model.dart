@@ -25,13 +25,13 @@ class ProfileViewModel {
     required AuthCubit authCubit,
     required IBadgeRepository badgeRepository,
     HiveInterface? hive,
-  })  : _cubit = cubit,
-        _prefService = prefService,
-        _statsService = statsService,
-        _userRecipeService = userRecipeService,
-        _authCubit = authCubit,
-        _badgeRepository = badgeRepository,
-        _hive = hive ?? Hive;
+  }) : _cubit = cubit,
+       _prefService = prefService,
+       _statsService = statsService,
+       _userRecipeService = userRecipeService,
+       _authCubit = authCubit,
+       _badgeRepository = badgeRepository,
+       _hive = hive ?? Hive;
 
   final ProfileCubit _cubit;
   final IPromptPreferenceService _prefService;
@@ -49,6 +49,12 @@ class ProfileViewModel {
     try {
       final PromptPreferences prefs = _prefService.getPreferences();
       final ProfileStats stats = _statsService.load();
+      // Set current user ID for data isolation
+      _authCubit.state.whenOrNull(
+        authenticated: (domain.User user) {
+          _userRecipeService.setCurrentUserId(user.id);
+        },
+      );
       final List<UserRecipe> userRecipes = _userRecipeService.fetch();
       final int favoritesCount = await _loadFavoritesCount();
       final List<Badge> badges = await _loadBadges();
@@ -110,6 +116,12 @@ class ProfileViewModel {
     String? videoPath,
   }) async {
     try {
+      // Set current user ID for data isolation
+      _authCubit.state.whenOrNull(
+        authenticated: (domain.User user) {
+          _userRecipeService.setCurrentUserId(user.id);
+        },
+      );
       await _userRecipeService.createManual(
         title: title,
         description: description,
@@ -196,5 +208,3 @@ class ProfileViewModel {
     _cubit.update(badges: badges);
   }
 }
-
-

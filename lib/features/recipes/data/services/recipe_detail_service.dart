@@ -58,6 +58,10 @@ class RecipeDetailService {
       // For MVP, we assume recipes with non-empty IDs are AI recommendations
       final bool isAIRecommendation = recipe.id.isNotEmpty;
 
+      // Get current user ID for data isolation
+      final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      _userRecipeService.setCurrentUserId(currentUserId);
+
       // Convert Recipe to UserRecipe
       await _userRecipeService.createManual(
         title: recipe.title,

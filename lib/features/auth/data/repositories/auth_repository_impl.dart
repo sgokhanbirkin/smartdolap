@@ -75,6 +75,17 @@ class AuthRepositoryImpl implements IAuthRepository {
         await userCredential.user!.reload();
       }
 
+      // Create user document in Firestore immediately to prevent permission errors
+      // when snapshot listeners start before household setup
+      await _firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set(<String, dynamic>{
+            'email': email,
+            'displayName': displayName,
+            'createdAt': DateTime.now().toIso8601String(),
+          }, SetOptions(merge: true));
+
       return UserModel.fromFirebaseUser(userCredential.user!).toEntity();
     } on fb.FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -122,12 +133,24 @@ class AuthRepositoryImpl implements IAuthRepository {
       String? householdId;
       String? avatarId;
       try {
-        final DocumentSnapshot<Map<String, dynamic>> userDoc =
-            await _firestore.collection('users').doc(firebaseUser.uid).get();
+        final DocumentSnapshot<Map<String, dynamic>> userDoc = await _firestore
+            .collection('users')
+            .doc(firebaseUser.uid)
+            .get();
         if (userDoc.exists) {
           final Map<String, dynamic>? data = userDoc.data();
           householdId = data?['householdId'] as String?;
           avatarId = data?['avatarId'] as String?;
+        } else {
+          // Create user document if it doesn't exist (for existing users)
+          await _firestore
+              .collection('users')
+              .doc(firebaseUser.uid)
+              .set(<String, dynamic>{
+                'email': firebaseUser.email,
+                'displayName': firebaseUser.displayName,
+                'createdAt': DateTime.now().toIso8601String(),
+              }, SetOptions(merge: true));
         }
       } on Object {
         // Silently fail - householdId might not exist yet
@@ -148,8 +171,9 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   @override
-  Stream<domain.User?> get currentUserStream =>
-      _firebaseAuth.authStateChanges().asyncMap((fb.User? firebaseUser) async {
+  Stream<domain.User?> get currentUserStream => _firebaseAuth
+      .authStateChanges()
+      .asyncMap((fb.User? firebaseUser) async {
         if (firebaseUser == null) {
           return null;
         }
@@ -165,9 +189,9 @@ class AuthRepositoryImpl implements IAuthRepository {
             householdId = data?['householdId'] as String?;
             avatarId = data?['avatarId'] as String?;
           }
-      } on Object {
-        // Silently fail - householdId might not exist yet
-      }
+        } on Object {
+          // Silently fail - householdId might not exist yet
+        }
 
         return UserModel(
           id: firebaseUser.uid,
@@ -177,17 +201,16 @@ class AuthRepositoryImpl implements IAuthRepository {
           householdId: householdId,
           avatarId: avatarId,
         ).toEntity();
-      }).asyncExpand((domain.User? user) {
+      })
+      .asyncExpand((domain.User? user) {
         if (user == null) {
           return Stream<domain.User?>.value(null);
         }
 
         // Listen to Firestore user document changes for householdId updates
-        return _firestore
-            .collection('users')
-            .doc(user.id)
-            .snapshots()
-            .map((DocumentSnapshot<Map<String, dynamic>> snapshot) {
+        return _firestore.collection('users').doc(user.id).snapshots().map((
+          DocumentSnapshot<Map<String, dynamic>> snapshot,
+        ) {
           // If document doesn't exist, return user without householdId
           if (!snapshot.exists) {
             return UserModel(

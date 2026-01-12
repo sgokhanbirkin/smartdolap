@@ -37,8 +37,12 @@ class RecipesPageDataService {
       recipesViewModel.loadMeal(userId, meal);
 
   /// Load made recipes (recipes marked as made - with or without photo)
-  Future<List<Recipe>> loadMadeRecipes() async {
-    debugPrint('[RecipesPageDataService] Yaptıklarım yükleniyor...');
+  Future<List<Recipe>> loadMadeRecipes(String userId) async {
+    debugPrint(
+      '[RecipesPageDataService] Yaptıklarım yükleniyor... (userId: $userId)',
+    );
+    // Set current user ID for data isolation
+    _userRecipeService.setCurrentUserId(userId);
     final List<UserRecipe> allRecipes = _userRecipeService.fetch();
     debugPrint(
       '[RecipesPageDataService] Toplam ${allRecipes.length} tarif bulundu',

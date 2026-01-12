@@ -140,18 +140,6 @@ class _FoodPreferencesOnboardingPageState
   Future<void> _saveAndContinue() async {
     final AuthState authState = context.read<AuthCubit>().state;
     final FoodPreferencesCubit cubit = context.read<FoodPreferencesCubit>();
-    final List<String> selectedFoodIds = cubit.selectedFoodIds;
-
-    // Minimum 3 food selection required
-    if (selectedFoodIds.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tr('food_preferences_minimum', args: <String>['3'])),
-          backgroundColor: Theme.of(context).colorScheme.errorContainer,
-        ),
-      );
-      return;
-    }
 
     await authState.whenOrNull(
       authenticated: (User user) async {
@@ -306,7 +294,9 @@ class _FoodPreferencesOnboardingPageState
             Text(
               tr(
                 'food_preferences_selected',
-                args: <String>['${selectedFoodIds.length}'],
+                namedArgs: <String, String>{
+                  'count': '${selectedFoodIds.length}',
+                },
               ),
               style: TextStyle(
                 fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
@@ -314,14 +304,6 @@ class _FoodPreferencesOnboardingPageState
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            if (selectedFoodIds.length < 3)
-              Text(
-                tr('food_preferences_minimum', args: <String>['3']),
-                style: TextStyle(
-                  fontSize: isTablet ? AppSizes.textXS : AppSizes.textXS,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
           ],
         ),
         SizedBox(height: AppSizes.verticalSpacingM),
@@ -481,7 +463,8 @@ class _FoodPreferencesOnboardingPageState
   );
 
   Widget _buildContinueButton(BuildContext context, int selectedCount) {
-    final bool canContinue = selectedCount >= 3;
+    // Always allow continuing - food selection is optional
+    const bool canContinue = true;
 
     return BlocBuilder<FoodPreferencesCubit, FoodPreferencesState>(
       builder: (BuildContext context, FoodPreferencesState state) {
