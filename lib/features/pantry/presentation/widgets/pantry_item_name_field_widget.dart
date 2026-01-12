@@ -15,6 +15,7 @@ class PantryItemNameFieldWidget extends StatelessWidget {
     required this.isProcessingPhoto,
     required this.isImageLoading,
     required this.onCameraPressed,
+    required this.onBarcodePressed,
     required this.fieldDecoration,
     this.imageUrl,
     super.key,
@@ -37,6 +38,9 @@ class PantryItemNameFieldWidget extends StatelessWidget {
 
   /// Callback when camera button is pressed
   final VoidCallback onCameraPressed;
+
+  /// Callback when barcode button is pressed
+  final VoidCallback onBarcodePressed;
 
   /// Field decoration builder
   final InputDecoration Function(BuildContext, {String? hint}) fieldDecoration;
@@ -98,6 +102,12 @@ class PantryItemNameFieldWidget extends StatelessWidget {
                     context,
                   ).colorScheme.onPrimaryContainer,
                 ),
+              ),
+              SizedBox(width: AppSizes.spacingS),
+              IconButton.filledTonal(
+                onPressed: isProcessingPhoto ? null : onBarcodePressed,
+                icon: const Icon(Icons.qr_code_scanner),
+                tooltip: tr('scan_barcode'),
               ),
             ],
           ),

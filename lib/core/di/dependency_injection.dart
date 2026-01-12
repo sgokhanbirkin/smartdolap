@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_it/get_it.dart';
@@ -15,6 +16,8 @@ import 'package:smartdolap/core/services/i_onboarding_service.dart';
 import 'package:smartdolap/core/services/i_sync_service.dart';
 import 'package:smartdolap/core/services/onboarding_service.dart';
 import 'package:smartdolap/core/services/sync_service.dart';
+import 'package:smartdolap/core/services/api_service.dart';
+import 'package:smartdolap/core/services/product_cache_service.dart';
 import 'package:smartdolap/features/analytics/data/repositories/analytics_repository_impl.dart';
 import 'package:smartdolap/features/analytics/data/repositories/meal_consumption_repository_impl.dart';
 import 'package:smartdolap/features/analytics/data/services/analytics_service_impl.dart';
@@ -28,6 +31,13 @@ import 'package:smartdolap/features/analytics/presentation/viewmodel/analytics_c
 import 'package:smartdolap/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:smartdolap/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/login_usecase.dart';
+import 'package:smartdolap/features/barcode/data/repositories/product_lookup_repository_impl.dart';
+import 'package:smartdolap/features/barcode/data/services/open_food_facts_service.dart';
+import 'package:smartdolap/features/barcode/domain/repositories/i_product_lookup_repository.dart';
+import 'package:smartdolap/features/barcode/domain/use_cases/scan_product_barcode_usecase.dart';
+import 'package:smartdolap/features/barcode/presentation/viewmodel/barcode_scanner_cubit.dart';
+import 'package:smartdolap/features/barcode/presentation/viewmodel/serial_barcode_scanner_cubit.dart';
+import 'package:smartdolap/features/barcode/presentation/viewmodel/serial_barcode_scanner_cubit_v2.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/logout_usecase.dart';
 import 'package:smartdolap/features/auth/domain/use_cases/register_usecase.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
@@ -63,6 +73,7 @@ import 'package:smartdolap/features/pantry/domain/use_cases/add_pantry_item.dart
 import 'package:smartdolap/features/pantry/domain/use_cases/delete_pantry_item.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/list_pantry_items.dart';
 import 'package:smartdolap/features/pantry/domain/use_cases/update_pantry_item.dart';
+import 'package:smartdolap/features/pantry/domain/use_cases/bulk_add_pantry_items.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_cubit.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/profile/data/profile_stats_service.dart';
@@ -81,6 +92,7 @@ import 'package:smartdolap/features/rate_limiting/domain/services/i_rate_limit_s
 import 'package:smartdolap/features/rate_limiting/presentation/cubit/rate_limit_cubit.dart';
 import 'package:smartdolap/features/recipes/data/repositories/comment_repository_impl.dart';
 import 'package:smartdolap/features/recipes/data/repositories/recipes_repository_impl.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_api_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_cache_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_image_service.dart';
 import 'package:smartdolap/features/recipes/domain/repositories/i_comment_repository.dart';
@@ -110,8 +122,7 @@ import 'package:smartdolap/features/shopping/domain/use_cases/update_shopping_li
 import 'package:smartdolap/features/shopping/presentation/viewmodel/shopping_list_cubit.dart';
 import 'package:smartdolap/product/services/expiry_notification_service.dart';
 import 'package:smartdolap/product/services/i_expiry_notification_service.dart';
-import 'package:smartdolap/product/services/image_lookup_service.dart'
-    show IImageLookupService, NoOpImageSearchService;
+import 'package:smartdolap/product/services/image_lookup_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
 import 'package:smartdolap/product/services/openai/openai_service.dart';
 import 'package:smartdolap/product/services/storage/i_storage_service.dart';
@@ -223,6 +234,12 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
   sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
 
+  // API Service (Backend communication)
+  sl.registerLazySingleton<ApiService>(() => ApiService(sl<fb.FirebaseAuth>()));
+
+  // Product Cache Service (Memory cache for product lookups)
+  sl.registerLazySingleton<ProductCacheService>(() => ProductCacheService());
+
   // Auth — DIP: arayüz → implementasyon
   sl.registerLazySingleton<IAuthRepository>(
     () => AuthRepositoryImpl(sl<fb.FirebaseAuth>(), sl<FirebaseFirestore>()),
@@ -242,6 +259,34 @@ Future<void> setupLocator() async {
     ),
   );
 
+  // Barcode Scanner — DIP: Clean Architecture
+  // OpenFoodFacts Service
+  sl.registerLazySingleton<OpenFoodFactsService>(
+    () => OpenFoodFactsService(
+      apiService: sl<ApiService>(),
+      productCache: sl<ProductCacheService>(),
+      dio: sl<Dio>(),
+    ),
+  );
+  // Repository
+  sl.registerLazySingleton<IProductLookupRepository>(
+    () => ProductLookupRepositoryImpl(sl<OpenFoodFactsService>()),
+  );
+  // Use Case
+  sl.registerFactory<ScanProductBarcodeUseCase>(
+    () => ScanProductBarcodeUseCase(sl<IProductLookupRepository>()),
+  );
+  // Cubit
+  sl.registerFactory<BarcodeScannerCubit>(
+    () => BarcodeScannerCubit(sl<ScanProductBarcodeUseCase>()),
+  );
+  sl.registerFactory<SerialBarcodeScannerCubit>(
+    () => SerialBarcodeScannerCubit(sl<ScanProductBarcodeUseCase>()),
+  );
+  sl.registerFactory<SerialBarcodeScannerCubitV2>(
+    () => SerialBarcodeScannerCubitV2(sl<ScanProductBarcodeUseCase>()),
+  );
+
   // Pantry
   sl.registerLazySingleton<IPantryRepository>(
     () => PantryRepositoryImpl(
@@ -254,6 +299,9 @@ Future<void> setupLocator() async {
   sl.registerFactory<AddPantryItem>(() => AddPantryItem(sl()));
   sl.registerFactory<UpdatePantryItem>(() => UpdatePantryItem(sl()));
   sl.registerFactory<DeletePantryItem>(() => DeletePantryItem(sl()));
+  sl.registerFactory<BulkAddPantryItems>(
+    () => BulkAddPantryItems(sl<IPantryRepository>()),
+  );
 
   // Pantry Cubit - State only (MVVM pattern)
   sl.registerFactory<PantryCubit>(PantryCubit.new);
@@ -275,12 +323,30 @@ Future<void> setupLocator() async {
     () => Dio(BaseOptions(baseUrl: 'https://api.openai.com/v1')),
   );
 
-  // Image lookup services - DISABLED for production
-  // Using NoOpImageSearchService to avoid external API calls
-  // Images should come from OpenAI response or be null (placeholder shown)
-  sl.registerLazySingleton<IImageLookupService>(
-    () => const NoOpImageSearchService(),
+  // Pexels HTTP client for image search
+  sl.registerLazySingleton<Dio>(
+    () => Dio(BaseOptions(baseUrl: 'https://api.pexels.com/v1')),
+    instanceName: 'pexelsDio',
   );
+
+  // Image lookup services - ENABLED with Pexels API
+  // Pexels provides high-quality, royalty-free images for recipes
+  // Free tier: 200 requests per hour
+  // Get API key from: https://www.pexels.com/api/
+  sl.registerLazySingleton<IImageLookupService>(() {
+    final String? apiKey = dotenv.env['PEXELS_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint(
+        '[DI] PEXELS_API_KEY not found in .env - image search disabled',
+      );
+      return const NoOpImageSearchService();
+    }
+    debugPrint('[DI] Pexels image search enabled');
+    return PexelsImageSearchService(
+      dio: sl<Dio>(instanceName: 'pexelsDio'),
+      apiKey: apiKey,
+    );
+  });
 
   // Feedback Service
   sl.registerLazySingleton<IFeedbackService>(() => const FeedbackService());
@@ -296,9 +362,16 @@ Future<void> setupLocator() async {
     () => RateLimitCubit(sl<IRateLimitService>()),
   );
 
+  sl.registerLazySingleton<RecipeApiService>(
+    () => RecipeApiService(sl<ApiService>()),
+  );
+
   // OpenAI
   sl.registerLazySingleton<IOpenAIService>(
-    () => OpenAIService(dio: sl(), rateLimitService: sl<IRateLimitService>()),
+    () => OpenAIService(
+      apiKey: dotenv.maybeGet('OPENAI_API_KEY'),
+      rateLimitService: sl<IRateLimitService>(),
+    ),
   );
 
   // Storage
@@ -451,8 +524,9 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<IRecipesRepository>(
     () => RecipesRepositoryImpl(
       sl<FirebaseFirestore>(),
-      sl(),
-      sl(),
+      sl<IPantryRepository>(),
+      sl<IOpenAIService>(),
+      sl<RecipeApiService>(),
       sl<IPromptPreferenceService>(),
       sl<IRecipeImageService>(),
       sl<IRecipeCacheService>(),

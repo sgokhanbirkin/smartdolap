@@ -11,6 +11,7 @@ import 'package:smartdolap/features/profile/domain/entities/prompt_preferences.d
 import 'package:smartdolap/features/profile/domain/repositories/i_prompt_preference_service.dart';
 import 'package:smartdolap/features/recipes/data/services/firestore_recipe_mapper.dart';
 import 'package:smartdolap/features/recipes/data/services/missing_ingredient_calculator.dart';
+import 'package:smartdolap/features/recipes/data/services/recipe_api_service.dart';
 import 'package:smartdolap/features/recipes/data/services/recipe_filter_service.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe.dart';
 import 'package:smartdolap/features/recipes/domain/entities/recipe_step.dart';
@@ -20,7 +21,6 @@ import 'package:smartdolap/features/recipes/domain/repositories/i_recipes_reposi
 import 'package:smartdolap/features/sync/domain/entities/sync_task.dart';
 import 'package:smartdolap/features/sync/domain/services/i_sync_queue_service.dart';
 import 'package:smartdolap/product/services/openai/i_openai_service.dart';
-import 'package:smartdolap/product/services/openai/openai_parsing_exception.dart';
 import 'package:uuid/uuid.dart';
 
 /// Repository implementation for recipes
@@ -33,6 +33,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
     this._firestore,
     this._pantry,
     this._openai,
+    this._recipeApiService,
     this._promptPrefs,
     this._recipeImageService,
     this._recipeCacheService,
@@ -42,6 +43,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
   final FirebaseFirestore _firestore;
   final IPantryRepository _pantry;
   final IOpenAIService _openai;
+  final RecipeApiService _recipeApiService;
   final IPromptPreferenceService _promptPrefs;
   final IRecipeImageService _recipeImageService;
   final IRecipeCacheService _recipeCacheService;
@@ -68,14 +70,37 @@ class RecipesRepositoryImpl implements IRecipesRepository {
 
     final PromptPreferences prefs = _promptPrefs.getPreferences();
 
-    // OpenAI'ye istek at
-    final List<RecipeSuggestion> suggestions = await _openai.suggestRecipes(
-      ingredients,
-      servings: prefs.servings,
-      count: count,
-      query: prompt,
-      excludeTitles: excludeTitles,
-    );
+    // Try backend API first, fallback to OpenAI if backend fails
+    List<RecipeSuggestion> suggestions;
+    try {
+      debugPrint("[RecipesRepository] Backend API'ye istek atılıyor...");
+      suggestions = await _recipeApiService.generateRecipes(
+        ingredients: ingredients,
+        servings: prefs.servings,
+        count: count,
+        query: prompt,
+        excludeTitles: excludeTitles,
+        meal: meal,
+      );
+      debugPrint(
+        '[RecipesRepository] Backend API başarılı - ${suggestions.length} öneri',
+      );
+    } catch (e) {
+      // Backend failed (404, timeout, etc.) - fallback to direct OpenAI
+      debugPrint('[RecipesRepository] Backend API hata: $e');
+      debugPrint("[RecipesRepository] OpenAI'ye fallback yapılıyor...");
+
+      suggestions = await _openai.suggestRecipes(
+        ingredients,
+        servings: prefs.servings,
+        count: count,
+        query: prompt,
+        excludeTitles: excludeTitles,
+      );
+      debugPrint(
+        '[RecipesRepository] OpenAI fallback başarılı - ${suggestions.length} öneri',
+      );
+    }
 
     debugPrint(
       '[RecipesRepository] OpenAI yanıtı geldi - ${suggestions.length} öneri',
@@ -236,8 +261,7 @@ class RecipesRepositoryImpl implements IRecipesRepository {
           excludeTitles: allExcludeTitles,
         );
 
-        // Yeni tarifleri hem Hive'a hem Firestore'a kaydet (zaten _generateRecipesWithOpenAIAndSave içinde Firestore'a kaydediliyor)
-        // Sadece Hive cache'e ekle
+        // Yeni tarifleri hem Hive'a hem Firestore'a kaydet
         await _recipeCacheService.addRecipesToCache(cacheKey, generated);
 
         final List<Recipe> combined = <Recipe>[...filteredCached, ...generated];
@@ -253,26 +277,14 @@ class RecipesRepositoryImpl implements IRecipesRepository {
 
       // Eğer cache yeterliyse (buraya gelmemeli ama güvenlik için)
       return filteredCached;
-    } on OpenAIParsingException catch (e) {
-      Logger.error(
-        '[RecipesRepository] OpenAI parsing error in getRecipesFromFirestoreFirst',
-        e,
-      );
-      if (filteredCached.isNotEmpty) {
-        debugPrint(
-          "[RecipesRepository] OpenAI hatası, Hive cache'den ${filteredCached.length} tarif döndürülüyor",
-        );
-        return filteredCached;
-      }
-      rethrow;
     } catch (e) {
       Logger.error(
-        '[RecipesRepository] OpenAI error in getRecipesFromFirestoreFirst',
+        '[RecipesRepository] Error in getRecipesFromFirestoreFirst',
         e,
       );
       if (filteredCached.isNotEmpty) {
         debugPrint(
-          "[RecipesRepository] OpenAI hatası, Hive cache'den ${filteredCached.length} tarif döndürülüyor",
+          "[RecipesRepository] Hata oluştu, Hive cache'den ${filteredCached.length} tarif döndürülüyor",
         );
         return filteredCached;
       }

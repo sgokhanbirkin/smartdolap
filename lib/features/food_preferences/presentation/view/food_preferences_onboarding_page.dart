@@ -34,11 +34,11 @@ class _FoodPreferencesOnboardingPageState
 
   final Map<String, TextEditingController> _productControllers =
       <String, TextEditingController>{
-    'breakfast': TextEditingController(),
-    'lunch': TextEditingController(),
-    'dinner': TextEditingController(),
-    'snack': TextEditingController(),
-  };
+        'breakfast': TextEditingController(),
+        'lunch': TextEditingController(),
+        'dinner': TextEditingController(),
+        'snack': TextEditingController(),
+      };
 
   final Map<String, FocusNode> _productFocusNodes = <String, FocusNode>{
     'breakfast': FocusNode(),
@@ -50,7 +50,12 @@ class _FoodPreferencesOnboardingPageState
   @override
   void initState() {
     super.initState();
-    _loadFoodPreferences();
+    // Delay loading to next frame to ensure all providers are ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadFoodPreferences();
+      }
+    });
   }
 
   @override
@@ -66,11 +71,27 @@ class _FoodPreferencesOnboardingPageState
 
   void _loadFoodPreferences() {
     final AuthState authState = context.read<AuthCubit>().state;
+    debugPrint(
+      '[FoodPreferencesPage] Loading food preferences, authState: $authState',
+    );
+
+    bool userFound = false;
     authState.whenOrNull(
       authenticated: (User user) {
+        debugPrint('[FoodPreferencesPage] User authenticated: ${user.id}');
+        userFound = true;
         context.read<FoodPreferencesCubit>().loadFoodPreferences(user.id);
       },
     );
+
+    // If not authenticated, still load preferences with empty user ID
+    // This will show all available foods but won't load user-specific preferences
+    if (!userFound) {
+      debugPrint(
+        '[FoodPreferencesPage] WARNING: User not authenticated! Loading with empty userId',
+      );
+      context.read<FoodPreferencesCubit>().loadFoodPreferences('');
+    }
   }
 
   void _addProduct(String mealType) {
@@ -91,11 +112,13 @@ class _FoodPreferencesOnboardingPageState
 
     // Update cubit
     context.read<FoodPreferencesCubit>().updateMealTypePreferences(
-          breakfast: mealType == 'breakfast' ? _mealTypeProducts['breakfast'] : null,
-          lunch: mealType == 'lunch' ? _mealTypeProducts['lunch'] : null,
-          dinner: mealType == 'dinner' ? _mealTypeProducts['dinner'] : null,
-          snack: mealType == 'snack' ? _mealTypeProducts['snack'] : null,
-        );
+      breakfast: mealType == 'breakfast'
+          ? _mealTypeProducts['breakfast']
+          : null,
+      lunch: mealType == 'lunch' ? _mealTypeProducts['lunch'] : null,
+      dinner: mealType == 'dinner' ? _mealTypeProducts['dinner'] : null,
+      snack: mealType == 'snack' ? _mealTypeProducts['snack'] : null,
+    );
   }
 
   void _removeProduct(String mealType, String product) {
@@ -105,11 +128,13 @@ class _FoodPreferencesOnboardingPageState
 
     // Update cubit
     context.read<FoodPreferencesCubit>().updateMealTypePreferences(
-          breakfast: mealType == 'breakfast' ? _mealTypeProducts['breakfast'] : null,
-          lunch: mealType == 'lunch' ? _mealTypeProducts['lunch'] : null,
-          dinner: mealType == 'dinner' ? _mealTypeProducts['dinner'] : null,
-          snack: mealType == 'snack' ? _mealTypeProducts['snack'] : null,
-        );
+      breakfast: mealType == 'breakfast'
+          ? _mealTypeProducts['breakfast']
+          : null,
+      lunch: mealType == 'lunch' ? _mealTypeProducts['lunch'] : null,
+      dinner: mealType == 'dinner' ? _mealTypeProducts['dinner'] : null,
+      snack: mealType == 'snack' ? _mealTypeProducts['snack'] : null,
+    );
   }
 
   Future<void> _saveAndContinue() async {
@@ -157,14 +182,14 @@ class _FoodPreferencesOnboardingPageState
     return BlocListener<FoodPreferencesCubit, FoodPreferencesState>(
       listener: (BuildContext context, FoodPreferencesState state) {
         state.whenOrNull(
-      saved: () {
-        // If navigated from SharePage, pop back instead of replacing
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        } else {
-          Navigator.of(context).pushReplacementNamed(AppRouter.home);
-        }
-      },
+          saved: () {
+            // If navigated from SharePage, pop back instead of replacing
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacementNamed(AppRouter.home);
+            }
+          },
           error: (String message) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -177,58 +202,67 @@ class _FoodPreferencesOnboardingPageState
       },
       child: BackgroundWrapper(
         child: Scaffold(
-        appBar: AppBar(
-          title: Text(tr('food_preferences_onboarding_title')),
-        ),
-        resizeToAvoidBottomInset: true,
-        body: BlocBuilder<FoodPreferencesCubit, FoodPreferencesState>(
-          builder: (BuildContext context, FoodPreferencesState state) => state.when(
-              initial: () => const Center(child: CircularProgressIndicator()),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              loaded: (
-                List<FoodPreference> allFoodPreferences,
-                List<String> selectedFoodIds,
-                _,
-              ) => SingleChildScrollView(
-                  padding: EdgeInsets.all(AppSizes.padding),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      // Description
-                      Text(
-                        tr('food_preferences_onboarding_description'),
-                        style: TextStyle(
-                          fontSize: isTablet ? AppSizes.textL : AppSizes.textM,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          appBar: AppBar(title: Text(tr('food_preferences_onboarding_title'))),
+          resizeToAvoidBottomInset: true,
+          body: BlocBuilder<FoodPreferencesCubit, FoodPreferencesState>(
+            builder: (BuildContext context, FoodPreferencesState state) =>
+                state.when(
+                  initial: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  loaded:
+                      (
+                        List<FoodPreference> allFoodPreferences,
+                        List<String> selectedFoodIds,
+                        _,
+                      ) => SingleChildScrollView(
+                        padding: EdgeInsets.all(AppSizes.padding),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            // Description
+                            Text(
+                              tr('food_preferences_onboarding_description'),
+                              style: TextStyle(
+                                fontSize: isTablet
+                                    ? AppSizes.textL
+                                    : AppSizes.textM,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: AppSizes.verticalSpacingXL),
+                            // Food chips section
+                            _buildFoodChipsSection(
+                              context,
+                              allFoodPreferences,
+                              selectedFoodIds,
+                              isTablet,
+                            ),
+                            SizedBox(height: AppSizes.verticalSpacingXL),
+                            // Meal type products section
+                            _buildMealTypeProductsSection(context, isTablet),
+                            SizedBox(height: AppSizes.verticalSpacingXL),
+                            // Continue button
+                            _buildContinueButton(
+                              context,
+                              selectedFoodIds.length,
+                            ),
+                          ],
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: AppSizes.verticalSpacingXL),
-                      // Food chips section
-                      _buildFoodChipsSection(
-                        context,
-                        allFoodPreferences,
-                        selectedFoodIds,
-                        isTablet,
-                      ),
-                      SizedBox(height: AppSizes.verticalSpacingXL),
-                      // Meal type products section
-                      _buildMealTypeProductsSection(context, isTablet),
-                      SizedBox(height: AppSizes.verticalSpacingXL),
-                      // Continue button
-                      _buildContinueButton(context, selectedFoodIds.length),
-                    ],
-                  ),
+                  saving: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  saved: () => const SizedBox.shrink(),
+                  error: (String message) => Center(child: Text(message)),
                 ),
-              saving: () => const Center(child: CircularProgressIndicator()),
-              saved: () => const SizedBox.shrink(),
-              error: (String message) => Center(
-                child: Text(message),
-              ),
-            ),
+          ),
         ),
-      ),
       ),
     );
   }
@@ -239,12 +273,27 @@ class _FoodPreferencesOnboardingPageState
     List<String> selectedFoodIds,
     bool isTablet,
   ) {
+    // Debug: Print the data being displayed
+    debugPrint(
+      '[FoodPreferencesPage] Building chips with ${allFoodPreferences.length} foods',
+    );
+    debugPrint('[FoodPreferencesPage] Selected IDs: $selectedFoodIds');
+
     // Group by category
     final Map<String, List<FoodPreference>> groupedByCategory =
         <String, List<FoodPreference>>{};
     for (final FoodPreference food in allFoodPreferences) {
       groupedByCategory.putIfAbsent(food.category, () => <FoodPreference>[]);
       groupedByCategory[food.category]!.add(food);
+    }
+
+    debugPrint(
+      '[FoodPreferencesPage] Categories: ${groupedByCategory.keys.toList()}',
+    );
+    for (final entry in groupedByCategory.entries) {
+      debugPrint(
+        '[FoodPreferencesPage] Category ${entry.key}: ${entry.value.length} items',
+      );
     }
 
     return Column(
@@ -255,7 +304,10 @@ class _FoodPreferencesOnboardingPageState
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Text(
-              tr('food_preferences_selected', args: <String>['${selectedFoodIds.length}']),
+              tr(
+                'food_preferences_selected',
+                args: <String>['${selectedFoodIds.length}'],
+              ),
               style: TextStyle(
                 fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
                 fontWeight: FontWeight.bold,
@@ -289,17 +341,25 @@ class _FoodPreferencesOnboardingPageState
               Wrap(
                 spacing: AppSizes.spacingS,
                 runSpacing: AppSizes.verticalSpacingS,
-                children: entry.value.map(
-                  (FoodPreference food) => FilterChip(
-                    label: Text(food.name),
-                    selected: selectedFoodIds.contains(food.id),
-                    onSelected: (_) {
-                      context.read<FoodPreferencesCubit>().toggleFoodSelection(food.id);
-                    },
-                    selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                    checkmarkColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ).toList(),
+                children: entry.value
+                    .map(
+                      (FoodPreference food) => FilterChip(
+                        label: Text(food.name),
+                        selected: selectedFoodIds.contains(food.id),
+                        onSelected: (_) {
+                          context
+                              .read<FoodPreferencesCubit>()
+                              .toggleFoodSelection(food.id);
+                        },
+                        selectedColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        checkmarkColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                    )
+                    .toList(),
               ),
               SizedBox(height: AppSizes.verticalSpacingM),
             ],
@@ -309,50 +369,51 @@ class _FoodPreferencesOnboardingPageState
     );
   }
 
-  Widget _buildMealTypeProductsSection(BuildContext context, bool isTablet) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          tr('meal_type_products_hint'),
-          style: TextStyle(
-            fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
-            fontWeight: FontWeight.bold,
+  Widget _buildMealTypeProductsSection(BuildContext context, bool isTablet) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            tr('meal_type_products_hint'),
+            style: TextStyle(
+              fontSize: isTablet ? AppSizes.textM : AppSizes.textS,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        SizedBox(height: AppSizes.verticalSpacingM),
-        // Breakfast
-        _buildMealTypeProductInput(
-          context,
-          'breakfast',
-          tr('meal_type_breakfast'),
-          isTablet,
-        ),
-        SizedBox(height: AppSizes.verticalSpacingM),
-        // Lunch
-        _buildMealTypeProductInput(
-          context,
-          'lunch',
-          tr('meal_type_lunch'),
-          isTablet,
-        ),
-        SizedBox(height: AppSizes.verticalSpacingM),
-        // Dinner
-        _buildMealTypeProductInput(
-          context,
-          'dinner',
-          tr('meal_type_dinner'),
-          isTablet,
-        ),
-        SizedBox(height: AppSizes.verticalSpacingM),
-        // Snack
-        _buildMealTypeProductInput(
-          context,
-          'snack',
-          tr('meal_type_snack'),
-          isTablet,
-        ),
-      ],
-    );
+          SizedBox(height: AppSizes.verticalSpacingM),
+          // Breakfast
+          _buildMealTypeProductInput(
+            context,
+            'breakfast',
+            tr('meal_type_breakfast'),
+            isTablet,
+          ),
+          SizedBox(height: AppSizes.verticalSpacingM),
+          // Lunch
+          _buildMealTypeProductInput(
+            context,
+            'lunch',
+            tr('meal_type_lunch'),
+            isTablet,
+          ),
+          SizedBox(height: AppSizes.verticalSpacingM),
+          // Dinner
+          _buildMealTypeProductInput(
+            context,
+            'dinner',
+            tr('meal_type_dinner'),
+            isTablet,
+          ),
+          SizedBox(height: AppSizes.verticalSpacingM),
+          // Snack
+          _buildMealTypeProductInput(
+            context,
+            'snack',
+            tr('meal_type_snack'),
+            isTablet,
+          ),
+        ],
+      );
 
   Widget _buildMealTypeProductInput(
     BuildContext context,
@@ -360,62 +421,64 @@ class _FoodPreferencesOnboardingPageState
     String mealTypeLabel,
     bool isTablet,
   ) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          mealTypeLabel,
-          style: TextStyle(
-            fontSize: isTablet ? AppSizes.textS : AppSizes.textXS,
-            fontWeight: FontWeight.w600,
-          ),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Text(
+        mealTypeLabel,
+        style: TextStyle(
+          fontSize: isTablet ? AppSizes.textS : AppSizes.textXS,
+          fontWeight: FontWeight.w600,
         ),
-        SizedBox(height: AppSizes.verticalSpacingS / 2),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: TextField(
-                controller: _productControllers[mealType],
-                focusNode: _productFocusNodes[mealType],
-                enabled: true,
-                enableInteractiveSelection: true,
-                keyboardType: TextInputType.text,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(
-                  hintText: tr('meal_type_product_placeholder'),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radius),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.spacingM,
-                    vertical: AppSizes.spacingS,
-                  ),
+      ),
+      SizedBox(height: AppSizes.verticalSpacingS / 2),
+      Row(
+        children: <Widget>[
+          Expanded(
+            child: TextField(
+              controller: _productControllers[mealType],
+              focusNode: _productFocusNodes[mealType],
+              enabled: true,
+              enableInteractiveSelection: true,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: tr('meal_type_product_placeholder'),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radius),
                 ),
-                onSubmitted: (_) => _addProduct(mealType),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.spacingM,
+                  vertical: AppSizes.spacingS,
+                ),
               ),
+              onSubmitted: (_) => _addProduct(mealType),
             ),
-            SizedBox(width: AppSizes.spacingS),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => _addProduct(mealType),
-              tooltip: tr('meal_type_add_product'),
-            ),
-          ],
-        ),
-        if (_mealTypeProducts[mealType]!.isNotEmpty) ...<Widget>[
-          SizedBox(height: AppSizes.verticalSpacingS / 2),
-          Wrap(
-            spacing: AppSizes.spacingS,
-            runSpacing: AppSizes.verticalSpacingS / 2,
-            children: _mealTypeProducts[mealType]!.map(
-              (String product) => InputChip(
-                label: Text(product),
-                onDeleted: () => _removeProduct(mealType, product),
-              ),
-            ).toList(),
+          ),
+          SizedBox(width: AppSizes.spacingS),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _addProduct(mealType),
+            tooltip: tr('meal_type_add_product'),
           ),
         ],
+      ),
+      if (_mealTypeProducts[mealType]!.isNotEmpty) ...<Widget>[
+        SizedBox(height: AppSizes.verticalSpacingS / 2),
+        Wrap(
+          spacing: AppSizes.spacingS,
+          runSpacing: AppSizes.verticalSpacingS / 2,
+          children: _mealTypeProducts[mealType]!
+              .map(
+                (String product) => InputChip(
+                  label: Text(product),
+                  onDeleted: () => _removeProduct(mealType, product),
+                ),
+              )
+              .toList(),
+        ),
       ],
-    );
+    ],
+  );
 
   Widget _buildContinueButton(BuildContext context, int selectedCount) {
     final bool canContinue = selectedCount >= 3;
@@ -471,4 +534,3 @@ class _FoodPreferencesOnboardingPageState
     }
   }
 }
-

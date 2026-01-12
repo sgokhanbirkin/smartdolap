@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,40 +20,61 @@ class ThemeDialogWidget extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          RadioListTile<ThemeMode>(
+          ListTile(
             title: Text(tr('light_theme')),
-            value: ThemeMode.light,
-            groupValue: currentThemeMode,
-            onChanged: (ThemeMode? value) {
-              if (value != null) {
-                themeCubit.setThemeMode(value);
-                Navigator.pop(context);
-                Navigator.pop(context); // Close settings menu too
-              }
+            leading: Radio<ThemeMode>(
+              value: ThemeMode.light,
+              groupValue: currentThemeMode,
+              onChanged: (ThemeMode? value) {
+                if (value != null) {
+                  themeCubit.setThemeMode(value);
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Close settings menu too
+                }
+              },
+            ),
+            onTap: () {
+              themeCubit.setThemeMode(ThemeMode.light);
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
           ),
-          RadioListTile<ThemeMode>(
+          ListTile(
             title: Text(tr('dark_theme')),
-            value: ThemeMode.dark,
-            groupValue: currentThemeMode,
-            onChanged: (ThemeMode? value) {
-              if (value != null) {
-                themeCubit.setThemeMode(value);
-                Navigator.pop(context);
-                Navigator.pop(context); // Close settings menu too
-              }
+            leading: Radio<ThemeMode>(
+              value: ThemeMode.dark,
+              groupValue: currentThemeMode,
+              onChanged: (ThemeMode? value) {
+                if (value != null) {
+                  themeCubit.setThemeMode(value);
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Close settings menu too
+                }
+              },
+            ),
+            onTap: () {
+              themeCubit.setThemeMode(ThemeMode.dark);
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
           ),
-          RadioListTile<ThemeMode>(
+          ListTile(
             title: Text(tr('system_theme')),
-            value: ThemeMode.system,
-            groupValue: currentThemeMode,
-            onChanged: (ThemeMode? value) {
-              if (value != null) {
-                themeCubit.setThemeMode(value);
-                Navigator.pop(context);
-                Navigator.pop(context); // Close settings menu too
-              }
+            leading: Radio<ThemeMode>(
+              value: ThemeMode.system,
+              groupValue: currentThemeMode,
+              onChanged: (ThemeMode? value) {
+                if (value != null) {
+                  themeCubit.setThemeMode(value);
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Close settings menu too
+                }
+              },
+            ),
+            onTap: () {
+              themeCubit.setThemeMode(ThemeMode.system);
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
           ),
         ],
@@ -66,4 +89,3 @@ class ThemeDialogWidget extends StatelessWidget {
     );
   }
 }
-

@@ -143,14 +143,27 @@ class PantryRepositoryImpl implements IPantryRepository {
   PantryItem _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) =>
       _fromMap(d.data(), fallbackId: d.id);
 
+  /// Helper method to parse DateTime from Firestore
+  /// Handles both Timestamp (from Firestore) and String (from cache) types
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
   PantryItem _fromMap(Map<String, dynamic> m, {String? fallbackId}) => PantryItem(
     id: m['id'] as String? ?? fallbackId ?? '',
     name: m['name'] as String? ?? '',
     quantity: (m['quantity'] as num?)?.toDouble() ?? 1.0,
     unit: m['unit'] as String? ?? '',
-    expiryDate: m['expiryDate'] != null
-        ? DateTime.tryParse(m['expiryDate'] as String)
-        : null,
+    expiryDate: _parseDateTime(m['expiryDate']),
     imageUrl: m['imageUrl'] as String?,
     ingredients:
         (m['ingredients'] as List<dynamic>?)
@@ -164,12 +177,8 @@ class PantryRepositoryImpl implements IPantryRepository {
             .toList() ??
         const <Ingredient>[],
     category: m['category'] as String?,
-    createdAt: m['createdAt'] != null
-        ? DateTime.tryParse(m['createdAt'] as String)
-        : null,
-    updatedAt: m['updatedAt'] != null
-        ? DateTime.tryParse(m['updatedAt'] as String)
-        : null,
+    createdAt: _parseDateTime(m['createdAt']),
+    updatedAt: _parseDateTime(m['updatedAt']),
     addedByUserId: m['addedByUserId'] as String?,
     addedByAvatarId: m['addedByAvatarId'] as String?,
   );

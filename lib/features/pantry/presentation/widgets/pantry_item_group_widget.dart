@@ -12,7 +12,8 @@ class PantryItemGroupWidget extends StatefulWidget {
     required this.items,
     required this.userId,
     required this.onItemTap,
-    required this.buildDismissibleCard, this.onQuantityChanged,
+    required this.buildDismissibleCard,
+    this.onQuantityChanged,
     super.key,
   });
 
@@ -84,12 +85,14 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
 
   @override
   Widget build(BuildContext context) {
-    final Color categoryColor = CategoryColors.getCategoryColor(
-      widget.category,
-    );
-    final Color categoryIconColor = CategoryColors.getCategoryIconColor(
-      widget.category,
-    );
+    // Theme-aware colors for dark mode
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color categoryColor = isDark
+        ? Theme.of(context).colorScheme.surface
+        : CategoryColors.getCategoryColor(widget.category);
+    final Color categoryIconColor = isDark
+        ? Theme.of(context).colorScheme.onSurface
+        : CategoryColors.getCategoryIconColor(widget.category);
 
     return Padding(
       padding: EdgeInsets.only(bottom: AppSizes.verticalSpacingM),
@@ -133,7 +136,11 @@ class _PantryItemGroupWidgetState extends State<PantryItemGroupWidget>
                       vertical: AppSizes.spacingXS,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: isDark
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest
+                          : Colors.white.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(AppSizes.radius),
                     ),
                     child: Text(

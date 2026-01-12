@@ -77,14 +77,17 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
 
     final String unit = widget.item.unit.toLowerCase().trim();
     double increment;
-    
+
     if (unit == 'g' || unit == 'gr' || unit == 'gram') {
       increment = delta > 0 ? 25 : -25;
     } else if (unit == 'kg' || unit == 'kilogram') {
       increment = delta > 0 ? 0.1 : -0.1;
     } else if (unit == 'ml' || unit == 'mililitre') {
       increment = delta > 0 ? 50 : -50;
-    } else if (unit == 'lt' || unit == 'l' || unit == 'litre' || unit == 'liter') {
+    } else if (unit == 'lt' ||
+        unit == 'l' ||
+        unit == 'litre' ||
+        unit == 'liter') {
       increment = delta > 0 ? 0.1 : -0.1;
     } else if (unit == 'adet' ||
         unit == 'tane' ||
@@ -96,11 +99,12 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
       increment = delta > 0 ? 0.5 : -0.5;
     }
 
-    double newQuantity =
-        (widget.item.quantity + increment).clamp(0.1, 1000);
-    newQuantity =
-        QuantityFormatter.roundQuantity(newQuantity, widget.item.unit);
-    
+    double newQuantity = (widget.item.quantity + increment).clamp(0.1, 1000);
+    newQuantity = QuantityFormatter.roundQuantity(
+      newQuantity,
+      widget.item.unit,
+    );
+
     if ((newQuantity - widget.item.quantity).abs() < 0.001) {
       return;
     }
@@ -112,12 +116,23 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
   @override
   Widget build(BuildContext context) {
     final bool hasQuickActions = widget.onQuantityChanged != null;
+
+    // Theme-aware colors for dark mode
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color categoryColor = widget.item.category != null
-        ? CategoryColors.getCategoryColor(widget.item.category!)
-        : AppColors.surfaceLight;
+        ? (isDark
+              ? Theme.of(context).colorScheme.surface
+              : CategoryColors.getCategoryColor(widget.item.category!))
+        : (isDark
+              ? Theme.of(context).colorScheme.surface
+              : AppColors.surfaceLight);
     final Color categoryIconColor = widget.item.category != null
-        ? CategoryColors.getCategoryIconColor(widget.item.category!)
-        : AppColors.primaryBlue;
+        ? (isDark
+              ? Theme.of(context).colorScheme.onSurface
+              : CategoryColors.getCategoryIconColor(widget.item.category!))
+        : (isDark
+              ? Theme.of(context).colorScheme.onSurface
+              : AppColors.primaryBlue);
 
     return GestureDetector(
       onTapDown: (_) {
@@ -145,13 +160,15 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
                   : Colors.transparent,
               width: _isPressed ? 2 : 0,
             ),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: categoryColor.withValues(alpha: 0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: isDark
+                ? null
+                : <BoxShadow>[
+                    BoxShadow(
+                      color: categoryColor.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(
@@ -205,10 +222,8 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
                       SizedBox(width: AppSizes.spacingXS * 0.2),
                       Flexible(
                         child: Text(
-                          '${QuantityFormatter.formatQuantity(
-                            widget.item.quantity,
-                            widget.item.unit,
-                          )} ${widget.item.unit}'.trim(),
+                          '${QuantityFormatter.formatQuantity(widget.item.quantity, widget.item.unit)} ${widget.item.unit}'
+                              .trim(),
                           style: TextStyle(
                             fontSize: AppSizes.textXS * 0.75,
                             fontWeight: FontWeight.w500,
@@ -232,10 +247,8 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
                   )
                 else
                   Text(
-                    '${QuantityFormatter.formatQuantity(
-                      widget.item.quantity,
-                      widget.item.unit,
-                    )} ${widget.item.unit}'.trim(),
+                    '${QuantityFormatter.formatQuantity(widget.item.quantity, widget.item.unit)} ${widget.item.unit}'
+                        .trim(),
                     style: TextStyle(
                       fontSize: AppSizes.textXS * 0.75,
                       fontWeight: FontWeight.w500,
@@ -309,4 +322,3 @@ class _PantryItemGridCardState extends State<PantryItemGridCard>
     return true;
   }
 }
-

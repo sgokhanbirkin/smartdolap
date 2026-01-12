@@ -20,6 +20,7 @@ class PantryCategoryHelper {
     'snacks',
     'drinks',
     'frozen',
+    'breakfast',
     'other',
   ];
 
@@ -69,6 +70,8 @@ class PantryCategoryHelper {
         return tr('categories.drinks');
       case 'frozen':
         return tr('categories.frozen');
+      case 'breakfast':
+        return tr('categories.breakfast');
       case 'other':
       default:
         return tr('categories.other');
@@ -167,7 +170,24 @@ class PantryCategoryHelper {
       'mısır',
       'pizza',
       'sebze',
+      'mısır',
+      'pizza',
+      'sebze',
       'patates',
+    ],
+    'breakfast': <String>[
+      'tahin',
+      'pekmez',
+      'reçel',
+      'bal',
+      'zeytin',
+      'helva',
+      'fındık ezmesi',
+      'fıstık ezmesi',
+      'krem peynir',
+      'müsli',
+      'gevrek',
+      'granola',
     ],
   };
 
@@ -244,6 +264,8 @@ class PantryCategoryHelper {
         return Icons.local_cafe;
       case 'frozen':
         return Icons.ac_unit;
+      case 'breakfast':
+        return Icons.breakfast_dining;
       case 'other':
       default:
         return Icons.inventory_2_outlined;

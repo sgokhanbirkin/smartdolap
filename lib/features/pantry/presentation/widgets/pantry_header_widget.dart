@@ -6,6 +6,8 @@ import 'package:smartdolap/core/constants/app_sizes.dart';
 import 'package:smartdolap/features/auth/domain/entities/user.dart' as domain;
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_cubit.dart';
 import 'package:smartdolap/features/auth/presentation/viewmodel/auth_state.dart';
+import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
+import 'package:smartdolap/features/pantry/presentation/widgets/add_item_options_sheet.dart';
 import 'package:smartdolap/product/router/app_router.dart';
 
 /// Widget for pantry page header with title, subtitle, and search bar
@@ -40,47 +42,86 @@ class PantryHeaderWidget extends StatelessWidget {
             ),
           ),
           BlocBuilder<AuthCubit, AuthState>(
-            builder: (BuildContext context, AuthState authState) => authState.whenOrNull(
-                authenticated: (domain.User user) {
-                  if (user.householdId == null) {
-                    return const SizedBox.shrink();
-                  }
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      IconButton(
-                        icon: const Icon(Icons.shopping_cart_outlined),
-                        tooltip: tr('shopping_list.title'),
-                        onPressed: () {
-                          Navigator.of(context).pushNamed(
-                            AppRouter.shoppingList,
-                          );
-                        },
-                      ),
-                      TextButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pushNamed(
-                            AppRouter.pantryAdd,
-                            arguments: <String, dynamic>{
-                              'householdId': user.householdId!,
-                              'userId': user.id,
-                              'avatarId': user.avatarId,
-                            },
-                          );
-                        },
-                        icon: Icon(Icons.add, size: AppSizes.iconS),
-                        label: Text(tr('add_item')),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.spacingS,
-                            vertical: AppSizes.spacingXS,
+            builder: (BuildContext context, AuthState authState) =>
+                authState.whenOrNull(
+                  authenticated: (domain.User user) {
+                    if (user.householdId == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        IconButton(
+                          icon: const Icon(Icons.shopping_cart_outlined),
+                          tooltip: tr('shopping_list.title'),
+                          onPressed: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRouter.shoppingList);
+                          },
+                        ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            final method = await AddItemOptionsSheet.show(
+                              context,
+                            );
+                            if (method == null || !context.mounted) return;
+
+                            switch (method) {
+                              case AddItemMethod.manual:
+                                Navigator.of(context).pushNamed(
+                                  AppRouter.pantryAdd,
+                                  arguments: <String, dynamic>{
+                                    'householdId': user.householdId!,
+                                    'userId': user.id,
+                                    'avatarId': user.avatarId,
+                                  },
+                                );
+                              case AddItemMethod.barcodeScan:
+                                await Navigator.of(context).pushNamed(
+                                  AppRouter.serialBarcodeScanner,
+                                  arguments: <String, dynamic>{
+                                    'householdId': user.householdId!,
+                                    'userId': user.id,
+                                  },
+                                );
+                                if (context.mounted) {
+                                  context.read<PantryViewModel>().refresh(
+                                    user.householdId!,
+                                  );
+                                }
+                              case AddItemMethod.receiptScan:
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      tr('receipt_scan_coming_soon'),
+                                    ),
+                                  ),
+                                );
+                              case AddItemMethod.visualScan:
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      tr('visual_scan_coming_soon'),
+                                    ),
+                                  ),
+                                );
+                            }
+                          },
+                          icon: Icon(Icons.add, size: AppSizes.iconS),
+                          label: Text(tr('add_item')),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSizes.spacingS,
+                              vertical: AppSizes.spacingXS,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ) ?? const SizedBox.shrink(),
+                      ],
+                    );
+                  },
+                ) ??
+                const SizedBox.shrink(),
           ),
         ],
       ),

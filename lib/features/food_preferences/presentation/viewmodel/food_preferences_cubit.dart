@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smartdolap/features/food_preferences/domain/entities/food_preference.dart';
 import 'package:smartdolap/features/food_preferences/domain/entities/meal_type_preferences.dart';
@@ -32,11 +33,26 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
       final UserFoodPreferences? currentPreferences =
           await getUserFoodPreferencesUseCase.call(userId);
 
+      // Debug: Print loaded preferences
+      debugPrint(
+        '[FoodPreferencesCubit] Loaded ${allFoodPreferences.length} food preferences',
+      );
+      for (final food in allFoodPreferences) {
+        debugPrint(
+          '[FoodPreferencesCubit] Food: ${food.id} - ${food.name} (${food.category})',
+        );
+      }
+
       if (currentPreferences != null) {
         _selectedFoodIds = List<String>.from(
           currentPreferences.selectedFoodIds,
         );
         _mealTypePreferences = currentPreferences.mealTypePreferences;
+        debugPrint(
+          '[FoodPreferencesCubit] Current preferences found: ${_selectedFoodIds.length} foods selected',
+        );
+      } else {
+        debugPrint('[FoodPreferencesCubit] No current preferences found');
       }
 
       emit(
@@ -47,6 +63,7 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
         ),
       );
     } on Object catch (error) {
+      debugPrint('[FoodPreferencesCubit] Error loading preferences: $error');
       emit(FoodPreferencesState.error(error.toString()));
     }
   }
@@ -62,9 +79,16 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
           ) {
             if (_selectedFoodIds.contains(foodId)) {
               _selectedFoodIds.remove(foodId);
+              debugPrint(
+                '[FoodPreferencesCubit] Removed food: $foodId, total: ${_selectedFoodIds.length}',
+              );
             } else {
               _selectedFoodIds.add(foodId);
+              debugPrint(
+                '[FoodPreferencesCubit] Added food: $foodId, total: ${_selectedFoodIds.length}',
+              );
             }
+            debugPrint('[FoodPreferencesCubit] Selected foods: $_selectedFoodIds');
             emit(
               FoodPreferencesState.loaded(
                 allFoodPreferences: allFoodPreferences,
@@ -73,7 +97,11 @@ class FoodPreferencesCubit extends Cubit<FoodPreferencesState> {
               ),
             );
           },
-      orElse: () {},
+      orElse: () {
+        debugPrint(
+          '[FoodPreferencesCubit] toggleFoodSelection called but state is not loaded',
+        );
+      },
     );
   }
 

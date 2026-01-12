@@ -74,7 +74,7 @@ class _PantryItemCardState extends State<PantryItemCard>
 
     final String unit = widget.item.unit.toLowerCase().trim();
     double increment;
-    
+
     // Birim bazlı artış mantığı
     if (unit == 'g' || unit == 'gr' || unit == 'gram') {
       increment = delta > 0 ? 25 : -25; // Gram için 25'er artış
@@ -98,11 +98,12 @@ class _PantryItemCardState extends State<PantryItemCard>
     }
 
     // Floating-point precision sorununu önlemek için yuvarlama
-    double newQuantity =
-        (widget.item.quantity + increment).clamp(0.1, 1000);
-    newQuantity =
-        QuantityFormatter.roundQuantity(newQuantity, widget.item.unit);
-    
+    double newQuantity = (widget.item.quantity + increment).clamp(0.1, 1000);
+    newQuantity = QuantityFormatter.roundQuantity(
+      newQuantity,
+      widget.item.unit,
+    );
+
     if ((newQuantity - widget.item.quantity).abs() < 0.001) {
       return;
     }
@@ -117,6 +118,32 @@ class _PantryItemCardState extends State<PantryItemCard>
     final Color expiryColor = widget.item.expiryDate != null
         ? _getExpiryColor(widget.item.expiryDate!)
         : Theme.of(context).colorScheme.onSurfaceVariant;
+
+    // Theme-aware colors for dark mode
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color cardColor = widget.item.category != null
+        ? (isDark
+              ? Theme.of(context).colorScheme.surface
+              : CategoryColors.getCategoryColor(widget.item.category!))
+        : (isDark
+              ? Theme.of(context).colorScheme.surface
+              : AppColors.surfaceLight);
+    final Color textColor = widget.item.category != null
+        ? (isDark
+              ? Theme.of(context).colorScheme.onSurface
+              : CategoryColors.getCategoryIconColor(widget.item.category!))
+        : (isDark
+              ? Theme.of(context).colorScheme.onSurface
+              : AppColors.primaryBlue);
+    final Color badgeColor = widget.item.category != null
+        ? (isDark
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
+              : CategoryColors.getCategoryIconColor(
+                  widget.item.category!,
+                ).withValues(alpha: 0.15))
+        : (isDark
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
+              : AppColors.primaryBlue.withValues(alpha: 0.15));
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.95, end: 1.0),
@@ -142,33 +169,23 @@ class _PantryItemCardState extends State<PantryItemCard>
           scale: _scaleAnimation,
           child: Container(
             decoration: BoxDecoration(
-              color: widget.item.category != null
-                  ? CategoryColors.getCategoryColor(widget.item.category!)
-                  : AppColors.surfaceLight,
+              color: cardColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: _isPressed
-                    ? (widget.item.category != null
-                        ? CategoryColors.getCategoryIconColor(
-                            widget.item.category!,
-                          )
-                        : AppColors.primaryBlue)
-                        .withValues(alpha: 0.5)
+                    ? textColor.withValues(alpha: 0.5)
                     : Colors.transparent,
                 width: _isPressed ? 2 : 0,
               ),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: (widget.item.category != null
-                          ? CategoryColors.getCategoryColor(
-                              widget.item.category!,
-                            )
-                          : AppColors.surfaceLight)
-                      .withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              boxShadow: isDark
+                  ? null
+                  : <BoxShadow>[
+                      BoxShadow(
+                        color: cardColor.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
             ),
             child: Stack(
               clipBehavior: Clip.none,
@@ -204,23 +221,17 @@ class _PantryItemCardState extends State<PantryItemCard>
                                 vertical: AppSizes.spacingXS * 0.5,
                               ),
                               decoration: BoxDecoration(
-                                color: widget.item.category != null
-                                    ? CategoryColors.getCategoryIconColor(
-                                        widget.item.category!,
-                                      ).withValues(alpha: 0.15)
-                                    : AppColors.primaryBlue.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(AppSizes.radius * 0.75),
+                                color: badgeColor,
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radius * 0.75,
+                                ),
                               ),
                               child: Text(
                                 widget.item.name,
                                 style: TextStyle(
                                   fontSize: AppSizes.text,
                                   fontWeight: FontWeight.w600,
-                                  color: widget.item.category != null
-                                      ? CategoryColors.getCategoryIconColor(
-                                          widget.item.category!,
-                                        )
-                                      : AppColors.primaryBlue,
+                                  color: textColor,
                                   letterSpacing: -0.2,
                                 ),
                               ),
@@ -240,27 +251,17 @@ class _PantryItemCardState extends State<PantryItemCard>
                                     onPressed: () {
                                       _handleQuantityChange(-1);
                                     },
-                                    color: widget.item.category != null
-                                        ? CategoryColors.getCategoryIconColor(
-                                            widget.item.category!,
-                                          )
-                                        : AppColors.primaryBlue,
+                                    color: textColor,
                                   ),
                                   SizedBox(width: AppSizes.spacingXS),
                                 ],
                                 Text(
-                                  '${QuantityFormatter.formatQuantity(
-                                    widget.item.quantity,
-                                    widget.item.unit,
-                                  )} ${widget.item.unit}'.trim(),
+                                  '${QuantityFormatter.formatQuantity(widget.item.quantity, widget.item.unit)} ${widget.item.unit}'
+                                      .trim(),
                                   style: TextStyle(
                                     fontSize: AppSizes.textS,
                                     fontWeight: FontWeight.w500,
-                                    color: widget.item.category != null
-                                        ? CategoryColors.getCategoryIconColor(
-                                            widget.item.category!,
-                                          ).withValues(alpha: 0.8)
-                                        : AppColors.textMedium,
+                                    color: textColor.withValues(alpha: 0.8),
                                   ),
                                 ),
                                 if (hasQuickActions) ...<Widget>[
@@ -271,11 +272,7 @@ class _PantryItemCardState extends State<PantryItemCard>
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     onPressed: () => _handleQuantityChange(1),
-                                    color: widget.item.category != null
-                                        ? CategoryColors.getCategoryIconColor(
-                                            widget.item.category!,
-                                          )
-                                        : AppColors.primaryBlue,
+                                    color: textColor,
                                   ),
                                 ],
                               ],
@@ -306,11 +303,7 @@ class _PantryItemCardState extends State<PantryItemCard>
                               style: TextStyle(
                                 fontSize: AppSizes.textXS,
                                 fontWeight: FontWeight.w600,
-                                color: widget.item.category != null
-                                    ? CategoryColors.getCategoryIconColor(
-                                        widget.item.category!,
-                                      )
-                                    : expiryColor,
+                                color: textColor,
                               ),
                             ),
                           ],

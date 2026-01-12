@@ -14,6 +14,12 @@ class Logger {
     print('[INFO] $message');
   }
 
+  /// Log warning message
+  static void warning(String message) {
+    // ignore: avoid_print
+    print('[WARNING] $message');
+  }
+
   /// Log error message
   static void error(String message, [Object? error, StackTrace? stackTrace]) {
     // ignore: avoid_print

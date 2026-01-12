@@ -236,7 +236,11 @@ class RecipesViewModel {
 
       // _promptPreferences.incrementGenerated kaldırıldı - repository içinde zaten güncelleniyor
       if (!_cubit.isClosed) {
+        debugPrint(
+          "[RecipesViewModel] loadWithSelection tamamlandı - ${recipes.length} tarif cubit'e set ediliyor",
+        );
         _cubit.setLoaded(recipes, allRecipes: recipes);
+        debugPrint('[RecipesViewModel] Cubit setLoaded çağrıldı');
       }
     } on Exception catch (e) {
       debugPrint('[RecipesCubit] loadWithSelection hatası: $e');

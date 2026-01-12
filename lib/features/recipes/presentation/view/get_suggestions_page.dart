@@ -11,13 +11,16 @@ import 'package:smartdolap/features/pantry/domain/entities/pantry_item.dart';
 import 'package:smartdolap/features/pantry/presentation/viewmodel/pantry_view_model.dart';
 import 'package:smartdolap/features/recipes/presentation/controllers/get_suggestions_page_controller.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
+import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_state.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_view_model.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/add_ingredient_dialog_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/get_suggestions_action_buttons_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/ingredients_selection_section_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/meal_selector_widget.dart';
 import 'package:smartdolap/features/recipes/presentation/widgets/note_field_widget.dart';
+import 'package:smartdolap/features/recipes/presentation/widgets/recipe_loading_overlay_widget.dart';
 import 'package:smartdolap/features/sync/presentation/cubit/sync_worker_cubit.dart';
+import 'package:smartdolap/product/router/app_router.dart';
 
 /// Get suggestions page - Select ingredients by category and get AI suggestions
 class GetSuggestionsPage extends StatefulWidget {
@@ -48,6 +51,7 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
   final TextEditingController _noteController = TextEditingController();
   RecipesViewModel? _recipesViewModel;
   PantryViewModel? _pantryViewModel;
+  OverlayEntry? _loadingOverlay;
 
   @override
   void initState() {
@@ -127,11 +131,15 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
 
     setState(() => _isLoading = true);
 
+    // Show loading overlay with ingredient animation
+    _showLoadingOverlay();
+
     try {
       final RecipesViewModel? viewModel = _recipesViewModel;
       if (viewModel == null) {
         throw StateError('RecipesViewModel not initialized');
       }
+
       await viewModel
           .loadWithSelection(
             widget.userId,
@@ -141,14 +149,43 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
                 ? _noteController.text.trim()
                 : null,
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 60));
+
+      // Hide loading overlay
+      _hideLoadingOverlay();
 
       if (!mounted) {
         return;
       }
       setState(() => _isLoading = false);
-      Navigator.of(context).pop(true);
+
+      // Get generated recipes from cubit state
+      final RecipesCubit cubit = context.read<RecipesCubit>();
+      final RecipesState state = cubit.state;
+
+      if (state is RecipesLoaded && state.recipes.isNotEmpty) {
+        // Navigate to results page with recipes
+        await Navigator.of(context).pushReplacementNamed(
+          AppRouter.recipeSuggestionsResults,
+          arguments: <String, dynamic>{
+            'recipes': state.recipes,
+            'meal': _controller.selectedMeal,
+          },
+        );
+      } else {
+        // No recipes found, show message and pop
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tr('no_recipes_found')),
+              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+            ),
+          );
+        }
+        Navigator.of(context).pop(false);
+      }
     } on TimeoutException {
+      _hideLoadingOverlay();
       if (!mounted) {
         return;
       }
@@ -160,6 +197,7 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
         ),
       );
     } on Exception {
+      _hideLoadingOverlay();
       if (!mounted) {
         return;
       }
@@ -171,6 +209,23 @@ class _GetSuggestionsPageState extends State<GetSuggestionsPage> {
         ),
       );
     }
+  }
+
+  void _showLoadingOverlay() {
+    _loadingOverlay = OverlayEntry(
+      builder: (BuildContext context) => RecipeLoadingOverlayWidget(
+        selectedIngredients: _controller.selectedIngredients.toList(),
+        note: _noteController.text.trim().isNotEmpty
+            ? _noteController.text.trim()
+            : null,
+      ),
+    );
+    Overlay.of(context).insert(_loadingOverlay!);
+  }
+
+  void _hideLoadingOverlay() {
+    _loadingOverlay?.remove();
+    _loadingOverlay = null;
   }
 
   @override

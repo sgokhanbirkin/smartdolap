@@ -9,6 +9,8 @@ import 'package:smartdolap/core/widgets/splash_page.dart';
 import 'package:smartdolap/features/analytics/presentation/view/analytics_page.dart';
 import 'package:smartdolap/features/auth/presentation/view/login_page.dart';
 import 'package:smartdolap/features/auth/presentation/view/register_page.dart';
+import 'package:smartdolap/features/barcode/presentation/view/barcode_scanner_page.dart';
+import 'package:smartdolap/features/barcode/presentation/view/serial_barcode_scanner_page.dart';
 import 'package:smartdolap/features/food_preferences/presentation/view/food_preferences_onboarding_page.dart';
 import 'package:smartdolap/features/food_preferences/presentation/viewmodel/food_preferences_cubit.dart';
 import 'package:smartdolap/features/household/presentation/view/household_setup_page.dart';
@@ -31,6 +33,7 @@ import 'package:smartdolap/features/recipes/presentation/view/favorites_page.dar
 import 'package:smartdolap/features/recipes/presentation/view/get_suggestions_page.dart';
 import 'package:smartdolap/features/recipes/presentation/view/meal_recipes_page.dart';
 import 'package:smartdolap/features/recipes/presentation/view/recipe_detail_page.dart';
+import 'package:smartdolap/features/recipes/presentation/view/recipe_suggestions_results_page.dart';
 import 'package:smartdolap/features/recipes/presentation/viewmodel/recipes_cubit.dart';
 import 'package:smartdolap/features/shopping/presentation/view/shopping_list_page.dart';
 import 'package:smartdolap/product/widgets/app_shell.dart';
@@ -88,6 +91,15 @@ class AppRouter {
 
   /// Shopping list route path
   static const String shoppingList = '/shopping-list';
+
+  /// Recipe suggestions results route path
+  static const String recipeSuggestionsResults = '/recipes/suggestions-results';
+
+  /// Barcode scanner route path
+  static const String barcodeScanner = '/barcode-scanner';
+
+  /// Serial barcode scanner route path (batch mode)
+  static const String serialBarcodeScanner = '/barcode-scanner/serial';
 
   /// Generate route based on route settings
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -293,6 +305,42 @@ class AppRouter {
       case shoppingList:
         return MaterialPageRoute<dynamic>(
           builder: (BuildContext context) => const ShoppingListPage(),
+          settings: settings,
+        );
+      case barcodeScanner:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const BarcodeScannerPage(),
+          settings: settings,
+        );
+      case serialBarcodeScanner:
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => const SerialBarcodeScannerPage(),
+          settings: settings,
+        );
+      case recipeSuggestionsResults:
+        final Map<String, dynamic>? args =
+            settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['recipes'] == null) {
+          return MaterialPageRoute<dynamic>(
+            builder: (BuildContext context) => Scaffold(
+              body: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.padding),
+                  child: Text(
+                    tr('invalid_parameters'),
+                    style: TextStyle(fontSize: AppSizes.text),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => RecipeSuggestionsResultsPage(
+            recipes: args['recipes'] as List<Recipe>,
+            meal: args['meal'] as String?,
+          ),
           settings: settings,
         );
       case home:

@@ -169,6 +169,8 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
     });
   }
 
+
+
   @override
   void dispose() {
     _name.removeListener(_onNameChanged);
@@ -289,6 +291,7 @@ class _AddPantryItemPageState extends State<AddPantryItemPage> {
                   isImageLoading: _isImageLoading,
                   imageUrl: _imageUrl,
                   onCameraPressed: _pickImageFromCamera,
+                  onBarcodePressed: () {},
                   fieldDecoration: _fieldDecoration,
                 ),
                 SizedBox(height: AppSizes.verticalSpacingM),
